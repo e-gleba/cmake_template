@@ -7,6 +7,10 @@ project(
     HOMEPAGE_URL "https://github.com/e-gleba/cxx-skeleton"
     LANGUAGES C CXX)
 
+# CMAKE_CURRENT_LIST_DIR is used instead of CMAKE_SOURCE_DIR so
+# that this file works correctly if the project is ever consumed
+# as a subdirectory of a larger build.
+# Ref: Professional CMake §8.3 "Project-relative Variables"
 list(
     APPEND
     CMAKE_PREFIX_PATH
@@ -14,6 +18,11 @@ list(
     "${CMAKE_CURRENT_LIST_DIR}/cmake/description"
     "${CMAKE_CURRENT_LIST_DIR}/cmake/code_quality")
 
+# When cross-compiling, CMAKE_FIND_ROOT_PATH_MODE_PACKAGE is
+# typically set to ONLY in the toolchain file. That restricts
+# find_package() to searching only under CMAKE_FIND_ROOT_PATH
+# and CMAKE_SYSROOT — our local cmake/ dirs wouldn't be found.
+# Adding them to CMAKE_FIND_ROOT_PATH fixes this
 if(CMAKE_CROSSCOMPILING)
     list(
         APPEND
@@ -34,18 +43,51 @@ find_package(doxygen CONFIG REQUIRED)
 
 find_package(cpm CONFIG REQUIRED)
 
-set(CPACK_SYSTEM_NAME "${CPACK_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
-
-install(
-    FILES "${CPACK_RESOURCE_FILE_LICENSE}" "${CPACK_RESOURCE_FILE_README}"
-    DESTINATION .
-    COMPONENT documentation)
-
 add_subdirectory(src)
 
-include(CTest)
-if(BUILD_TESTING)
-    add_subdirectory(tests)
-endif()
+# CTest, CPack, and install rules for top-level metadata files
+# should only run when this project owns the build. If another
+# project pulls us in via add_subdirectory() or FetchContent,
+# it controls testing and packaging — we should not interfere.
+# Ref: Professional CMake §8.3, §39 "FetchContent"
+if(PROJECT_IS_TOP_LEVEL)
+    # include(CTest) creates the BUILD_TESTING cache option
+    # (default ON) and sets up CDash integration.
+    if(NOT CMAKE_CROSSCOMPILING)
+        include(CTest)
+    endif()
 
-include(CPack)
+    if(BUILD_TESTING)
+        add_subdirectory(tests)
+    endif()
+
+    include(GNUInstallDirs)
+
+    # Append processor to system name so packages for
+    # different architectures don't collide (e.g.
+    # "Windows-x86_64" vs "Windows-aarch64").
+    string(APPEND CPACK_SYSTEM_NAME "-${CMAKE_SYSTEM_PROCESSOR}")
+
+    # Install top-level metadata alongside the package.
+    # Use CMAKE_INSTALL_DOCDIR (defaults to share/doc/<project>)
+    # instead of hardcoded ".".
+    # Ref: https://cmake.org/cmake/help/latest/module/GNUInstallDirs.html
+    if(CPACK_RESOURCE_FILE_LICENSE)
+        install(
+            FILES "${CPACK_RESOURCE_FILE_LICENSE}"
+            DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+            COMPONENT documentation)
+    endif()
+    if(CPACK_RESOURCE_FILE_README)
+        install(
+            FILES "${CPACK_RESOURCE_FILE_README}"
+            DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+            COMPONENT documentation)
+    endif()
+
+    # include(CPack) must come AFTER all CPACK_* variables
+    # are set — it reads them at include-time and ignores
+    # any changes made afterward.
+    # Ref: Professional CMake §36.1 "Packaging Basics"
+    include(CPack)
+endif()

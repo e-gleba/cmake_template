@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.31)
-
 file(
     GLOB_RECURSE
     src
@@ -20,14 +18,8 @@ if(NOT
                                                             TRUE)
 endif()
 
-target_include_directories(tests PRIVATE ${CMAKE_CURRENT_LIST_DIR})
-
-set_target_properties(
-    tests
-    PROPERTIES CXX_STANDARD 23
-               CXX_STANDARD_REQUIRED ON
-               CXX_SCAN_FOR_MODULES OFF
-               CXX_EXTENSIONS OFF)
+target_include_directories(tests PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+target_compile_features(tests PRIVATE cxx_std_23)
 
 target_link_libraries(tests PRIVATE doctest::doctest
                                     $<$<PLATFORM_ID:Android>:log>)
@@ -39,6 +31,11 @@ target_compile_definitions(
             DOCTEST_CONFIG_ASSERTS_RETURN_VALUES
             DOCTEST_CONFIG_USE_STD_HEADERS)
 
+# doctest_discover_tests runs the built executable with --list-
+# test-cases to register each test case individually with CTest.
+# This only works on native builds where the host can execute the
+# binary. When cross-compiling, the executable targets a foreign
+# platform and cannot run on the host.
 if(NOT CMAKE_CROSSCOMPILING)
     include(doctest)
     doctest_discover_tests(tests)
