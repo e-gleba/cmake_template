@@ -1,39 +1,29 @@
-# SPDX-License-Identifier: MIT
-#
-# SPDX-FileCopyrightText: Copyright (c) 2019-2023 Lars Melchior and contributors
+include(FetchContent)
 
-set(CPM_DOWNLOAD_VERSION 0.42.0)
-set(CPM_HASH_SUM
-    "2020b4fc42dba44817983e06342e682ecfc3d2f484a581f11cc5731fbe4dce8a")
+set(cpm_version "0.42.1")
+set(cpm_expected_hash
+    "f3a6dcc6a04ce9e7f51a127307fa4f699fb2bade357a8eb4c5b45df76e1dc6a5")
 
-if(CPM_SOURCE_CACHE)
-    set(CPM_DOWNLOAD_LOCATION
-        "${CPM_SOURCE_CACHE}/cpm/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
-elseif(DEFINED ENV{CPM_SOURCE_CACHE})
-    set(CPM_DOWNLOAD_LOCATION
-        "$ENV{CPM_SOURCE_CACHE}/cpm/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
-else()
-    set(CPM_DOWNLOAD_LOCATION
-        "${CMAKE_BINARY_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
-endif()
+fetchcontent_declare(
+    get_cpm
+    URL "https://github.com/cpm-cmake/CPM.cmake/releases/download/v${cpm_version}/CPM.cmake"
+    URL_HASH SHA256=${cpm_expected_hash}
+    DOWNLOAD_NO_EXTRACT TRUE)
 
-# Expand relative path. This is important if the provided path contains a tilde (~)
-get_filename_component(CPM_DOWNLOAD_LOCATION ${CPM_DOWNLOAD_LOCATION} ABSOLUTE)
+fetchcontent_makeavailable(get_cpm)
 
-file(
-    DOWNLOAD
-    https://github.com/cpm-cmake/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake
-    ${CPM_DOWNLOAD_LOCATION}
-    EXPECTED_HASH SHA256=${CPM_HASH_SUM})
-
-include(${CPM_DOWNLOAD_LOCATION})
+include("${get_cpm_SOURCE_DIR}/CPM.cmake")
 
 # Enable local package reuse (vcpkg, system, etc.)
+# Ref: https://github.com/cpm-cmake/CPM.cmake#find_package-integration
 set(CPM_USE_LOCAL_PACKAGES ON)
 
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cpm)
+set(cpm_deps_dir "${CMAKE_CURRENT_LIST_DIR}/cpm")
 
-set(FETCHCONTENT_QUIET OFF)
+list(APPEND CMAKE_PREFIX_PATH "${cpm_deps_dir}")
+if(CMAKE_CROSSCOMPILING)
+    list(APPEND CMAKE_FIND_ROOT_PATH "${cpm_deps_dir}")
+endif()
 
 find_package(doctest CONFIG REQUIRED)
 find_package(sdl3 CONFIG REQUIRED)
