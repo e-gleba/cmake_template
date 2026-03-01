@@ -9,8 +9,14 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_FULL_PATH_NAMES NO)
 
     # Modern C++ features
-    set(DOXYGEN_CLANG_ASSISTED_PARSING YES)
-    set(DOXYGEN_CLANG_OPTIONS "-std=c++23;-stdlib=libc++")
+    # Documentation is a host-only activity. When cross-compiling,
+    # Doxygen would run on the host but try to parse headers from
+    # the cross-sysroot, which is extremely slow or hangs entirely
+    # (especially with CLANG_ASSISTED_PARSING). Skip entirely.
+    if(NOT CMAKE_CROSSCOMPILING)
+        set(DOXYGEN_CLANG_ASSISTED_PARSING YES)
+        set(DOXYGEN_CLANG_OPTIONS "-std=c++23;-stdlib=libc++")
+    endif()
     set(DOXYGEN_CPP_CLI_SUPPORT YES)
     set(DOXYGEN_MARKDOWN_SUPPORT YES)
 
@@ -33,11 +39,17 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_MATHJAX_FORMAT TeX)
     set(DOXYGEN_USE_MATHJAX YES)
 
-    doxygen_add_docs(doxygen ${PROJECT_SOURCE_DIR} ALL
-                     COMMENT "Building API documentation")
+    doxygen_add_docs(
+        doxygen
+        "${PROJECT_SOURCE_DIR}/src"
+        "${PROJECT_SOURCE_DIR}/include"
+        ALL
+        COMMENT "Building API documentation")
 
-    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated-docs"
-            DESTINATION "share/doc/${PROJECT_NAME}" COMPONENT documentation)
+    install(
+        DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated-docs"
+        DESTINATION "share/doc/${PROJECT_NAME}"
+        COMPONENT documentation)
 else()
     message(
         WARNING "Doxygen not found - documentation targets disabled\n"
