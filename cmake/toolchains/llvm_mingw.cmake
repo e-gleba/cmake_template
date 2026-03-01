@@ -61,7 +61,7 @@ if(NOT EXISTS "${lm_root}/bin/clang")
         message(
             STATUS
                 "Downloading llvm-mingw ${lm_ver} (${lm_host_arch} -> ${lm_triple})..."
-            )
+        )
         file(
             DOWNLOAD
             "https://github.com/mstorsjo/llvm-mingw/releases/download/${lm_ver}/${lm_pkg}.tar.xz"
