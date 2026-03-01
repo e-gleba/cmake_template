@@ -17,7 +17,42 @@
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
                 "FETCHCONTENT_QUIET": "OFF"
+            }
+        },
+        {
+            "name": "osxcross-base",
+            "displayName": "macOS Cross-Compilation Base",
+            "description": "Cross-compilation from Linux to macOS via osxcross. Auto-downloads SDK and builds toolchain on first configure (~5 min).",
+            "hidden": true,
+            "inherits": "base",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/macos.cmake",
+            "cacheVariables": {
+                "CMAKE_SYSTEM_NAME": "Darwin"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "osxcross-x86_64",
+            "displayName": "macOS (x86_64 Intel)",
+            "description": "Cross-compile for macOS on Intel",
+            "inherits": "osxcross-base",
+            "cacheVariables": {
+                "CMAKE_SYSTEM_PROCESSOR": "x86_64"
+            }
+        },
+        {
+            "name": "osxcross-arm64",
+            "displayName": "macOS (arm64 Apple Silicon)",
+            "description": "Cross-compile for macOS on Apple Silicon",
+            "inherits": "osxcross-base",
+            "cacheVariables": {
+                "CMAKE_SYSTEM_PROCESSOR": "arm64"
             }
         },
         {
@@ -174,6 +209,18 @@
             "configuration": "Debug"
         },
         {
+            "name": "osxcross-x86_64",
+            "displayName": "macOS Intel (Release)",
+            "configurePreset": "osxcross-x86_64",
+            "inherits": "build-release"
+        },
+        {
+            "name": "osxcross-arm64",
+            "displayName": "macOS Apple Silicon (Release)",
+            "configurePreset": "osxcross-arm64",
+            "inherits": "build-release"
+        },
+        {
             "name": "android-arm64",
             "displayName": "Android arm64 (Release)",
             "configurePreset": "android-arm64",
@@ -310,6 +357,28 @@
     ],
     "packagePresets": [
         {
+            "name": "osxcross-x86_64-package",
+            "displayName": "macOS Intel Package",
+            "configurePreset": "osxcross-x86_64",
+            "configurations": [
+                "Release"
+            ],
+            "generators": [
+                "TGZ"
+            ]
+        },
+        {
+            "name": "osxcross-arm64-package",
+            "displayName": "macOS Apple Silicon Package",
+            "configurePreset": "osxcross-arm64",
+            "configurations": [
+                "Release"
+            ],
+            "generators": [
+                "TGZ"
+            ]
+        },
+        {
             "name": "msvc-package",
             "displayName": "MSVC Package",
             "configurePreset": "msvc",
@@ -377,6 +446,44 @@
         }
     ],
     "workflowPresets": [
+        {
+            "name": "osxcross-x86_64-full",
+            "displayName": "macOS Intel Pipeline",
+            "description": "Configure, build, and package for macOS Intel (no test — cross-compiled binaries cannot run on the Linux host)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "osxcross-x86_64"
+                },
+                {
+                    "type": "build",
+                    "name": "osxcross-x86_64"
+                },
+                {
+                    "type": "package",
+                    "name": "osxcross-x86_64-package"
+                }
+            ]
+        },
+        {
+            "name": "osxcross-arm64-full",
+            "displayName": "macOS Apple Silicon Pipeline",
+            "description": "Configure, build, and package for macOS arm64 (no test — cross-compiled binaries cannot run on the Linux host)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "osxcross-arm64"
+                },
+                {
+                    "type": "build",
+                    "name": "osxcross-arm64"
+                },
+                {
+                    "type": "package",
+                    "name": "osxcross-arm64-package"
+                }
+            ]
+        },
         {
             "name": "android-arm64-full",
             "displayName": "Android arm64 Pipeline",
