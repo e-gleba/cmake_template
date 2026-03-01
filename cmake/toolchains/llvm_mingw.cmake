@@ -1,47 +1,45 @@
 cmake_minimum_required(VERSION 3.31)
 
+# --- User-configurable option (default: ON) ---
 if(NOT DEFINED DOWNLOAD_LLVM_MINGW_IF_NOT_EXIST)
-    set(download_llvm_mingw_if_not_exist ON)
-else()
-    set(download_llvm_mingw_if_not_exist "${DOWNLOAD_LLVM_MINGW_IF_NOT_EXIST}")
+    set(DOWNLOAD_LLVM_MINGW_IF_NOT_EXIST ON)
 endif()
 
-set(llvm_mingw_ver "20251216")
-set(llvm_mingw_host_os "ubuntu-22.04")
+# --- Constants ---
+set(lm_ver "20260224")
+set(lm_os "ubuntu-22.04")
 
 if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
-    set(host_arch "aarch64")
+    set(lm_host_arch "aarch64")
 else()
-    set(host_arch "x86_64")
+    set(lm_host_arch "x86_64")
 endif()
 
-set(target_prefix "${CMAKE_SYSTEM_PROCESSOR}-w64-mingw32")
-set(pkg_name
-    "llvm-mingw-${llvm_mingw_ver}-ucrt-${llvm_mingw_host_os}-${host_arch}")
-set(dl_url
-    "https://github.com/mstorsjo/llvm-mingw/releases/download/${llvm_mingw_ver}/${pkg_name}.tar.xz"
-    )
-set(work_dir "${CMAKE_SOURCE_DIR}")
-set(archive_path "${work_dir}/${pkg_name}.tar.xz")
-set(toolchain_dir "${work_dir}/llvm_mingw")
+set(lm_prefix "${CMAKE_SYSTEM_PROCESSOR}-w64-mingw32")
+set(lm_pkg "llvm-mingw-${lm_ver}-ucrt-${lm_os}-${lm_host_arch}")
+set(lm_root "${CMAKE_SOURCE_DIR}/llvm_mingw")
 
+# --- Download if needed ---
 message(CHECK_START "llvm-mingw")
 
-if(NOT EXISTS "${toolchain_dir}/bin/clang")
-    if(NOT download_llvm_mingw_if_not_exist)
+if(NOT EXISTS "${lm_root}/bin/clang")
+    if(NOT DOWNLOAD_LLVM_MINGW_IF_NOT_EXIST)
         message(
-            FATAL_ERROR
-                "== error: llvm-mingw not found at '${toolchain_dir}' => re-run with -Ddownload_llvm_mingw_if_not_exist=ON"
-            )
+            FATAL_ERROR "llvm-mingw not found at '${lm_root}'"
+                        " => re-run with -DDOWNLOAD_LLVM_MINGW_IF_NOT_EXIST=ON")
     endif()
+
+    set(lm_archive "${CMAKE_SOURCE_DIR}/${lm_pkg}.tar.xz")
+    set(lm_url
+        "https://github.com/mstorsjo/llvm-mingw/releases/download/${lm_ver}/${lm_pkg}.tar.xz"
+        )
 
     message(
         STATUS
-            "fetching llvm-mingw ${llvm_mingw_ver} [host=${host_arch} target=${CMAKE_SYSTEM_PROCESSOR}]..."
+            "fetching llvm-mingw ${lm_ver} [host=${lm_host_arch} target=${CMAKE_SYSTEM_PROCESSOR}]..."
         )
 
-    file(DOWNLOAD "${dl_url}" "${archive_path}" SHOW_PROGRESS STATUS dl_status)
-
+    file(DOWNLOAD "${lm_url}" "${lm_archive}" SHOW_PROGRESS STATUS dl_status)
     list(
         GET
         dl_status
@@ -57,40 +55,29 @@ if(NOT EXISTS "${toolchain_dir}/bin/clang")
        dl_code
        EQUAL
        0)
-        file(REMOVE "${archive_path}")
+        file(REMOVE "${lm_archive}")
         message(FATAL_ERROR "download failed: '${dl_msg}'")
     endif()
 
-    message(STATUS "extracting '${pkg_name}.tar.xz'")
-    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${archive_path}"
-                    WORKING_DIRECTORY "${work_dir}" COMMAND_ERROR_IS_FATAL ANY)
+    message(STATUS "extracting '${lm_pkg}.tar.xz'")
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E tar xf "${lm_archive}"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}" COMMAND_ERROR_IS_FATAL ANY)
 
-    file(REMOVE_RECURSE "${toolchain_dir}")
-    file(RENAME "${work_dir}/${pkg_name}" "${toolchain_dir}")
-    file(REMOVE "${archive_path}")
+    file(REMOVE_RECURSE "${lm_root}")
+    file(RENAME "${CMAKE_SOURCE_DIR}/${lm_pkg}" "${lm_root}")
+    file(REMOVE "${lm_archive}")
 endif()
 
-message(CHECK_PASS "'${toolchain_dir}'")
+message(CHECK_PASS "'${lm_root}'")
 
-# https://github.com/supertuxkart/stk-code/blob/master/cmake/Toolchain-llvm-mingw.cmake
+set(CMAKE_C_COMPILER "${lm_root}/bin/${lm_prefix}-clang")
+set(CMAKE_CXX_COMPILER "${lm_root}/bin/${lm_prefix}-clang++")
+set(CMAKE_RC_COMPILER "${lm_root}/bin/${lm_prefix}-windres")
+set(CMAKE_AR "${lm_root}/bin/llvm-ar")
+set(CMAKE_RANLIB "${lm_root}/bin/llvm-ranlib")
 
-set(CMAKE_FIND_ROOT_PATH
-    ${toolchain_dir}/generic-w64-mingw32
-    ${toolchain_dir}/${CMAKE_SYSTEM_PROCESSOR}-w64-mingw32/bin)
-
-set(CMAKE_C_COMPILER "${toolchain_dir}/bin/${target_prefix}-clang")
-set(CMAKE_CXX_COMPILER "${toolchain_dir}/bin/${target_prefix}-clang++")
-set(CMAKE_RC_COMPILER "${toolchain_dir}/bin/${target_prefix}-windres")
-set(CMAKE_AR "${toolchain_dir}/bin/llvm-ar")
-set(CMAKE_RANLIB "${toolchain_dir}/bin/llvm-ranlib")
-
-set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,-pdb=")
-set(CMAKE_C_FLAGS -gcodeview)
-set(CMAKE_CXX_FLAGS -gcodeview)
-
-# adjust the default behaviour of the FIND_XXX() commands:
-# search headers and libraries in the target environment, search
-# programs in the host environment
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ALWAYS)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
