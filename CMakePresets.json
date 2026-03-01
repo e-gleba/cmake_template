@@ -17,9 +17,7 @@
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_COLOR_DIAGNOSTICS": "ON",
-                "FETCHCONTENT_QUIET": "OFF",
-                "CPACK_RESOURCE_FILE_LICENSE": "${sourceDir}/license",
-                "CPACK_RESOURCE_FILE_README": "${sourceDir}/readme.md"
+                "FETCHCONTENT_QUIET": "OFF"
             }
         },
         {

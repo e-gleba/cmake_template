@@ -33,7 +33,6 @@ if(CMAKE_CROSSCOMPILING)
 endif()
 
 find_package(warnings CONFIG REQUIRED)
-find_package(package_description CONFIG REQUIRED)
 
 find_package(clang_format CONFIG REQUIRED)
 find_package(clang_tidy CONFIG REQUIRED)
@@ -62,28 +61,12 @@ if(PROJECT_IS_TOP_LEVEL)
     endif()
 
     include(GNUInstallDirs)
+    find_package(package_description CONFIG REQUIRED)
 
     # Append processor to system name so packages for
     # different architectures don't collide (e.g.
     # "Windows-x86_64" vs "Windows-aarch64").
     string(APPEND CPACK_SYSTEM_NAME "-${CMAKE_SYSTEM_PROCESSOR}")
-
-    # Install top-level metadata alongside the package.
-    # Use CMAKE_INSTALL_DOCDIR (defaults to share/doc/<project>)
-    # instead of hardcoded ".".
-    # Ref: https://cmake.org/cmake/help/latest/module/GNUInstallDirs.html
-    if(CPACK_RESOURCE_FILE_LICENSE)
-        install(
-            FILES "${CPACK_RESOURCE_FILE_LICENSE}"
-            DESTINATION "${CMAKE_INSTALL_DOCDIR}"
-            COMPONENT documentation)
-    endif()
-    if(CPACK_RESOURCE_FILE_README)
-        install(
-            FILES "${CPACK_RESOURCE_FILE_README}"
-            DESTINATION "${CMAKE_INSTALL_DOCDIR}"
-            COMPONENT documentation)
-    endif()
 
     # include(CPack) must come AFTER all CPACK_* variables
     # are set — it reads them at include-time and ignores

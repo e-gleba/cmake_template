@@ -1,75 +1,99 @@
-set(PROJECT_VENDOR "geugenm")
+# ─── Package Description ───────────────────────────────────────────
+# Sets CPack metadata and platform-specific packaging variables.
+# Loaded via find_package(package_description CONFIG REQUIRED).
+#
+# CMAKE_CURRENT_LIST_DIR = directory containing THIS file
+#                          (cmake/description/)
+# PROJECT_SOURCE_DIR     = root of the calling project
+#
+# Never use CMAKE_SOURCE_DIR — it breaks when this project is
+# consumed as a subdirectory of a larger build.
+# Ref: Professional CMake §8.3 "Project-relative Variables"
+# ───────────────────────────────────────────────────────────────────
+
+# ─── Project metadata ─────────────────────────────────────────────
+set(PROJECT_VENDOR "e-gleba")
 set(PROJECT_CONTACT "glebajk@gmail.com")
-set(PROJECT_LICENSE "GPL-2.0") # Use SPDX identifier (required by DEB/RPM)
+set(PROJECT_LICENSE "MIT") # SPDX identifier
 set(PROJECT_GROUP "System")
 
-# Optional: detect architecture automatically (don't hardcode)
-if(NOT DEFINED PROJECT_ARCH)
-    set(PROJECT_ARCH ${CMAKE_SYSTEM_PROCESSOR})
-    if(PROJECT_ARCH STREQUAL "x86_64")
-        set(PROJECT_ARCH "amd64") # Debian uses 'amd64'
-    elseif(PROJECT_ARCH MATCHES "aarch64|arm64")
-        set(PROJECT_ARCH "arm64")
-    endif()
-endif()
-
+# ─── Resource files ────────────────────────────────────────────────
 set(PROJECT_ICON_FILE "${CMAKE_CURRENT_LIST_DIR}/icon.png")
-set(PROJECT_LICENSE_FILE "${CMAKE_SOURCE_DIR}/license")
-set(PROJECT_README_FILE "${CMAKE_SOURCE_DIR}/readme.md")
+set(PROJECT_LICENSE_FILE "${PROJECT_SOURCE_DIR}/license")
+set(PROJECT_README_FILE "${PROJECT_SOURCE_DIR}/readme.md")
 
-configure_file("${CMAKE_CURRENT_LIST_DIR}/package.desktop.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.desktop" @ONLY)
-
-# === CPack Core Configuration ===
+# ─── CPack core configuration ─────────────────────────────────────
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
 set(CPACK_PACKAGE_VENDOR "${PROJECT_VENDOR}")
 set(CPACK_PACKAGE_CONTACT "${PROJECT_CONTACT}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
 set(CPACK_PACKAGE_HOMEPAGE_URL "${PROJECT_HOMEPAGE_URL}")
-set(CPACK_PACKAGE_LICENSE "${PROJECT_LICENSE}")
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_LICENSE_FILE}")
 set(CPACK_RESOURCE_FILE_README "${PROJECT_README_FILE}")
 
-set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_LIST_DIR}/description.txt")
-if(NOT EXISTS "${CPACK_PACKAGE_DESCRIPTION_FILE}")
+# Long description: use dedicated file if present, fall back
+# to the project readme.
+set(pkg_desc_file "${CMAKE_CURRENT_LIST_DIR}/description.txt")
+if(EXISTS "${pkg_desc_file}")
+    set(CPACK_PACKAGE_DESCRIPTION_FILE "${pkg_desc_file}")
+else()
     set(CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_README_FILE}")
 endif()
+unset(pkg_desc_file)
 
-set(CPACK_PACKAGE_ICON "${PROJECT_ICON_FILE}")
+# ─── CPack icon ────────────────────────────────────────────────────
+if(EXISTS "${PROJECT_ICON_FILE}")
+    set(CPACK_PACKAGE_ICON "${PROJECT_ICON_FILE}")
+endif()
 
-# === Generator-Specific Settings ===
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Generator-specific settings
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# DEB
+# ─── DEB ───────────────────────────────────────────────────────────
 set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
 
-# RPM
+# ─── RPM ───────────────────────────────────────────────────────────
 set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
 set(CPACK_RPM_PACKAGE_GROUP "${PROJECT_GROUP}")
+set(CPACK_RPM_PACKAGE_LICENSE "${PROJECT_LICENSE}")
 set(CPACK_RPM_PACKAGE_AUTOREQPROV "yes")
 
-# macOS
-set(CPACK_MACOSX_PACKAGE_NAME "${PROJECT_NAME}")
-if(EXISTS "${PROJECT_ICON_FILE}")
-    set(CPACK_MACOSX_BUNDLE_ICON "${PROJECT_ICON_FILE}")
-endif()
-
-# Windows (NSIS)
+# ─── Windows (NSIS) ───────────────────────────────────────────────
 set(CPACK_NSIS_MODIFY_PATH ON)
-set(CPACK_NSIS_MUI_ICON "${PROJECT_ICON_FILE}")
-set(CPACK_NSIS_MUI_UNIICON "${PROJECT_ICON_FILE}")
 
-install(
-    FILES "${PROJECT_README_FILE}" "${PROJECT_LICENSE_FILE}"
-    DESTINATION "share/doc/${PROJECT_NAME}"
-    COMPONENT documentation
-    PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Platform-specific install rules (Linux freedesktop integration)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    include(GNUInstallDirs)
 
-install(FILES "${PROJECT_ICON_FILE}" DESTINATION "share/pixmaps"
-        RENAME "${PROJECT_NAME}.png")
-install(FILES "${PROJECT_ICON_FILE}"
-        DESTINATION "share/icons/hicolor/256x256/apps"
-        RENAME "${PROJECT_NAME}.png")
+    # ── .desktop file ──────────────────────────────────────
+    set(pkg_desc_desktop_in "${CMAKE_CURRENT_LIST_DIR}/package.desktop.in")
+    if(EXISTS "${pkg_desc_desktop_in}")
+        configure_file(
+            "${pkg_desc_desktop_in}"
+            "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.desktop" @ONLY)
+        install(
+            FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.desktop"
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications"
+            COMPONENT runtime)
+    endif()
+    unset(pkg_desc_desktop_in)
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.desktop"
-        DESTINATION "share/applications")
+    # ── Application icon ───────────────────────────────────
+    if(EXISTS "${PROJECT_ICON_FILE}")
+        install(
+            FILES "${PROJECT_ICON_FILE}"
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/pixmaps"
+            RENAME "${PROJECT_NAME}.png"
+            COMPONENT runtime)
+        install(
+            FILES "${PROJECT_ICON_FILE}"
+            DESTINATION
+                "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps"
+            RENAME "${PROJECT_NAME}.png"
+            COMPONENT runtime)
+    endif()
+endif()
