@@ -27,7 +27,6 @@
             "description": "Cross-compilation from Linux to macOS via osxcross. Auto-downloads SDK and builds toolchain on first configure (~5 min).",
             "hidden": true,
             "inherits": "base",
-            "toolchainFile": "${sourceDir}/cmake/toolchains/macos.cmake",
             "cacheVariables": {
                 "CMAKE_SYSTEM_NAME": "Darwin"
             },

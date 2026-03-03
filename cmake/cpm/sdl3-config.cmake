@@ -25,6 +25,11 @@ cpmaddpackage(
     # Performance optimizations
     "SDL_CCACHE
     ON"
+    "SDL_CAMERA OFF"
+    "SDL_SENSOR OFF"
+    "SDL_HAPTIC OFF"
+    "SDL_JOYSTICK OFF"
+    "SDL_HIDAPI OFF"
     "CMAKE_BUILD_TYPE RelWithDebInfo"
     # Disable unnecessary features for speed
     "SDL_TEST_LIBRARY OFF"
@@ -43,5 +48,7 @@ cpmaddpackage(
     OFF"
     "SDL_ASSEMBLY
     OFF"
+    "CMAKE_SHARED_LINKER_FLAGS -Wl,-U,___isPlatformVersionAtLeast"
+    "CMAKE_EXE_LINKER_FLAGS -Wl,-U,___isPlatformVersionAtLeast"
     # Disable X11 screensaver extension
     "SDL_X11_XSCRNSAVER OFF")

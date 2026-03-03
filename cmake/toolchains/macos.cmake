@@ -19,7 +19,7 @@ endif()
 # ---- PATH: osxcross wrappers resolve ld via PATH lookup ----
 # Without this, clang falls through to /usr/bin/ld (GNU ld) which
 # chokes on "-m llvm" because it only knows ELF emulations.
-set(ENV{PATH} "${OSXCROSS_BIN_DIR}:$ENV{PATH}")
+set(ENV{PATH} "$ENV{PATH}:${OSXCROSS_BIN_DIR}")
 
 # ---- Compilers ----
 set(CMAKE_C_COMPILER "${OSXCROSS_BIN_DIR}/${OSXCROSS_TRIPLE}-clang")
@@ -69,3 +69,8 @@ list(
 set(ENV{PKG_CONFIG_LIBDIR}
     "${OSXCROSS_TARGET_DIR}/macports/pkgs/opt/local/lib/pkgconfig")
 set(ENV{PKG_CONFIG_SYSROOT_DIR} "${OSXCROSS_TARGET_DIR}/macports/pkgs")
+
+set(OSXCROSS_BINn "${OSXCROSS_TARGET_DIR}/bin")
+
+add_compile_options(-B${OSXCROSS_BINn})
+add_link_options(-B${OSXCROSS_BINn})
