@@ -92,11 +92,6 @@ if(NOT EXISTS "${lm_root}/bin/clang")
 
     set(lm_pkg "llvm-mingw-${lm_ver}-ucrt-ubuntu-22.04-${lm_host_arch}")
 
-    # Pin FetchContent's working directory (download cache, stamps)
-    # to a stable path next to this toolchain file.
-    set(FETCHCONTENT_BASE_DIR "${CMAKE_CURRENT_LIST_DIR}/.toolchain-deps")
-    set(FETCHCONTENT_QUIET OFF)
-
     include(FetchContent)
 
     fetchcontent_declare(
