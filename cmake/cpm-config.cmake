@@ -17,6 +17,7 @@ include("${get_cpm_SOURCE_DIR}/CPM.cmake")
 # Enable local package reuse (vcpkg, system, etc.)
 # Ref: https://github.com/cpm-cmake/CPM.cmake#find_package-integration
 set(CPM_USE_LOCAL_PACKAGES ON)
+set(CPM_SOURCE_CACHE "/tmp/cpm-cache")
 
 set(cpm_deps_dir "${CMAKE_CURRENT_LIST_DIR}/cpm")
 
