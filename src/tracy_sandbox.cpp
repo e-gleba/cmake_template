@@ -49,8 +49,50 @@ template <typename type_t> struct tracked_allocator
 
 using tracked_vector = std::vector<std::byte, tracked_allocator<std::byte>>;
 
+namespace {
+// ── Frame image capture for Tracy ────────────────────────────────────
+// Tracy expects raw RGBA pixels, width/height divisible by 4.
+// We downscale to 320x180 to keep bandwidth reasonable.
+void capture_frame_image(SDL_Renderer* renderer)
+{
+    ZoneScopedN("capture_frame_image");
+
+    constexpr int capture_w = 320;
+    constexpr int capture_h = 180;
+
+    // Read pixels from current render target
+    SDL_Surface* full = SDL_RenderReadPixels(renderer, nullptr);
+    if (full == nullptr) {
+        return;
+    }
+    auto full_guard = gsl::finally([&] { SDL_DestroySurface(full); });
+
+    // Create downscaled RGBA surface (dimensions divisible by 4)
+    SDL_Surface* scaled =
+        SDL_CreateSurface(capture_w, capture_h, SDL_PIXELFORMAT_RGBA32);
+    if (scaled == nullptr) {
+        return;
+    }
+    auto scaled_guard = gsl::finally([&] { SDL_DestroySurface(scaled); });
+
+    // Downscale with bilinear filtering
+    if (!SDL_BlitSurfaceScaled(
+            full, nullptr, scaled, nullptr, SDL_SCALEMODE_LINEAR)) {
+        return;
+    }
+
+    // Lock surface to ensure pixel pointer is valid
+    if (!SDL_LockSurface(scaled)) {
+        return;
+    }
+    auto lock_guard = gsl::finally([&] { SDL_UnlockSurface(scaled); });
+
+    // offset=0 => current frame, flip=false => top-down scanlines
+    FrameImage(scaled->pixels, capture_w, capture_h, 0, false);
+}
+
 // ── Worker: simulates CPU load under a traced zone ───────────────────
-static void worker_thread(std::size_t id, std::atomic<bool>& running)
+void worker_thread(std::size_t id, std::atomic<bool>& running)
 {
     const auto name = std::format("worker_{}", id);
     tracy::SetThreadName(name.c_str());
@@ -79,15 +121,17 @@ static void worker_thread(std::size_t id, std::atomic<bool>& running)
         FrameMarkNamed("worker");
     }
 }
+} // namespace
 
 // ── App state ────────────────────────────────────────────────────────
 
-struct app_state
+struct app_state final
 {
     SDL_Window*                 window   = nullptr;
     SDL_Renderer*               renderer = nullptr;
     std::atomic<bool>           running{ true };
     std::array<std::jthread, 4> workers;
+    std::uint64_t               frame_count = 0;
 };
 
 // NOLINTBEGIN(readability-identifier-naming)
@@ -155,13 +199,33 @@ SDL_AppResult SDL_AppIterate(void* appstate)
         std::memset(frame_data.data(), 0xAB, frame_data.size());
     }
 
+    // Render something visible so screenshots aren't just a solid color
     {
         ZoneScopedN("render");
+
         SDL_SetRenderDrawColor(state->renderer, 30, 30, 46, 255);
         SDL_RenderClear(state->renderer);
+
+        // Animated rectangle — proves frame capture works
+        const auto      phase = static_cast<float>(state->frame_count % 240);
+        const SDL_FRect rect  = {
+             .x = phase * 4.0F,
+             .y = 200.0F,
+             .w = 120.0F,
+             .h = 80.0F,
+        };
+        SDL_SetRenderDrawColor(state->renderer, 166, 227, 161, 255);
+        SDL_RenderFillRect(state->renderer, &rect);
+
+        // Capture every 4th frame — balance between coverage and overhead
+        if (state->frame_count % 4 == 0) {
+            capture_frame_image(state->renderer);
+        }
+
         SDL_RenderPresent(state->renderer);
     }
 
+    ++state->frame_count;
     FrameMark;
     return SDL_APP_CONTINUE;
 }
