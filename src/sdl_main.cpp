@@ -2,39 +2,41 @@
 #include <SDL3/SDL_main.h>
 
 #include <cstdlib>
+#include <gsl/gsl>
+#include <print>
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "SDL_Init failed: %s",
-                     SDL_GetError());
+        std::println(stderr, "sdl_init failed: {}", SDL_GetError());
         return EXIT_FAILURE;
     }
+    auto _ = gsl::finally([] { SDL_Quit(); });
 
-    struct sdl_guard final
-    {
-        ~sdl_guard() { SDL_Quit(); }
-    } guard;
-
-    constexpr SDL_MessageBoxButtonData buttons[] = {
-        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "OK" },
-        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Exit" }
+    constexpr std::array buttons = {
+        SDL_MessageBoxButtonData{ .flags =
+                                      SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT,
+                                  .buttonID = 0,
+                                  .text     = "OK" },
+        SDL_MessageBoxButtonData{ .flags =
+                                      SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT,
+                                  .buttonID = 1,
+                                  .text     = "Exit" },
     };
 
-    const SDL_MessageBoxData box = { SDL_MESSAGEBOX_INFORMATION,
-                                     nullptr,
-                                     "Hello World",
-                                     "SDL3 + C++23",
-                                     2,
-                                     buttons,
-                                     nullptr };
+    const SDL_MessageBoxData box = {
+        .flags       = SDL_MESSAGEBOX_INFORMATION,
+        .window      = nullptr,
+        .title       = "Hello World",
+        .message     = "SDL3 + C++23",
+        .numbuttons  = gsl::narrow_cast<int>(buttons.size()),
+        .buttons     = buttons.data(),
+        .colorScheme = nullptr,
+    };
 
     int button_id = -1;
     if (!SDL_ShowMessageBox(&box, &button_id)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "ShowMessageBox failed: %s",
-                     SDL_GetError());
+        std::println(stderr, "show_message_box failed: {}", SDL_GetError());
         return EXIT_FAILURE;
     }
 
