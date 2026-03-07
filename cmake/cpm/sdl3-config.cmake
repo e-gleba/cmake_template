@@ -17,6 +17,7 @@ cpmaddpackage(
     GIT_PROGRESS
     TRUE
     OPTIONS
+    "SDL_PRECOMPILED_HEADERS OFF" # android erros fix
     # Core library config - fast shared build
     "SDL_STATIC OFF"
     "SDL_SHARED ON"

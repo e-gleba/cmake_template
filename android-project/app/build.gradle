@@ -55,19 +55,12 @@ android {
         release {
             minifyEnabled = true
             shrinkResources = !isLibrary
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
 
             signingConfig = signingConfigs.debug
 
             ndk {
                 debugSymbolLevel = 'SYMBOL_TABLE'
-            }
-
-            postprocessing {
-                removeUnusedCode = true
-                removeUnusedResources = true
-                obfuscate = false
-                optimizeCode = true
             }
         }
     }
