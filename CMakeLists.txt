@@ -32,6 +32,8 @@ if(CMAKE_CROSSCOMPILING)
         "${CMAKE_CURRENT_LIST_DIR}/cmake/code_quality")
 endif()
 
+find_package(cpm CONFIG REQUIRED)
+
 find_package(warnings CONFIG REQUIRED)
 
 if(PROJECT_IS_TOP_LEVEL)
@@ -41,8 +43,6 @@ if(PROJECT_IS_TOP_LEVEL)
     find_package(cpplint CONFIG REQUIRED)
     find_package(doxygen CONFIG REQUIRED)
 endif()
-
-find_package(cpm CONFIG REQUIRED)
 
 add_subdirectory(src)
 

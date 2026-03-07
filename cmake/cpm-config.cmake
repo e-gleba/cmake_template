@@ -19,6 +19,8 @@ include("${get_cpm_SOURCE_DIR}/CPM.cmake")
 set(CPM_USE_LOCAL_PACKAGES ON)
 # set(CPM_SOURCE_CACHE "/tmp/cpm-cache")
 
+file(WRITE "${CPM_SOURCE_CACHE}/.clang-tidy" "Checks: '-*'\n")
+
 set(cpm_deps_dir "${CMAKE_CURRENT_LIST_DIR}/cpm")
 
 list(APPEND CMAKE_PREFIX_PATH "${cpm_deps_dir}")
