@@ -21,19 +21,21 @@ target_compile_features(sdl_app PRIVATE cxx_std_23)
 target_link_libraries(sdl_app PRIVATE SDL3::SDL3-shared Microsoft.GSL::GSL
                                       warnings)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    add_library(tracy_sandbox SHARED tracy_sandbox.cpp)
-else()
-    add_executable(tracy_sandbox tracy_sandbox.cpp)
-endif()
+if(TARGET Tracy::TracyClient)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+        add_library(tracy_sandbox SHARED tracy_sandbox.cpp)
+    else()
+        add_executable(tracy_sandbox tracy_sandbox.cpp)
+    endif()
 
-target_compile_features(tracy_sandbox PRIVATE cxx_std_23)
-target_link_libraries(
-    tracy_sandbox
-    PRIVATE SDL3::SDL3-shared
-            Tracy::TracyClient
-            Microsoft.GSL::GSL
-            warnings)
+    target_compile_features(tracy_sandbox PRIVATE cxx_std_23)
+    target_link_libraries(
+        tracy_sandbox
+        PRIVATE SDL3::SDL3-shared
+                Tracy::TracyClient
+                Microsoft.GSL::GSL
+                warnings)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     return()
