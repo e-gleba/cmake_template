@@ -8,14 +8,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_library(tests SHARED ${src})
 else()
     add_executable(tests ${src})
-endif()
-
-if(NOT
-   CMAKE_SYSTEM_NAME
-   STREQUAL
-   "Android")
-    set_source_files_properties("junit4_jni.cpp" PROPERTIES HEADER_FILE_ONLY
-                                                            TRUE)
+    set_source_files_properties(junit4_jni.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
 endif()
 
 target_include_directories(tests PRIVATE "${CMAKE_CURRENT_LIST_DIR}")

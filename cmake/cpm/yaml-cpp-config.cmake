@@ -1,4 +1,4 @@
-set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+include_guard(GLOBAL)
 
 cpmaddpackage(
     NAME
@@ -6,7 +6,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     jbeder/yaml-cpp
     GIT_TAG
-    0.8.0
+    yaml-cpp-0.9.0
     SYSTEM
     ON
     GIT_SHALLOW
@@ -14,14 +14,8 @@ cpmaddpackage(
     EXCLUDE_FROM_ALL
     ON
     OPTIONS
-    # Architecture
-    "YAML_BUILD_SHARED_LIBS OFF" # Core option for static build
-    "BUILD_SHARED_LIBS OFF"
-    "YAML_ENABLE_PIC ON" # Good for linking into other libs
-    # Bloat Removal
+    "YAML_BUILD_SHARED_LIBS OFF"
     "YAML_CPP_BUILD_TESTS OFF"
-    "YAML_CPP_BUILD_TOOLS OFF" # Kills the CLI tools
-    "YAML_CPP_BUILD_CONTRIB OFF" # Kills experimental/contrib stuff
-    "YAML_CPP_INSTALL OFF" # No system install
-    "YAML_CPP_FORMAT_SOURCE OFF" # Don't run clang-format during build
-    )
+    "YAML_CPP_BUILD_TOOLS OFF"
+    "YAML_CPP_INSTALL OFF"
+    "YAML_CPP_FORMAT_SOURCE OFF")
