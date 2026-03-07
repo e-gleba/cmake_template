@@ -9,10 +9,10 @@ else {
 }
 
 android {
-    compileSdk = 36
-    ndkVersion = "28.2.13676358"
+    compileSdk 36
+    ndkVersion = '29.0.14206865'
     namespace = "com.egleba.app"
-    buildToolsVersion = "36.0.0"
+    buildToolsVersion = '36.1.0'
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -36,7 +36,7 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments "-DANDROID_PLATFORM=android-21",
+                arguments "-DANDROID_PLATFORM=android-24",
                         "-DANDROID_STL=c++_shared",
                         "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
                         "-DCPM_SOURCE_CACHE=${System.getProperty('user.home')}/.cache/cpm-cmake"
@@ -108,6 +108,7 @@ android {
         abortOnError = false
         checkReleaseBuilds = false
     }
+    compileSdkMinor 1
 }
 
 dependencies {

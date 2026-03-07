@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: cmake-desktop-multiplatform-workflow
 
 permissions:
@@ -5,8 +6,8 @@ permissions:
 
 on:
     push:
-        branches: ["main"]
-        paths:
+        branches: [main]
+        paths: &paths
             - "src/**"
             - "include/**"
             - "cmake/**"
@@ -22,33 +23,17 @@ on:
             - ".github/workflows/**"
             - "android-project/**"
     pull_request:
-        branches: ["main"]
-        paths:
-            - "src/**"
-            - "include/**"
-            - "cmake/**"
-            - "**/*.cmake"
-            - "**/*.cpp"
-            - "**/*.hpp"
-            - "**/*.c"
-            - "**/*.h"
-            - "**/*.cxx"
-            - "**/*.hxx"
-            - "**/CMakeLists.txt"
-            - "CMakePresets.json"
-            - ".github/workflows/**"
-            - "android-project/**"
+        branches: [main]
+        paths: *paths
 
-# Cancel in-flight runs for the same branch/PR. Saves runner
-# minutes on rapid pushes during development.
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
 
+env:
+    CPM_SOURCE_CACHE: ${{ github.workspace }}/.cpm_cache
+
 jobs:
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # Native builds (host == target, can run tests)
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     native:
         runs-on: ${{ matrix.os }}
         strategy:
@@ -68,62 +53,37 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            # ── Linux dependencies ────────────────────────────────
-            - name: Install Linux dependencies
+            - name: install linux deps
               if: runner.os == 'Linux'
               run: |
                   sudo apt-get update -qq
                   sudo apt-get install -y --no-install-recommends \
-                    libwayland-dev \
-                    libxkbcommon-dev \
-                    libegl1-mesa-dev \
-                    libgles2-mesa-dev \
-                    libgl1-mesa-dev \
-                    libdbus-1-dev \
-                    libudev-dev \
-                    libasound2-dev \
-                    ninja-build \
-                    clang
+                    libwayland-dev libxkbcommon-dev \
+                    libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev \
+                    libdbus-1-dev libudev-dev libasound2-dev \
+                    ninja-build clang
 
-            # ── CPM cache (persists across runs) ──────────────────
-            # CPM_SOURCE_CACHE must match what your CMakeLists.txt
-            # or presets set. This avoids re-downloading every dep
-            # on every CI run.
-            - name: Cache CPM packages
-              uses: actions/cache@v4
+            - uses: actions/cache@v4
               with:
                   path: .cpm_cache
                   key: cpm-${{ matrix.artifact-name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
                   restore-keys: cpm-${{ matrix.artifact-name }}-
 
-            # ── Build + test + package (single workflow preset) ───
-            # cmake --workflow runs configure → build → test → package
-            # in sequence as defined in the workflow preset.
-            - name: CMake workflow (${{ matrix.preset }})
+            - name: build (${{ matrix.preset }})
               run: cmake --workflow --preset ${{ matrix.preset }}
 
-            # ── Upload artifacts ──────────────────────────────────
-            # Each generator produces a different extension. Upload
-            # all known types; if-no-files-found: ignore means
-            # missing types don't fail the job.
-            - name: Upload ZIP artifacts
-              uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v4
               with:
                   name: ${{ matrix.artifact-name }}-zip
                   path: build/**/*.zip
                   if-no-files-found: ignore
 
-            - name: Upload TGZ artifacts
-              uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v4
               with:
                   name: ${{ matrix.artifact-name }}-tgz
                   path: build/**/*.tar.gz
                   if-no-files-found: ignore
 
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # Cross-compilation: Linux → Windows via llvm-mingw
-    # No test step — cross-compiled .exe cannot run on Linux host.
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     cross-windows:
         runs-on: ubuntu-latest
         strategy:
@@ -140,45 +100,33 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Install build tools
+            - name: install build tools
               run: |
                   sudo apt-get update -qq
-                  sudo apt-get install -y --no-install-recommends \
-                    ninja-build
+                  sudo apt-get install -y --no-install-recommends ninja-build
 
-            # Cache the llvm-mingw toolchain download (~200MB).
-            # The toolchain extracts to <source>/.llvm_mingw/ via
-            # the toolchain file. Cache both the archive and the
-            # extracted tree.
-            - name: Cache llvm-mingw toolchain
-              uses: actions/cache@v4
+            - uses: actions/cache@v4
               with:
                   path: |
                       .llvm-mingw-cache
                       llvm_mingw
                   key: llvm-mingw-${{ hashFiles('cmake/toolchains/llvm_mingw.cmake') }}
 
-            - name: Cache CPM packages
-              uses: actions/cache@v4
+            - uses: actions/cache@v4
               with:
                   path: .cpm_cache
                   key: cpm-${{ matrix.artifact-name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
                   restore-keys: cpm-${{ matrix.artifact-name }}-
 
-            # Workflow preset runs configure → build → package (no test).
-            - name: CMake workflow (${{ matrix.preset }})
+            - name: build (${{ matrix.preset }})
               run: cmake --workflow --preset ${{ matrix.preset }}
 
-            - name: Upload TXZ artifacts
-              uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v4
               with:
                   name: ${{ matrix.artifact-name }}-txz
                   path: build/**/*.tar.xz
                   if-no-files-found: ignore
 
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # Android APK build via Gradle (not CMake workflow presets)
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     build-apk:
         runs-on: ubuntu-latest
         strategy:
@@ -188,7 +136,6 @@ jobs:
                     - build-type: debug
                       gradle-task: assembleDebug
                       abi: x86_64
-                    # Uncomment when ready:
                     # - build-type: debug
                     #   gradle-task: assembleDebug
                     #   abi: arm64-v8a
@@ -206,32 +153,27 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Set up JDK 17
-              uses: actions/setup-java@v4
+            - uses: actions/setup-java@v4
               with:
                   java-version: "17"
-                  distribution: "temurin"
+                  distribution: temurin
                   cache: gradle
 
-            - name: Cache CPM packages
-              uses: actions/cache@v4
+            - uses: actions/cache@v4
               with:
                   path: .cpm_cache
                   key: cpm-android-${{ matrix.abi }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
                   restore-keys: cpm-android-${{ matrix.abi }}-
 
-            - name: Make gradlew executable
-              run: chmod +x "${{ env.ANDROID_PROJECT_DIR }}/gradlew"
-
-            - name: Build Android ${{ matrix.build-type }} (${{ matrix.abi }})
+            - name: build apk (${{ matrix.abi }} ${{ matrix.build-type }})
               working-directory: ${{ env.ANDROID_PROJECT_DIR }}
               run: |
-                  ./gradlew --no-daemon --stacktrace \
-                    clean :app:${{ matrix.gradle-task }} \
+                  chmod +x gradlew
+                  ./gradlew --stacktrace \
+                    :app:${{ matrix.gradle-task }} \
                     -Pandroid.injected.build.abi=${{ matrix.abi }}
 
-            - name: Upload APK
-              uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v4
               with:
                   name: android-${{ matrix.abi }}-${{ matrix.build-type }}-apk
                   path: ${{ env.ANDROID_PROJECT_DIR }}/app/build/outputs/apk/**/*.apk

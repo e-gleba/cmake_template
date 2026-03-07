@@ -5,8 +5,8 @@
 # Build system
 androidGradlePlugin = "9.1.0"
 junit = "4.13.2"
-junitJupiter = "5.13.4"
-junitPlatformLauncher = "1.13.4"
+junitJupiter = "6.0.3"
+junitPlatformLauncher = "6.0.3"
 junitVersion = "1.3.0"
 runner = "1.7.0"
 rules = "1.7.0"
