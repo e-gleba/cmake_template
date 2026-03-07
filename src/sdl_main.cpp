@@ -3,12 +3,13 @@
 
 #include <cstdlib>
 #include <gsl/gsl>
-#include <print>
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        std::println(stderr, "sdl_init failed: {}", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "sdl_init failed: %s",
+                     SDL_GetError());
         return EXIT_FAILURE;
     }
     auto _ = gsl::finally([] { SDL_Quit(); });
@@ -36,9 +37,13 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
     int button_id = -1;
     if (!SDL_ShowMessageBox(&box, &button_id)) {
-        std::println(stderr, "show_message_box failed: {}", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "show_message_box failed: %s",
+                     SDL_GetError());
         return EXIT_FAILURE;
     }
+
+    SDL_Log("button_id == %d", button_id);
 
     return EXIT_SUCCESS;
 }
