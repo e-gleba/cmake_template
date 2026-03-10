@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# waydroid_setup.sh — Fedora KDE 43, Waydroid + Magisk + Frida
+# waydroid_setup.sh — Fedora KDE 43, Waydroid + Magisk + ARM + GApps + Frida
 # Modes:  check | install | reinstall (default: check)
 #
 # Examples:
@@ -10,17 +10,21 @@
 #   ./waydroid_setup.sh check --verbose    # extra debug output
 set -euo pipefail
 
-# -- defaults TODO -─
+# ── defaults ──
 
 MODE="check"
 DO_FRIDA=1
 DO_APK=1
 DO_MAGISK=1
+DO_ARM=1
+DO_GAPPS=1
 VERBOSE=0
 APK_PATH="${HOME}/Downloads/some.apk"
 MAGISK_DIR="${HOME}/Downloads/magiskWaydroid"
+WAYDROID_SCRIPT_DIR="${HOME}/Downloads/waydroid_script"
 FRIDA_HOST="192.168.240.112:27042"
 FRIDA_VENV_DIR="${HOME}/.cache/waydroid-frida/.venv"
+ARM_BACKEND="libhoudini" # libhoudini | libndk
 
 # ── usage ──
 
@@ -37,8 +41,12 @@ Flags:
   --no-frida          skip frida server/client setup
   --no-apk            skip apk installation
   --no-magisk         skip magisk rooting
-  --apk PATH          path to .apk (default: ~/Downloads/world-conqueror-4-*.apk)
+  --no-arm            skip ARM translation install
+  --no-gapps          skip GApps install
+  --arm-backend B     libhoudini (default) or libndk
+  --apk PATH          path to .apk
   --magisk-dir DIR    magisk installer dir (default: ~/Downloads/magiskWaydroid)
+  --script-dir DIR    casualsnek/waydroid_script dir (default: ~/Downloads/waydroid_script)
   --frida-host H:P    frida remote host:port (default: 192.168.240.112:27042)
   --verbose           extra debug output
   -h, --help          this message
@@ -58,12 +66,22 @@ while [[ $# -gt 0 ]]; do
   --no-frida) DO_FRIDA=0 ;;
   --no-apk) DO_APK=0 ;;
   --no-magisk) DO_MAGISK=0 ;;
+  --no-arm) DO_ARM=0 ;;
+  --no-gapps) DO_GAPPS=0 ;;
+  --arm-backend)
+    ARM_BACKEND="$2"
+    shift
+    ;;
   --apk)
     APK_PATH="$2"
     shift
     ;;
   --magisk-dir)
     MAGISK_DIR="$2"
+    shift
+    ;;
+  --script-dir)
+    WAYDROID_SCRIPT_DIR="$2"
     shift
     ;;
   --frida-host)
@@ -113,6 +131,22 @@ wait_boot() {
     sleep 2
   done
   err "android did not boot in 60s"
+}
+
+ensure_waydroid_script() {
+  if [[ ! -d "$WAYDROID_SCRIPT_DIR" ]]; then
+    info "cloning casualsnek/waydroid_script"
+    git clone --depth=1 https://github.com/casualsnek/waydroid_script "$WAYDROID_SCRIPT_DIR"
+  fi
+  if [[ ! -f "$WAYDROID_SCRIPT_DIR/venv/bin/python3" ]]; then
+    info "setting up waydroid_script venv"
+    python3 -m venv "$WAYDROID_SCRIPT_DIR/venv"
+    "$WAYDROID_SCRIPT_DIR/venv/bin/pip" install -r "$WAYDROID_SCRIPT_DIR/requirements.txt"
+  fi
+}
+
+waydroid_script_run() {
+  sudo "$WAYDROID_SCRIPT_DIR/venv/bin/python3" "$WAYDROID_SCRIPT_DIR/main.py" "$@"
 }
 
 # ── check functions (read-only, return 0/1) ──
@@ -209,6 +243,26 @@ check_arm_translation() {
   return 0
 }
 
+check_gapps() {
+  info "GApps"
+  local vending gms gsf
+  vending="$(sudo waydroid shell -- pm path com.android.vending 2>/dev/null || true)"
+  gms="$(sudo waydroid shell -- pm path com.google.android.gms 2>/dev/null || true)"
+  gsf="$(sudo waydroid shell -- pm path com.google.android.gsf 2>/dev/null || true)"
+
+  if [[ -n "$vending" && -n "$gms" && -n "$gsf" ]]; then
+    ok "play store: $vending"
+    ok "gms: $gms"
+    ok "gsf: $gsf"
+    return 0
+  else
+    [[ -z "$vending" ]] && warn "com.android.vending (play store) missing"
+    [[ -z "$gms" ]] && warn "com.google.android.gms missing"
+    [[ -z "$gsf" ]] && warn "com.google.android.gsf missing"
+    return 1
+  fi
+}
+
 check_network() {
   info "network (inside android)"
   local rc=0
@@ -217,8 +271,7 @@ check_network() {
     ok "default route present"
     dbg "$(sudo waydroid shell -- ip route 2>/dev/null)"
   else
-    warn "no default route"
-    rc=1
+    warn "no default route (may be false positive if pings pass)"
   fi
 
   if sudo waydroid shell -- ping -c1 -W3 8.8.8.8 &>/dev/null; then
@@ -318,6 +371,45 @@ do_magisk() {
   ok "magisk installed"
 }
 
+do_arm_translation() {
+  info "ARM TRANSLATION ($ARM_BACKEND)"
+  ensure_waydroid_script
+
+  sudo waydroid session stop 2>/dev/null || true
+
+  waydroid_script_run uninstall libhoudini 2>/dev/null || true
+  waydroid_script_run uninstall libndk 2>/dev/null || true
+
+  waydroid_script_run install "$ARM_BACKEND"
+
+  sudo systemctl restart waydroid-container
+  waydroid show-full-ui &
+  wait_boot
+  ok "$ARM_BACKEND installed"
+}
+
+do_gapps() {
+  info "GAPPS"
+  ensure_waydroid_script
+
+  sudo waydroid session stop 2>/dev/null || true
+  waydroid_script_run install gapps
+
+  sudo systemctl restart waydroid-container
+  waydroid show-full-ui &
+  wait_boot
+  ok "gapps installed"
+
+  echo ""
+  echo "  next steps:"
+  echo "    1. run: cd $WAYDROID_SCRIPT_DIR && sudo venv/bin/python3 main.py certified"
+  echo "    2. register device id at https://google.com/android/uncertified"
+  echo "    3. wait 10-20 min"
+  echo "    4. run: sudo waydroid shell -- pm clear com.google.android.gms"
+  echo "    5. restart waydroid, sign into play store"
+  echo ""
+}
+
 do_apk() {
   info "APK"
   if [[ -f "$APK_PATH" ]]; then
@@ -357,7 +449,7 @@ do_frida() {
   unxz -f "$FRIDA_TMP/frida-server.xz"
 
   mkdir -p "$HOME/.local/share/waydroid/data/local/tmp"
-  cp "$FRIDA_TMP/frida-server" "$HOME/.local/share/waydroid/data/local/tmp/frida-server"
+  sudo cp "$FRIDA_TMP/frida-server" "$HOME/.local/share/waydroid/data/local/tmp/frida-server"
 
   sudo waydroid shell -- cp /data/local/tmp/frida-server /system/bin/frida-server
   sudo waydroid shell -- chmod 755 /system/bin/frida-server
@@ -378,6 +470,7 @@ check)
   if check_session; then
     check_root || true
     check_arm_translation || true
+    check_gapps || true
     check_network || true
     ((DO_FRIDA)) && { check_frida || true; }
   fi
@@ -394,11 +487,14 @@ install)
   fi
   do_boot
   if ((DO_MAGISK)); then
-    if ! check_root; then
-      do_magisk
-    fi
+    check_root || do_magisk
   fi
-  check_arm_translation || warn "arm translation missing, install separately"
+  if ((DO_ARM)); then
+    check_arm_translation || do_arm_translation
+  fi
+  if ((DO_GAPPS)); then
+    check_gapps || do_gapps
+  fi
   check_network || warn "no internet inside android"
   ((DO_APK)) && do_apk
   ((DO_FRIDA)) && { check_frida || do_frida; }
@@ -411,8 +507,9 @@ reinstall)
   do_install_waydroid
   do_boot
   ((DO_MAGISK)) && do_magisk
+  ((DO_ARM)) && do_arm_translation
+  ((DO_GAPPS)) && do_gapps
   check_root || warn "root not obtained"
-  check_arm_translation || warn "arm translation missing"
   check_network || warn "no internet inside android"
   ((DO_APK)) && do_apk
   ((DO_FRIDA)) && do_frida
