@@ -3,7 +3,7 @@
 
 [versions]
 # Build system
-androidGradlePlugin = "9.1.0"
+androidGradlePlugin = "9.2.0"
 junit = "4.13.2"
 junitJupiter = "6.0.3"
 junitPlatformLauncher = "6.0.3"
