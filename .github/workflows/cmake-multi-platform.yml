@@ -165,6 +165,9 @@ jobs:
                   key: cpm-android-${{ matrix.abi }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
                   restore-keys: cpm-android-${{ matrix.abi }}-
 
+            - name: accept android sdk licenses
+              run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
             - name: build apk (${{ matrix.abi }} ${{ matrix.build-type }})
               working-directory: ${{ env.ANDROID_PROJECT_DIR }}
               run: |
