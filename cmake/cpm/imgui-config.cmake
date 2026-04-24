@@ -2,7 +2,7 @@ cpmaddpackage(
     NAME
     imgui
     VERSION
-    1.92.6
+    1.92.7
     GITHUB_REPOSITORY
     ocornut/imgui
     EXCLUDE_FROM_ALL
@@ -44,4 +44,3 @@ target_sources(
             ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp)
 
 target_link_libraries(imgui_sdl3_opengl3 PUBLIC imgui SDL3::SDL3)
-

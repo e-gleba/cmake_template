@@ -5,11 +5,13 @@ cpmaddpackage(
     doctest/doctest
     VERSION
     2.5.2
-    SYSTEM
-    ON
+    GIT_TAG
+    v2.5.2
     GIT_SHALLOW
     ON
     EXCLUDE_FROM_ALL
+    ON
+    SYSTEM
     ON
     OPTIONS
     "DOCTEST_WITH_TESTS OFF"
@@ -18,12 +20,12 @@ cpmaddpackage(
     "DOCTEST_USE_STD_HEADERS ON")
 
 if(doctest_ADDED)
-    set(doctest_cmake_path "${doctest_SOURCE_DIR}/scripts/cmake")
-    set(doctest_source "downloaded")
+    set(doctest_modroot "${doctest_SOURCE_DIR}/scripts/cmake")
+    set(doctest_label "fetch")
 else()
-    set(doctest_cmake_path "${doctest_DIR}")
-    set(doctest_source "system")
+    set(doctest_modroot "${doctest_DIR}")
+    set(doctest_label "system")
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${doctest_cmake_path}")
-message(STATUS "doctest (${doctest_source}) -> '${doctest_cmake_path}'")
+list(APPEND CMAKE_MODULE_PATH "${doctest_modroot}")
+message(STATUS "doctest [${doctest_label}] ${doctest_modroot}")

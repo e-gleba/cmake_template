@@ -2,7 +2,7 @@ cpmaddpackage(
     NAME
     implot
     VERSION
-    0.17
+    1.0
     GITHUB_REPOSITORY
     epezent/implot
     SYSTEM
@@ -21,7 +21,7 @@ target_sources(
     PRIVATE ${implot_SOURCE_DIR}/implot.cpp
             ${implot_SOURCE_DIR}/implot_items.cpp
             ${implot_SOURCE_DIR}/implot_demo.cpp # optional demo
-    )
+)
 
 target_include_directories(implot SYSTEM PUBLIC ${implot_SOURCE_DIR})
 
