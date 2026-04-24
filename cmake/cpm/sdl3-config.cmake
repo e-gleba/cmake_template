@@ -86,7 +86,19 @@ if(TARGET SDL3-shared)
     set_target_properties(SDL3-shared PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
 endif()
 
-if(APPLE AND TARGET SDL3-shared)
-    target_link_options(SDL3-shared INTERFACE
-                        "SHELL:-Wl,-U,___isPlatformVersionAtLeast")
-endif()
+# Adding backend implementations
+#
+# OpenGL installation commands:
+#   - Windows:   vcpkg install opengl --triplet=x64-windows
+#   - Fedora:    sudo dnf install mesa-libGL-devel mesa-libGLU-devel
+#   - Arch:      sudo pacman -S mesa glu
+#   - Ubuntu:    sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev
+
+add_library(imgui_sdl3_opengl3 STATIC)
+
+target_sources(
+    imgui_sdl3_opengl3
+    PRIVATE ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp)
+
+target_link_libraries(imgui_sdl3_opengl3 PUBLIC imgui SDL3::SDL3)

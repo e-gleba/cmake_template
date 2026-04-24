@@ -34,7 +34,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     hoene/libmysofa
     GIT_TAG
-    v1.3.2
+    v1.3.4
     SYSTEM
     ON
     GIT_SHALLOW
@@ -49,7 +49,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     google/flatbuffers
     GIT_TAG
-    v25.9.23
+    v25.12.19-2026-02-06-03fffb2
     SYSTEM
     ON
     GIT_SHALLOW
@@ -65,7 +65,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     ValveSoftware/steam-audio
     GIT_TAG
-    v4.8.0
+    v4.8.1
     SYSTEM
     ON
     GIT_SHALLOW
