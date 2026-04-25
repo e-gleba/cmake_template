@@ -86,6 +86,11 @@ android {
                 jniLibs.srcDirs = ['libs']
             }
         }
+        androidTest {
+            if (!excludeNativeLibs) {
+                jniLibs.srcDirs = ['libs']
+            }
+        }
     }
 
     if (isLibrary) {

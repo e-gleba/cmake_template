@@ -1,5 +1,8 @@
 package com.egleba.app;
 
+import android.os.Build;
+import static org.junit.Assume.assumeTrue;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -23,36 +26,22 @@ import static org.junit.Assert.assertTrue;
 ///
 /// @see https://developer.android.com/ndk/guides/test-native-libraries
 /// @see https://developer.android.com/training/testing/unit-testing/instrumented-unit-tests
+/// @see gradle task :app:connectedDebugAndroidTest
 @RunWith(Parameterized.class)
 public final class AppActivityTest {
 
     static {
+        assumeTrue("Must run on device", !Build.FINGERPRINT.equals("robolectric"));
         System.loadLibrary("tests");
     }
 
-    /// Retrieves the list of available native test names.
-    ///
-    /// Queries the embedded native test suite for registered test identifiers.
-    /// Used to populate JUnit parameterized instances.
-    ///
-    /// @return Array of native test names, or null if unavailable
-    public static native String[] getTestNames();
+    private static native String[] getTestNames();
 
-    /// Executes a specific native test by name.
-    ///
-    /// @param name Test identifier to run
-    /// @return true if passed, false otherwise
-    public static native boolean runTest(String name);
+    private static native boolean runTest(String name);
 
-    /// The name of the current test case being executed.
     @Parameterized.Parameter
     public String testName;
 
-    /// Provides test parameters for JUnit's parameterized runner.
-    ///
-    /// Safely handles null or empty native test lists to avoid runtime errors.
-    ///
-    /// @return Collection of test name parameters; empty if no tests found
     @Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         final String[] names = Objects.requireNonNull(getTestNames(),
@@ -62,11 +51,8 @@ public final class AppActivityTest {
                 .collect(Collectors.toList());
     }
 
-    /// Executes a single native test case.
-    ///
-    /// Asserts that the native test passes; includes test name in failure message.
     @Test
     public void runSingle() {
-        assertTrue("❌ Native test '" + testName + "' failed", runTest(testName));
+        assertTrue("Native test failed: " + testName, runTest(testName));
     }
 }

@@ -1,17 +1,25 @@
-#include "main.h"
+#include "main.hpp"
 
 // Enable doctest introspection
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest/doctest.h>
 
-[[nodiscard]] std::set<std::string> get_all_tests()
-{
-    std::set<std::string> names;
-    for (const auto& test : doctest::detail::getRegisteredTests())
-    {
-        names.insert(test.m_name);
-    }
-    return names;
+#include <algorithm>           // std::ranges::transform
+#include <iterator>            // std::inserter
+#include <ranges>
+
+[[nodiscard]] auto get_all_tests() -> std::set<std::string> {
+    const std::set<doctest::detail::TestCase> &registered = doctest::detail::getRegisteredTests();
+
+    auto names = registered
+                 | std::views::transform(
+            [](const auto &tc) { return std::string{tc.m_name}; });
+
+#if __cplusplus >= 202302L
+    return std::ranges::to<std::set>(names);
+#else
+    return {std::ranges::begin(names), std::ranges::end(names)};
+#endif
 }
 
 int main()
