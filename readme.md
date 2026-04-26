@@ -39,22 +39,26 @@ Most CMake starters stop at "it builds on my machine". This template goes furthe
 
 ## Comparison
 
-| Feature | cmake_template | [kigster/cmake-project-template](https://github.com/kigster/cmake-project-template) | [district10/cmake-templates](https://github.com/district10/cmake-templates) | [pamplejuce](https://github.com/sudara/pamplejuce) |
-| :-- | :--: | :--: | :--: | :--: |
-| Pitch | Generic C++ starter with cross-compile | Minimal C/C++ starter | Qt / Boost / OpenCV examples | JUCE audio plugins |
-| C++ Standard | **23 / 26** | unspecified | **11** | unspecified |
-| CMake Presets | 10+ with workflows | basic | — | JUCE-oriented |
-| Android NDK | ✅ | ❌ | ❌ | ❌ |
-| Linux → Windows cross | ✅ llvm-mingw | ❌ | ❌ | ❌ |
-| Docker / CI-ready | ✅ Dockerfile + GitHub Actions | ❌ | ❌ | ✅ GitHub Actions |
-| CPack packaging | ✅ tar.gz / zip / tar.xz | ❌ | ❌ | ❌ |
-| Dependency manager | CPM | — | — | — |
-| Qt / OpenGL | ❌ | ❌ | ✅ | ❌ |
-| Audio / JUCE | ❌ | ❌ | ❌ | ✅ |
-| Conan / vcpkg | ❌ [planned (#3)](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ |
-| C++20 modules | ❌ [planned (#5)](https://github.com/e-gleba/cmake_template/issues/5) | ❌ | ❌ | ❌ |
+| Feature | cmake_template | [cpp-best-practices](https://github.com/cpp-best-practices/cmake_template) | [kigster](https://github.com/kigster/cmake-project-template) | [district10](https://github.com/district10/cmake-templates) | [pamplejuce](https://github.com/sudara/pamplejuce) |
+| :-- | :--: | :--: | :--: | :--: | :--: |
+| Pitch | Generic C++ starter with cross-compile | Opinionated best-practice starter | Minimal C/C++ starter | Qt / Boost / OpenCV examples | JUCE audio plugins |
+| C++ Standard | **23 / 26** | 17 / 20 | unspecified | **11** | unspecified |
+| CMake Presets | 10+ with workflows | — | basic | — | JUCE-oriented |
+| Android NDK | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Linux → Windows cross | ✅ llvm-mingw | ❌ | ❌ | ❌ | ❌ |
+| WebAssembly | ❌ [planned (#2)](https://github.com/e-gleba/cmake_template/issues/2) | ✅ + GitHub Pages deploy | ❌ | ❌ | ❌ |
+| Docker / CI-ready | ✅ Dockerfile + GitHub Actions | ✅ Docker + Actions | ❌ | ❌ | ✅ GitHub Actions |
+| CPack packaging | ✅ tar.gz / zip / tar.xz | ❌ | ❌ | ❌ | ❌ |
+| Dependency manager | CPM | CPM | — | — | — |
+| Sanitizers (ASan/UBSan) | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Fuzz testing | ❌ | ✅ libFuzzer | ❌ | ❌ | ❌ |
+| Codecov / CodeQL | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Qt / OpenGL | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Audio / JUCE | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Conan / vcpkg | ❌ [planned (#3)](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ | ❌ |
+| C++20 modules | ❌ [planned (#5)](https://github.com/e-gleba/cmake_template/issues/5) | ❌ | ❌ | ❌ | ❌ |
 
-> Honest notes: this template is intentionally generic — it does not include Qt, OpenGL, or audio scaffolding. Those are well covered by specialized starters above. We focus on cross-platform build engineering.
+> Honest notes: this template is intentionally generic — it does not include Qt, OpenGL, audio scaffolding, or sanitizers. Those are well covered by specialized starters above. We focus on cross-platform build engineering and packaging.
 
 ## Prerequisites
 
