@@ -45,10 +45,12 @@ Most CMake starters stop at "it builds on my machine". This template goes furthe
 | C++ Standard | **23 / 26** | 17 / 20 | unspecified | **11** | unspecified |
 | CMake Presets | 10+ with workflows | — | basic | — | JUCE-oriented |
 | Android NDK | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Android instrumentation (tests) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Linux → Windows cross | ✅ llvm-mingw | ❌ | ❌ | ❌ | ❌ |
 | WebAssembly | ❌ [planned (#2)](https://github.com/e-gleba/cmake_template/issues/2) | ✅ + GitHub Pages deploy | ❌ | ❌ | ❌ |
 | Docker / CI-ready | ✅ Dockerfile + GitHub Actions | ✅ Docker + Actions | ❌ | ❌ | ✅ GitHub Actions |
 | CPack packaging | ✅ tar.gz / zip / tar.xz | ❌ | ❌ | ❌ | ❌ |
+| CTest test runner | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Dependency manager | CPM + [prebuilt/air-gapped (#8)](https://github.com/e-gleba/cmake_template/issues/8) | CPM | — | — | — |
 | vcpkg compatibility | ❌ [planned (#3)](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ | ❌ |
 | Sanitizers (ASan/UBSan) | ❌ [planned (#9)](https://github.com/e-gleba/cmake_template/issues/9) | ✅ | ❌ | ❌ | ❌ |
