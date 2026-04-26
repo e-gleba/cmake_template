@@ -70,7 +70,7 @@ cpmaddpackage(
     "SDL_POWER OFF"
     "SDL_SENSOR ${sdl_sensor}"
     # ---- video backends ----
-    "SDL_X11 OFF"
+    "SDL_X11 ON"
     "SDL_WAYLAND ${sdl_wayland}"
     "SDL_KMSDRM OFF"
     "SDL_RPI OFF"

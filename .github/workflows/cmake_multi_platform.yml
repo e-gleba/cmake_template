@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: cmake-desktop-multiplatform-workflow
+name: cmake_multiplatform_workflow
 
 on:
     push:
@@ -22,6 +22,9 @@ on:
     pull_request:
         branches: [main]
         paths: *paths
+    release:
+        types: [published]
+    workflow_dispatch:
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
@@ -62,6 +65,7 @@ jobs:
                   sudo apt-get update -qq
                   sudo apt-get install -y --no-install-recommends \
                     ninja-build clang \
+                    doxygen graphviz \
                     libwayland-dev libxkbcommon-dev \
                     libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev \
                     libdbus-1-dev libudev-dev libasound2-dev
@@ -76,6 +80,42 @@ jobs:
             - name: build
               run: cmake --workflow --preset ${{ matrix.preset }}
 
+            # ── Documentation (Clang only) ───────────────────────────────────
+            - name: build documentation
+              if: matrix.preset == 'clang-full'
+              run: cmake --build --preset clang-docs
+
+            - name: verify documentation
+              if: matrix.preset == 'clang-full'
+              run: |
+                  index_path="build/clang/generated_docs/html/index.html"
+                  if [[ ! -f "${index_path}" ]]; then
+                    echo "::error::Documentation index not found at ${index_path}"
+                    exit 1
+                  fi
+                  echo "Documentation ready: ${index_path}"
+                  du -sh build/clang/generated_docs/html/
+                  find build/clang/generated_docs/html -maxdepth 1 -type f | sort
+
+            - name: upload documentation artifact
+              if: matrix.preset == 'clang-full'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: doxygen_html_${{ github.run_id }}
+                  path: build/clang/generated_docs/html/
+                  retention-days: 30
+                  if-no-files-found: error
+
+            - name: documentation summary
+              if: matrix.preset == 'clang-full' && always()
+              run: |
+                  echo "## Documentation build result" >> $GITHUB_STEP_SUMMARY
+                  echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- Trigger: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
+                  echo "- Ref: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+                  echo "- Preset: \`clang-docs\`" >> $GITHUB_STEP_SUMMARY
+                  echo "- Artifact: \`doxygen_html_${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+            # ──────────────────────────────────────────────────────────────────
             - name: upload zip artifact
               uses: actions/upload-artifact@v7
               with:
@@ -93,8 +133,6 @@ jobs:
                   compression-level: 0
 
     # ── cross-compile: Linux → Windows (llvm-mingw) ─────────────────────────────
-    # Build dirs must NOT be cached — a stale CMakeCache.txt from a different ABI
-    # run poisons CMAKE_SYSROOT (x86_64 sysroot leaks into i686/aarch64).
     cross-windows:
         name: cross-windows / ${{ matrix.artifact-name }}
         runs-on: ubuntu-latest
@@ -118,9 +156,6 @@ jobs:
                   sudo apt-get update -qq
                   sudo apt-get install -y --no-install-recommends ninja-build
 
-            # Keyed on toolchain cmake file hash — bumping LLVM_MINGW_VERSION there
-            # automatically busts this cache and triggers a fresh download.
-            # No restore-keys: partial toolchain = broken toolchain.
             - name: cache llvm-mingw toolchain
               uses: actions/cache@v5
               with:
@@ -145,8 +180,7 @@ jobs:
                   if-no-files-found: ignore
                   compression-level: 0
 
-        # ── android APK build ────────────────────────────────────────────────────────
-    # Gradle daemon disabled — ephemeral CI runners gain nothing from persistence.
+    # ── android APK build ────────────────────────────────────────────────────────
     build-apk:
         name: android / ${{ matrix.build-type }}
         runs-on: ubuntu-latest
@@ -156,8 +190,6 @@ jobs:
                 include:
                     - build-type: release
                       gradle-task: assembleRelease
-                    # - build-type: debug
-                    #   gradle-task: assmbleDebug
 
         env:
             ANDROID_PROJECT_DIR: ${{ github.workspace }}/android-project
@@ -190,7 +222,6 @@ jobs:
                   key: cpm-android-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
                   restore-keys: cpm-android-
 
-            # sdkmanager exits 1 when all licenses already accepted — || true swallows it.
             - name: accept android sdk licenses
               run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
@@ -207,9 +238,6 @@ jobs:
                   compression-level: 0
 
     # ── android instrumented tests ──────────────────────────────────────────────
-    # Spins up an x86_64 emulator (fast on GitHub-hosted runners) and runs the
-    # androidTest source set.  The task builds its own debug + test APKs, so this
-    # job can run in parallel with build-apk.
     android-test:
         name: android / instrumented-tests
         runs-on: ubuntu-latest

@@ -241,6 +241,16 @@
             "inherits": "build-debug"
         },
         {
+            "name": "clang-docs",
+            "displayName": "Clang (Documentation)",
+            "description": "Generate Doxygen documentation only",
+            "configurePreset": "clang",
+            "inherits": "build-release",
+            "targets": [
+                "docs"
+            ]
+        },
+        {
             "name": "gcc-release",
             "displayName": "GCC (Release)",
             "configurePreset": "gcc",
