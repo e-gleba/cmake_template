@@ -214,6 +214,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 ## References
 
 ### Standards & Drafts
+
 - **[C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/)** — Authoritative coding standard maintained by Stroustrup & Sutter [isocpp/CppCoreGuidelines](https://github.com/isocpp/CppCoreGuidelines)
 - **[cppreference.com](https://en.cppreference.com/)** — Community-driven language and standard library reference
 - **[DevDocs C++](https://devdocs.io/cpp/)** — Aggregated, offline-capable API documentation
@@ -231,6 +232,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[endoflife.date](https://endoflife.date/)** — End-of-life dates for compilers, libraries, and platforms
 
 ### Build, CMake & Packaging
+
 - **[CMake Documentation](https://cmake.org/cmake/help/latest/)** — Official command and variable reference [Kitware/CMake](https://github.com/Kitware/CMake)
 - **[Modern CMake](https://cliutils.gitlab.io/modern-cmake/)** — Practical guide to idiomatic, target-based CMake
 - **[CMake Cookbook](https://github.com/dev-cafe/cmake-cookbook)** — Ready-to-use recipes for real-world build problems [dev-cafe/cmake-cookbook](https://github.com/dev-cafe/cmake-cookbook)
@@ -246,12 +248,14 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **Хабр: Создаем свою простую (C++) библиотеку с документацией, CMake и блекджеком** — Practical walkthrough of a documented CMake library release
 
 ### Build Profiling & Tracing
+
 - **[Clang `-ftime-trace`](https://clang.llvm.org/docs/UsersManual.html#time-trace)** — Generates Chrome-trace `.json` for per-compilation profiling; use `clang++ -ftime-trace` [llvm/llvm-project](https://github.com/llvm/llvm-project)
 - **[CMake profiling](https://cmake.org/cmake/help/latest/manual/cmake.1.html#profiling)** — Native profiling output in Google Trace format via `cmake --profiling-output=trace.json --profiling-format=google-trace` [Kitware/CMake](https://github.com/Kitware/CMake)
 - **[Perfetto UI](https://ui.perfetto.dev)** — Advanced trace visualization for build and runtime profiling [google/perfetto](https://github.com/google/perfetto)
 - **[Chrome Tracing](chrome://tracing)** — Built-in Chromium viewer for JSON trace events
 
 ### Debuggers & Execution Control
+
 - **[LLDB](https://lldb.llvm.org/)** — LLVM native debugger with scriptable Python/C++ APIs [llvm/llvm-project](https://github.com/llvm/llvm-project)
 - **[GDB](https://www.gnu.org/software/gdb/)** — GNU Project debugger supporting remote and embedded targets [bminor/binutils-gdb](https://github.com/bminor/binutils-gdb)
 - **[x64dbg](https://x64dbg.com/)** — Open-source Windows x64/x32 debugger for reverse engineering and malware analysis [x64dbg/x64dbg](https://github.com/x64dbg/x64dbg)
@@ -261,6 +265,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[raddbg](https://github.com/EpicGames/raddbg)** — Epic Games visual debugger focused on C/C++ data-oriented inspection [EpicGames/raddbg](https://github.com/EpicGames/raddbg)
 
 ### Reverse Engineering & Disassembly
+
 - **[Ghidra](https://ghidra-sre.org/)** — NSA-developed software reverse engineering framework with decompiler and scripting [NationalSecurityAgency/ghidra](https://github.com/NationalSecurityAgency/ghidra)
 - **[Cutter](https://cutter.re/)** — Qt-based GUI for Rizin/Radare2 reverse engineering [rizinorg/cutter](https://github.com/rizinorg/cutter)
 - **[Rizin](https://rizin.re/)** — UNIX-like reverse engineering framework and command-line toolset [rizinorg/rizin](https://github.com/rizinorg/rizin)
@@ -269,6 +274,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[Decompiler Explorer](https://dogbolt.org/)** — Side-by-side comparison of decompiler outputs from multiple engines
 
 ### Online Tooling & Playgrounds
+
 - **[Compiler Explorer](https://godbolt.org/)** — Live assembly exploration across compilers and architectures; created by Matt Godbolt [compiler-explorer/compiler-explorer](https://github.com/compiler-explorer/compiler-explorer)
 - **[Matt Godbolt — What Has My Compiler Done for Me Lately](https://www.youtube.com/watch?v=bSkpMdDe4g4)** — Seminal talk on reading and understanding compiler-generated assembly
 - **[C++ Insights](https://cppinsights.io/)** — See template instantiations and compiler transformations [andreasfertig/cppinsights](https://github.com/andreasfertig/cppinsights)
@@ -280,6 +286,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[Decompiler Explorer](https://dogbolt.org/)** — Side-by-side decompiler output comparison
 
 ### Code Quality, Sanitizers & Analysis
+
 - **[Clangd](https://clangd.llvm.org/)** — LLVM language server for IDE completion, navigation, and refactoring [llvm/llvm-project](https://github.com/llvm/llvm-project)
 - **[Clang-Tidy](https://clang.llvm.org/extra/clang-tidy/)** — Extensible linting with modern C++ checks and auto-fixes [llvm/llvm-project](https://github.com/llvm/llvm-project)
 - **[Clang Static Analyzer](https://clang-analyzer.llvm.org/)** — Source-level bug detection for C, C++, and Objective-C
@@ -292,6 +299,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[DynamoRIO](https://dynamorio.org/)** — Runtime code manipulation system for dynamic instrumentation and analysis [DynamoRIO/dynamorio](https://github.com/DynamoRIO/dynamorio)
 
 ### Testing & Benchmarking
+
 - **[Catch2](https://github.com/catchorg/Catch2)** — Modern, header-only capable C++ test framework [catchorg/Catch2](https://github.com/catchorg/Catch2)
 - **[GoogleTest](https://github.com/google/googletest)** — Google's xUnit-style testing and mocking framework [google/googletest](https://github.com/google/googletest)
 - **[doctest](https://github.com/doctest/doctest)** — Light, fast single-header testing library [doctest/doctest](https://github.com/doctest/doctest)
@@ -299,6 +307,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[Quick C++ Benchmark](https://quick-bench.com/)** — Online micro-benchmark playground [FredTingaud/quick-bench](https://github.com/FredTingaud/quick-bench)
 
 ### Performance & Architecture
+
 - **[Performance-Aware Programming](https://www.computerenhance.com/)** — Casey Muratori's course on software performance
 - **[Agner Fog](https://agner.org/optimize)** — Authoritative microarchitecture, calling conventions, and instruction tables
 - **[uops.info](https://uops.info/)** — Independent instruction latency and throughput measurements
@@ -309,23 +318,37 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[C/C++: 70x faster file embeds using string literals](https://mortbopet.net/posts/2024/c++-file-embeds/)** — Compile-time resource embedding via string literals
 
 ### Libraries & Ecosystem
+
 - **[userver](https://github.com/userver-framework/userver)** — Yandex high-performance asynchronous C++ framework with coroutines [userver-framework/userver](https://github.com/userver-framework/userver)
+- **[Taskflow](https://github.com/taskflow/taskflow)** — General-purpose parallel and heterogeneous task programming system with a work-stealing runtime [taskflow/taskflow](https://github.com/taskflow/taskflow)
+- **[Flecs](https://github.com/SanderMertens/flecs)** — Fast, portable, and extensible Entity Component System in C/C++ [SanderMertens/flecs](https://github.com/SanderMertens/flecs)
+- **[EnTT](https://github.com/skypjack/entt)** — Gaming meets modern C++ with a fast, reliable, and header-only ECS [skypjack/entt](https://github.com/skypjack/entt)
 - **[PFR](https://github.com/boostorg/pfr)** — Boost.PFR for precise and flat reflection by Anton Polukhin [boostorg/pfr](https://github.com/boostorg/pfr)
 - **[Anton Polukhin](https://github.com/apolukhin)** — Core contributor to Boost, reflection, and modern C++ tooling [apolukhin](https://github.com/apolukhin)
 - **[Abseil](https://github.com/abseil/abseil-cpp)** — Google's open-source C++ common libraries [abseil/abseil-cpp](https://github.com/abseil/abseil-cpp)
 - **[Folly](https://github.com/facebook/folly)** — Facebook's core C++ library optimized for performance and practicality [facebook/folly](https://github.com/facebook/folly)
 - **[Seastar](https://github.com/scylladb/seastar)** — High-performance C++ framework for I/O intensive async apps [scylladb/seastar](https://github.com/scylladb/seastar)
 - **[brpc](https://github.com/apache/brpc)** — Industrial-grade RPC framework used throughout Baidu [apache/brpc](https://github.com/apache/brpc)
+- **[gRPC](https://github.com/grpc/grpc)** — High-performance RPC framework with Protobuf and HTTP/2 support [grpc/grpc](https://github.com/grpc/grpc)
 - **[fmt](https://github.com/fmtlib/fmt)** — Modern formatting library that inspired `std::format` [fmtlib/fmt](https://github.com/fmtlib/fmt)
 - **[spdlog](https://github.com/gabime/spdlog)** — Fast, header-only/compiled C++ logging library [gabime/spdlog](https://github.com/gabime/spdlog)
 - **[nlohmann/json](https://github.com/nlohmann/json)** — Intuitive JSON for Modern C++ with STL-like interface [nlohmann/json](https://github.com/nlohmann/json)
+- **[simdjson](https://github.com/simdjson/simdjson)** — Gigabytes-per-second JSON parser using SIMD and thread-safety [simdjson/simdjson](https://github.com/simdjson/simdjson)
 - **[range-v3](https://github.com/ericniebler/range-v3)** — Range library providing views and actions for C++20/23 preview [ericniebler/range-v3](https://github.com/ericniebler/range-v3)
 - **[Boost](https://github.com/boostorg/boost)** — Widely used collection of peer-reviewed portable C++ libraries [boostorg/boost](https://github.com/boostorg/boost)
 - **[Dear ImGui Bundle](https://github.com/pthom/imgui_bundle)** — Batteries-included ImGui ecosystem with bindings and docs [pthom/imgui_bundle](https://github.com/pthom/imgui_bundle)
+- **[SFML](https://github.com/SFML/SFML)** — Simple and Fast Multimedia Library for multimedia, windowing, and graphics [SFML/SFML](https://github.com/SFML/SFML)
+- **[GLFW](https://github.com/glfw/glfw)** — Multi-platform window and input library for OpenGL/Vulkan [glfw/glfw](https://github.com/glfw/glfw)
+- **[bgfx](https://github.com/bkaradzic/bgfx)** — Cross-platform, shader-driven graphics API agnostic rendering library [bkaradzic/bgfx](https://github.com/bkaradzic/bgfx)
+- **[sol2](https://github.com/ThePhD/sol2)** — Fast, type-safe Lua scripting C++ binding library [ThePhD/sol2](https://github.com/ThePhD/sol2)
+- **[toml++](https://github.com/marzer/tomlplusplus)** — Header-only TOML config parser and serializer for modern C++ [marzer/tomlplusplus](https://github.com/marzer/tomlplusplus)
+- **[xtensor](https://github.com/xtensor-stack/xtensor)** — NumPy-inspired multi-dimensional arrays with lazy evaluation [xtensor-stack/xtensor](https://github.com/xtensor-stack/xtensor)
+- **[Eigen](https://gitlab.com/libeigen/eigen)** — Lightweight C++ template library for linear algebra and matrix/vector operations [libeigen/eigen](https://gitlab.com/libeigen/eigen)
 - **[Awesome C++](https://github.com/fffaraz/awesome-cpp)** — Curated comprehensive list of frameworks, libraries, and resources [fffaraz/awesome-cpp](https://github.com/fffaraz/awesome-cpp)
 - **Хабр: Тысяча и одна библиотека С++** — Curated Russian-language overview of useful C++ libraries
 
 ### Compiler Docs & Standard Libraries
+
 - **[Clang](https://clang.llvm.org/docs)** — LLVM/Clang driver, attributes, and language extensions [llvm/llvm-project](https://github.com/llvm/llvm-project)
 - **[GCC](https://gcc.gnu.org/onlinedocs)** — GNU Compiler Collection online manuals
 - **[MSVC](https://learn.microsoft.com/cpp)** — Microsoft C++ language and library reference
@@ -333,6 +356,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[Microsoft STL](https://github.com/microsoft/STL)** — MSVC standard library implementation on GitHub [microsoft/STL](https://github.com/microsoft/STL)
 
 ### Profiling & Runtime Inspection
+
 - **[Perfetto UI](https://ui.perfetto.dev)** — Advanced trace visualization for build and runtime profiling [google/perfetto](https://github.com/google/perfetto)
 - **[Tracy](https://github.com/wolfpld/tracy)** — Real-time, nanosecond-resolution frame and zone profiler [wolfpld/tracy](https://github.com/wolfpld/tracy)
 - **[Optick](https://github.com/bombomby/optick)** — Lightweight C++ profiler with GPU and instrumentation support [bombomby/optick](https://github.com/bombomby/optick)
@@ -342,6 +366,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[RenderDoc](https://renderdoc.org/)** — Standalone graphics debugger for frame capture and GPU analysis [baldurk/renderdoc](https://github.com/baldurk/renderdoc)
 
 ### Community, Talks & People
+
 - **[C++ Weekly](https://youtube.com/@cppweekly)** — Jason Turner's concise weekly tips and modern techniques
 - **[CppCon](https://youtube.com/@CppCon)** — Annual conference talks covering advanced and upcoming features
 - **[C++ Stories](https://www.cppstories.com)** — Bartek Filipek's in-depth articles on modern C++
@@ -357,6 +382,7 @@ The project generates `compile_commands.json` and is compatible with CLion, Visu
 - **[Howard Hinnant](https://howardhinnant.github.io/)** — Author of `std::chrono`/`date.h` and seminal C++ timing articles [HowardHinnant/date](https://github.com/HowardHinnant/date)
 
 ### Learning Paths
+
 - **[Learn C++](https://www.learncpp.com/)** — Free, comprehensive tutorial series from basics through advanced topics
 - **[Learn X in Y Minutes: C++](https://learnxinyminutes.com/docs/c++/)** — Condensed syntax and feature tour for quick reference
 - **[Курс по разработке 64-битных приложений на языке C и C++](https://www.viva64.com/ru/a/0012/)** — Course on 64-bit C/C++ development pitfalls and practices
