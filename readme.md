@@ -9,6 +9,7 @@
   <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-23%2F26-00599C?style=for-the-badge&logo=cplusplus&logoColor=white&labelColor=1C1C1C" alt="C++ Standard"/></a>
   <a href="https://cmake.org"><img src="https://img.shields.io/badge/CMake-3.31%2B-064F8C?style=for-the-badge&logo=cmake&logoColor=white&labelColor=1C1C1C" alt="CMake"/></a>
   <a href="license.md"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge&labelColor=1C1C1C" alt="License"/></a>
+  <a href="https://github.com/sponsors/e-gleba"><img src="https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=githubsponsors&labelColor=1C1C1C" alt="Sponsor"/></a>
 </p>
 
 Production-ready C++ template with **Android NDK**, **cross-compilation to Windows**, **Docker**, **CPack**, and **one-command CI pipelines**. Targets C++23/26. Ninja Multi-Config, CPM, code-quality tooling — zero friction from clone to package.
@@ -244,6 +245,17 @@ CPM downloads are verbose (`FETCHCONTENT_QUIET=OFF`) for CI visibility.
 ## IDE Support
 
 The project generates `compile_commands.json` and is compatible with CLion, Visual Studio, QtCreator, KDevelop, and any LSP-based editor.
+
+## Consulting
+
+Need help with **CMake architecture**, **cross-compilation pipelines**, **CI/CD for C++**, or **packaging with CPack**? I help teams reduce build friction and ship faster.
+
+- 🌐 [e-gleba.github.io](https://e-gleba.github.io) — contacts, portfolio, and blog
+- 💼 Open for **freelance** and **contract work** (up to $150/hr depending on scope)
+- 🛠️ Services: CMake audits, toolchain setup, Docker/CI optimization, custom presets, onboarding workshops
+- ☕ [Sponsor on GitHub](https://github.com/sponsors/e-gleba) — support open-source development and get priority support
+
+For inquiries, reach out through the website above or open a [Discussion](https://github.com/e-gleba/cmake_template/discussions).
 
 ---
 
