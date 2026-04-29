@@ -12,105 +12,79 @@
   <a href="docs/contributing.md"><img src="https://img.shields.io/badge/Contributing-Guide-4CAF50?style=for-the-badge&labelColor=1C1C1C" alt="Contributing Guide"/></a>
 </p>
 
-**Production-ready, battle-tested C++ CMake template** featuring first-class support for **Android NDK**, **Linux-to-Windows cross-compilation** via llvm-mingw, **Docker**-based reproducibility, **CPack** packaging, and **one-command CI pipelines** via CMake workflows.
-
-Targets modern C++23/26. Uses Ninja Multi-Config, CPM for dependencies, comprehensive code-quality tooling (clang-format, clang-tidy, pre-commit), and professional documentation. From `git clone` to packaged artifact in minutes — zero friction.
+Production-ready C++ template with **Android NDK**, **cross-compilation to Windows**, **Docker**, **CPack**, and **one-command CI pipelines**. Targets C++23/26. Ninja Multi-Config, CPM, code-quality tooling — zero friction from clone to package.
 
 ## Quick Start
 
 ```bash
-# Native development (GCC)
 cmake --preset=gcc
 cmake --build --preset=gcc-release
 ctest --preset=gcc-release
+```
 
-# Full pipeline (configure, build, test, package)
+Full pipeline (configure → build → test → package):
+
+```bash
 cmake --workflow --preset=gcc-full
 ```
 
-See [docs/presets.md](docs/presets.md) (now the consolidated professional guide covering presets **and** platforms) for Android, Windows cross, and more.
+## Why this template?
 
-## Why This Template?
+Most CMake starters stop at "it builds on my machine". This template goes further with first-class cross-compilation and packaging.
 
-Most starters provide basic builds. This one is engineered for **real-world cross-platform shipping**:
+- **Android NDK out of the box** — 4 presets (arm64, arm32, x64, x86) with API 24.
+- **Linux → Windows cross-compile** — 3 llvm-mingw presets (x86_64, i686, aarch64).
+- **Reproducible builds** — Docker images for CI and local development.
+- **One-command pipelines** — `cmake --workflow` handles configure → build → test → package.
+- **Modern standards** — C++23/26 with clang-tidy, clang-format, IWYU-ready structure.
+- **Professional documentation** — upgraded [CONTRIBUTING.md](docs/contributing.md) and consolidated [Presets/Platforms guide](docs/presets.md).
 
-- **Android NDK out-of-the-box** — 4 ABIs (arm64, arm32, x64, x86), API 24, with workflow support.
-- **Seamless Linux → Windows cross-compilation** — llvm-mingw presets for x86_64, i686, aarch64.
-- **Reproducible environments** via Dockerfiles and pinned toolchains.
-- **CMake Workflows** for reliable CI/CD without complex YAML matrices initially.
-- **Modern tooling** — C++23/26 ready, excellent static analysis, formatting, CPack for distribution.
-- **Professional documentation** — upgraded CONTRIBUTING.md, consolidated presets/platforms guide, architecture overview.
+## Comparison
 
-The template deliberately stays generic (no Qt, JUCE, or domain-specific scaffolding) so it serves as a solid foundation for any C++ project while excelling at build engineering.
+| Feature | cmake_template | [cpp-best-practices](https://github.com/cpp-best-practices/cmake_template) | [kigster](https://github.com/kigster/cmake-project-template) | [district10](https://github.com/district10/cmake-templates) | [pamplejuce](https://github.com/sudara/pamplejuce) |
+| :-- | :--: | :--: | :--: | :--: | :--: |
+| Pitch | Generic C++ starter with cross-compile | Opinionated best-practice starter | Minimal C/C++ starter | Qt / Boost / OpenCV examples | JUCE audio plugins |
+| C++ Standard | **23 / 26** | 17 / 20 | unspecified | **11** | unspecified |
+| CMake Presets | 10+ with workflows | — | basic | — | JUCE-oriented |
+| Android NDK | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Android instrumentation (tests) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Linux → Windows cross | ✅ llvm-mingw | ❌ | ❌ | ❌ | ❌ |
+| WebAssembly | ❌ [planned (#2)](https://github.com/e-gleba/cmake_template/issues/2) | ✅ + GitHub Pages deploy | ❌ | ❌ | ❌ |
+| Docker / CI-ready | ✅ Dockerfile + GitHub Actions | ✅ Docker + Actions | ❌ | ❌ | ✅ GitHub Actions |
+| CPack packaging | ✅ tar.gz / zip / tar.xz | ❌ | ❌ | ❌ | ❌ |
+| CTest test runner | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Dependency manager | CPM + [prebuilt/air-gapped (#8)](https://github.com/e-gleba/cmake_template/issues/8) | CPM | — | — | — |
+| vcpkg compatibility | ❌ [planned (#3)](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ | ❌ |
+| Sanitizers (ASan/UBSan) | ❌ [planned (#9)](https://github.com/e-gleba/cmake_template/issues/9) | ✅ | ❌ | ❌ | ❌ |
+| Fuzz testing | ❌ | ✅ libFuzzer | ❌ | ❌ | ❌ |
+| Codecov / CodeQL | ❌ [planned (#10)](https://github.com/e-gleba/cmake_template/issues/10) | ✅ | ❌ | ❌ | ❌ |
+| Steam Runtime / Steam Deck | ❌ [planned (#11)](https://github.com/e-gleba/cmake_template/issues/11) | ❌ | ❌ | ❌ | ❌ |
+| Qt / OpenGL | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Audio / JUCE | ❌ | ❌ | ❌ | ❌ | ✅ |
+| C++20 modules | ❌ [planned (#5)](https://github.com/e-gleba/cmake_template/issues/5) | ❌ | ❌ | ❌ | ❌ |
+| macOS / iOS (Xcode presets) | ❌ [planned (#20)](https://github.com/e-gleba/cmake_template/issues/20) | Limited | ❌ | ❌ | Specialized |
 
-## Supported Platforms & Presets
+> Honest notes: this template is intentionally generic — it does not include Qt, OpenGL, audio scaffolding, or fuzz testing. Those are well covered by specialized starters above. We focus on cross-platform build engineering and packaging. See the new consolidated [presets.md](docs/presets.md) for current platform support and detailed macOS/iOS roadmap.
 
-See the comprehensive **[Presets, Platforms & Cross-Compilation Guide](docs/presets.md)**. It has been significantly upgraded with:
+## Consulting
 
-- Merged content from the former `platforms.md`
-- Professional tables, philosophy, troubleshooting, and extension guides
-- Detailed roadmap for **macOS and iOS support**
+Need help with **CMake architecture**, **cross-compilation pipelines**, **CI/CD for C++**, or **packaging with CPack**? I help teams reduce build friction and ship faster.
 
-**macOS / iOS Planning (High Priority)**
+- 🌐 [e-gleba.github.io](https://e-gleba.github.io) — contacts, portfolio, and blog
+- 📧 <i@egleba.ru> — direct inquiries (fastest response)
+- 💼 Open for **freelance** and **contract work** (up to $150/hr depending on scope)
+- 🛠️ Services: CMake audits, toolchain setup, Docker/CI optimization, custom presets, onboarding workshops
 
-We are actively planning first-class native macOS and iOS support using CMake's `Xcode` generator. See open issue [#20](https://github.com/e-gleba/cmake_template/issues/20) for the full specification, including:
-
-- `macos-xcode` and universal binary presets
-- iOS device and simulator presets (`CMAKE_SYSTEM_NAME=iOS`)
-- Proper code signing, entitlements, and deployment target handling
-- GitHub `macos-*` runner integration
-- Documentation for Xcode project generation, Instruments, and App Store workflows
-
-This will make the template one of the most complete cross-platform CMake starters available. Contributions toward this issue are welcome (labeled `help wanted`).
-
-## Comparison with Other Templates
-
-| Feature | cmake_template | cpp-best-practices/cmake_template | Other Common Starters |
-|---------|----------------|-----------------------------------|-----------------------|
-| C++ Standard | **23/26** | 17/20 | Varies (often older) |
-| CMake Presets | **10+ with full workflows** | Basic | Usually minimal |
-| Android NDK (multiple ABIs) | ✅ Full workflows | ❌ | Rare |
-| Linux → Windows Cross (llvm-mingw) | ✅ | ❌ | Rare |
-| Docker Reproducibility + CI | ✅ | Partial | Varies |
-| CPack Packaging | ✅ Multiple formats | ❌ | Rare |
-| Professional Docs & Contributing Guide | **Upgraded top-tier** | Good | Varies |
-| macOS/iOS Xcode Support | **Planned (#20)** | Limited | Specialized templates only |
-| Sanitizers, WASM, vcpkg, Steam | **Roadmap (see issues)** | Some included | Varies |
-
-This template stands out for its focus on **cross-compilation engineering**, packaging, and production reproducibility while maintaining simplicity.
-
-## Roadmap
-
-- **High priority**: macOS/iOS with Xcode generator ([#20](https://github.com/e-gleba/cmake_template/issues/20))
-- Sanitizers (ASan/UBSan/TSan) integration
-- Emscripten/WASM preset
-- vcpkg alongside CPM
-- Prebuilt/air-gapped dependency support
-- Steam Runtime / Steam Deck verification
-- Enhanced CI with CodeQL, coverage, more Docker variants
-
-Contributions accelerating any of these are highly valued.
-
-## Consulting Services
-
-Need expert help with **CMake architecture**, **cross-compilation pipelines**, **modern C++ build systems**, **CI/CD optimization**, or **CPack packaging**?
-
-- 🌐 [e-gleba.github.io](https://e-gleba.github.io) — portfolio, blog, contact
-- 📧 i@egleba.ru (fastest)
-- Open to freelance/contract work and team workshops
-
-This repository itself demonstrates the quality of deliverables you can expect.
-
-## More Details
-
-- [Presets, Platforms & Cross-Compilation (consolidated)](docs/presets.md)
-- [Architecture & Project Structure](docs/architecture.md)
-- [Docker Guide](docs/docker.md)
-- [References](docs/references.md)
-- [Contributing (Professional Guide)](docs/contributing.md)
+For inquiries, reach out via email or through the website above, or open a [Discussion](https://github.com/e-gleba/cmake_template/discussions).
 
 ---
 
-**Star the repo if you find it useful.** Feedback, issues, and PRs make it better for everyone.
+## More details
 
-*Made with focus on simplicity, professionalism, and real-world usability.*
+- [Presets, Platforms & Cross-Compilation (consolidated)](docs/presets.md)
+- [Docker Guide](docs/docker.md)
+- [Architecture](docs/architecture.md)
+- [References](docs/references.md)
+- [Contributing](docs/contributing.md)
+
+**Roadmap note**: macOS/iOS Xcode support is now prominently planned in [#20](https://github.com/e-gleba/cmake_template/issues/20). Many other enhancements tracked in open issues.
