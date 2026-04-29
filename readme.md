@@ -26,6 +26,7 @@ Full pipeline (configure → build → test → package):
 ```bash
 cmake --workflow --preset=gcc-full
 ```
+
 ## Why this template?
 
 Most CMake starters stop at "it builds on my machine". This template goes further with first-class cross-compilation and packaging.
@@ -67,15 +68,15 @@ Most CMake starters stop at "it builds on my machine". This template goes furthe
 Need help with **CMake architecture**, **cross-compilation pipelines**, **CI/CD for C++**, or **packaging with CPack**? I help teams reduce build friction and ship faster.
 
 - 🌐 [e-gleba.github.io](https://e-gleba.github.io) — contacts, portfolio, and blog
-- 📧 i@egleba.ru — direct inquiries (fastest response)
+- 📧 <i@egleba.ru> — direct inquiries (fastest response)
 - 💼 Open for **freelance** and **contract work** (up to $150/hr depending on scope)
 - 🛠️ Services: CMake audits, toolchain setup, Docker/CI optimization, custom presets, onboarding workshops
 
 For inquiries, reach out via email or through the website above, or open a [Discussion](https://github.com/e-gleba/cmake_template/discussions).
 
 ---
- 
-##  Documentation
+
+## More details
 
 - [Docker Guide](docs/docker.md)
 - [Presets](docs/presets.md)
@@ -83,3 +84,4 @@ For inquiries, reach out via email or through the website above, or open a [Disc
 - [References](docs/references.md)
 - [Contributing](docs/contributing.md)
 - [Architecture](docs/architecture.md)
+

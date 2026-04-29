@@ -41,8 +41,6 @@ sudo apt install cmake g++ ninja-build doxygen llvm clang-tools
 choco install cmake llvm ninja doxygen visualstudio2022buildtools
 ```
 
-
-
 ## Project Structure
 
 ```
@@ -97,7 +95,6 @@ cmake --build build/gcc --target doxygen
 
 Output: `build/gcc/docs/doxygen/html`.
 
-
 ## Dependencies
 
 Managed via [CPM](https://github.com/cpm-cmake/CPM.cmake). Add packages in CMakeLists.txt:
@@ -111,14 +108,3 @@ CPM downloads are verbose (`FETCHCONTENT_QUIET=OFF`) for CI visibility.
 ## IDE Support
 
 The project generates `compile_commands.json` and is compatible with CLion, Visual Studio, QtCreator, KDevelop, and any LSP-based editor.
-
-## Consulting
-
-Need help with **CMake architecture**, **cross-compilation pipelines**, **CI/CD for C++**, or **packaging with CPack**? I help teams reduce build friction and ship faster.
-
-- 🌐 [e-gleba.github.io](https://e-gleba.github.io) — contacts, portfolio, and blog
-- 📧 i@egleba.ru — direct inquiries (fastest response)
-- 💼 Open for **freelance** and **contract work** (up to $150/hr depending on scope)
-- 🛠️ Services: CMake audits, toolchain setup, Docker/CI optimization, custom presets, onboarding workshops
-
-For inquiries, reach out via email or through the website above, or open a [Discussion](https://github.com/e-gleba/cmake_template/discussions).
