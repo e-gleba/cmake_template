@@ -1,3 +1,5 @@
+#include "main.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -15,8 +17,6 @@
 #include <jni.h>
 
 #include <doctest/doctest.h>
-
-#include <main.hpp> // get_all_tests() -> std::set<std::string>
 
 namespace {
 // -------------------------------------------------------------------------
@@ -147,8 +147,8 @@ Java_com_egleba_app_AppActivityTest_getTestNames(JNIEnv* env, jclass)
                 std::format("FindClass failed for {}", string_class));
         }
 
-        const std::set<std::string>   tests = get_all_tests();
-        jobjectArray out =
+        const std::set<std::string> tests = egleba::doctest::get_all_tests();
+        jobjectArray                out =
             env->NewObjectArray(static_cast<jsize>(tests.size()), sc, nullptr);
         env->DeleteLocalRef(sc);
 
@@ -190,7 +190,7 @@ Java_com_egleba_app_AppActivityTest_runTest(JNIEnv* env, jclass, jstring jname)
     try {
         const jni_utf_chars name(env, jname);
 
-        doctest::Context ctx {};
+        doctest::Context ctx{};
         ctx.setOption("test-case", name.c_str());
         ctx.setOption("duration", true);
         ctx.setOption("no-exitcode", true);

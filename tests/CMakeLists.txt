@@ -8,7 +8,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_library(tests SHARED ${src})
 else()
     add_executable(tests ${src})
-    set_source_files_properties(junit4_jni.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
+    set_source_files_properties(doctest_android_jni.cpp
+                                PROPERTIES HEADER_FILE_ONLY TRUE)
 endif()
 
 target_include_directories(tests PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
@@ -19,10 +20,8 @@ target_link_libraries(tests PRIVATE doctest::doctest
 
 target_compile_definitions(
     tests
-    PRIVATE DOCTEST_CONFIG_SUPER_FAST_ASSERTS
-            DOCTEST_CONFIG_NO_SHORT_MACRO_NAMES
-            DOCTEST_CONFIG_ASSERTS_RETURN_VALUES
-            DOCTEST_CONFIG_USE_STD_HEADERS)
+    PRIVATE DOCTEST_CONFIG_NO_SHORT_MACRO_NAMES
+            DOCTEST_CONFIG_ASSERTS_RETURN_VALUES DOCTEST_CONFIG_USE_STD_HEADERS)
 
 # doctest_discover_tests runs the built executable with --list-
 # test-cases to register each test case individually with CTest.
