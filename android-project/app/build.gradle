@@ -42,6 +42,7 @@ android {
         }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments clearPackageData: 'true'
     }
 
     buildFeatures {
@@ -52,6 +53,7 @@ android {
         debug {
             debuggable = true
             jniDebuggable = true
+            testCoverageEnabled = true
         }
         release {
             minifyEnabled = true
@@ -108,6 +110,42 @@ android {
         abortOnError = false
         checkReleaseBuilds = false
     }
+
+    testOptions {
+        animationsDisabled = true
+        // execution = 'ANDROIDX_TEST_ORCHESTRATOR'
+
+        unitTests {
+            includeAndroidResources = true
+            returnDefaultValues = true
+            all {
+                it.testLogging {
+                    events 'passed', 'skipped', 'failed', 'standardOut', 'standardError'
+                    showStandardStreams = true
+                    showCauses = true
+                    showExceptions = true
+                    showStackTraces = true
+                }
+            }
+        }
+
+        // Gradle Managed Devices — AOSP ATD (api 30 only, ATD limit)
+        // docs: https://developer.android.com/studio/test/gradle-managed-devices
+        managedDevices {
+            localDevices {
+                pixel6atd30 {
+                    device = 'Pixel 6'
+                    apiLevel = 30
+                    systemImageSource = 'aosp-atd'
+                    require64Bit = true
+                }
+            }
+        }
+
+        // Test report + result dirs (root build dir, single place)
+        reportDir = "${rootProject.layout.buildDirectory.get().asFile}/test_reports/${project.name}"
+        resultsDir = "${rootProject.layout.buildDirectory.get().asFile}/test_results/${project.name}"
+    }
 }
 
 dependencies {
@@ -117,4 +155,6 @@ dependencies {
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.runner
     androidTestImplementation libs.rules
+
+//    androidTestUtil           libs.orchestrator   // need orchestrator artifact for ANDROIDX_TEST_ORCHESTRATOR
 }
