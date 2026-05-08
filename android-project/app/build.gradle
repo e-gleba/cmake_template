@@ -198,9 +198,6 @@ android {
                 }
             }
         }
-
-        reportDir = "${rootProject.layout.buildDirectory.get().asFile}/test_reports/${project.name}"
-        resultsDir = "${rootProject.layout.buildDirectory.get().asFile}/test_results/${project.name}"
     }
 }
 
