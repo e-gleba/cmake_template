@@ -128,3 +128,7 @@ repositories/
 ghidra.repos.config
 Ghidra/.ghidraSvrKeys
 wrapper.log*
+
+# Project strange dirs:
+OFF/
+cmake_system_information__/
