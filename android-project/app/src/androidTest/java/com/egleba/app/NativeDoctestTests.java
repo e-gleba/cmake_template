@@ -28,7 +28,7 @@ import static org.junit.Assert.assertTrue;
 /// @see https://developer.android.com/training/testing/unit-testing/instrumented-unit-tests
 /// @see gradle task :app:connectedDebugAndroidTest
 @RunWith(Parameterized.class)
-public final class AppActivityTest {
+public final class NativeDoctestTests {
 
     static {
         assumeTrue("Must run on device", !Build.FINGERPRINT.equals("robolectric"));
@@ -52,7 +52,7 @@ public final class AppActivityTest {
     }
 
     @Test
-    public void runSingle() {
+    public void runNative() {
         assertTrue("Native test failed: " + testName, runTest(testName));
     }
 }

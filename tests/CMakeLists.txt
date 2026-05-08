@@ -21,7 +21,10 @@ target_link_libraries(tests PRIVATE doctest::doctest
 target_compile_definitions(
     tests
     PRIVATE DOCTEST_CONFIG_NO_SHORT_MACRO_NAMES
-            DOCTEST_CONFIG_ASSERTS_RETURN_VALUES DOCTEST_CONFIG_USE_STD_HEADERS)
+            DOCTEST_CONFIG_INCLUDE_TYPE_TRAITS
+            DOCTEST_CONFIG_REQUIRE_STRINGIFICATION_FOR_ALL_USED_TYPES
+            DOCTEST_CONFIG_ASSERTS_RETURN_VALUES
+            DOCTEST_CONFIG_USE_STD_HEADERS)
 
 # doctest_discover_tests runs the built executable with --list-
 # test-cases to register each test case individually with CTest.

@@ -62,15 +62,17 @@ DOCTEST_TEST_CASE("string length")
     }
 }
 
-static void throw_out_of_range()
-{
-    throw std::out_of_range("bounds");
+namespace {
+    void throw_out_of_range() {
+        throw std::out_of_range("bounds");
+    }
+
+    void throw_logic_check() {
+        throw std::logic_error("vector::_M_range_check");
+    }
+
+    void noop() {}
 }
-static void throw_logic_check()
-{
-    throw std::logic_error("vector::_M_range_check");
-}
-static void noop() {}
 
 DOCTEST_TEST_CASE("exception contracts" * doctest::timeout(0.1))
 {
@@ -80,15 +82,17 @@ DOCTEST_TEST_CASE("exception contracts" * doctest::timeout(0.1))
     DOCTEST_CHECK_NOTHROW(noop());
 }
 
-template <typename t> t clamp(t v, t lo, t hi) noexcept
-{
-    if (v < lo) {
-        return lo;
+namespace {
+    template<typename t>
+    t clamp(t v, t lo, t hi) noexcept {
+        if (v < lo) {
+            return lo;
+        }
+        if (hi < v) {
+            return hi;
+        }
+        return v;
     }
-    if (hi < v) {
-        return hi;
-    }
-    return v;
 }
 
 DOCTEST_TEST_CASE_TEMPLATE("clamp", t, int, float, double)

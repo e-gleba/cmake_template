@@ -1,17 +1,11 @@
 #include "main.hpp"
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
-#include <format>
 #include <iostream>
-#include <iterator>
-#include <ranges>
-#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include <android/log.h>
 #include <jni.h>
@@ -19,176 +13,119 @@
 #include <doctest/doctest.h>
 
 namespace {
-// -------------------------------------------------------------------------
-// Android logcat streambuf — zero-copy, line-buffered
-// -------------------------------------------------------------------------
-class android_log_buf final : public std::streambuf
-{
-    static constexpr char tag[] = "native_tests";
-    std::array<char, 512> buffer_{};
 
-public:
-    android_log_buf()
-    {
-        auto s = std::span(buffer_);
-        setp(s.data(), s.data() + s.size() - 1);
-    }
+// ── Android logcat streambuf ─────────────────────────────────────────────
+    class android_log_buf final : public std::streambuf {
+        static constexpr auto tag = "native_tests";
+        std::array<char, 512> buf_{};
 
-    ~android_log_buf() override { flush(); }
+    public:
+        android_log_buf() { reset(); }
 
-protected:
-    int_type overflow(int_type ch) override
-    {
-        if (ch == traits_type::eof() || pptr() == epptr())
+        ~android_log_buf() override { flush(); }
+
+    protected:
+        int_type overflow(int_type c) override {
             flush();
+            if (c == traits_type::eof()) return traits_type::not_eof(c);
+            *pptr() = static_cast<char>(c);
+            pbump(1);
+            if (c == '\n') flush();
+            return c;
+        }
 
-        if (ch == traits_type::eof())
-            return traits_type::not_eof(ch);
-
-        *pptr() = static_cast<char>(ch);
-        pbump(1);
-
-        if (ch == '\n')
+        int sync() override {
             flush();
+            return 0;
+        }
 
-        return ch;
+    private:
+        void reset() { setp(buf_.data(), buf_.data() + buf_.size() - 1); }
+
+        void flush() {
+            auto n = static_cast<std::size_t>(pptr() - pbase());
+            if (!n) return;
+            if (buf_[n - 1] == '\n') --n;
+            buf_[n] = '\0';
+            if (n) __android_log_write(ANDROID_LOG_INFO, tag, buf_.data());
+            reset();
+        }
+    };
+
+    struct log_init {
+        android_log_buf buf;
+
+        log_init() noexcept {
+            std::cout.rdbuf(&buf);
+            std::cerr.rdbuf(&buf);
+        }
+    } _log_init{};
+
+// ── JNI helpers ──────────────────────────────────────────────────────────
+    struct jni_string final {
+        JNIEnv *env;
+        jstring ref;
+        const char *data;
+
+        jni_string(JNIEnv *e, jstring s)
+                : env(e), ref(s), data(e->GetStringUTFChars(s, nullptr)) {
+            if (!data) throw std::runtime_error("GetStringUTFChars failed");
+        }
+
+        ~jni_string() { env->ReleaseStringUTFChars(ref, data); }
+
+        jni_string(const jni_string &) = delete;
+
+        jni_string &operator=(const jni_string &) = delete;
+
+        [[nodiscard]] std::string_view view() const noexcept { return data; }
+
+        [[nodiscard]] const char *c_str() const noexcept { return data; }
+    };
+
+    inline void throw_java(JNIEnv *env, std::string_view msg) {
+        if (jclass ex = env->FindClass("java/lang/RuntimeException")) {
+            env->ThrowNew(ex, msg.data());
+            env->DeleteLocalRef(ex);
+        }
     }
 
-    int sync() override
-    {
-        flush();
-        return 0;
-    }
-
-private:
-    void flush()
-    {
-        auto len = static_cast<std::size_t>(pptr() - pbase());
-        if (len == 0)
-            return;
-
-        if (buffer_[len - 1] == '\n')
-            buffer_[--len] = '\0';
-        else
-            buffer_[len] = '\0';
-
-        if (len > 0)
-            __android_log_write(ANDROID_LOG_INFO, tag, buffer_.data());
-
-        auto s = std::span(buffer_);
-        setp(s.data(), s.data() + s.size() - 1);
-    }
-};
-
-struct log_redirector final
-{
-    android_log_buf buf;
-    log_redirector()
-    {
-        std::cout.rdbuf(&buf);
-        std::cerr.rdbuf(&buf);
-    }
-} log_redirect;
-
-// -------------------------------------------------------------------------
-// JNI RAII helpers
-// -------------------------------------------------------------------------
-struct jni_utf_chars final
-{
-    JNIEnv*     env;
-    jstring     ref;
-    const char* data;
-
-    jni_utf_chars(JNIEnv* e, jstring s)
-        : env(e)
-        , ref(s)
-        , data(env->GetStringUTFChars(s, nullptr))
-    {
-        if (!data)
-            throw std::runtime_error("GetStringUTFChars failed");
-    }
-
-    ~jni_utf_chars()
-    {
-        if (data)
-            env->ReleaseStringUTFChars(ref, data);
-    }
-
-    [[nodiscard]] std::string_view view() const { return data; }
-    [[nodiscard]] const char*      c_str() const { return data; }
-
-    jni_utf_chars(const jni_utf_chars&)            = delete;
-    jni_utf_chars& operator=(const jni_utf_chars&) = delete;
-};
-
-inline void throw_java_exception(JNIEnv* env, const char* msg)
-{
-    if (const jclass ex = env->FindClass("java/lang/RuntimeException")) {
-        env->ThrowNew(ex, msg);
-        env->DeleteLocalRef(ex);
-    }
-}
 } // namespace
 
-// =============================================================================
-// JNI entry points — every path catches C++ exceptions before returning to JVM
-// =============================================================================
+// ── JNI entry points ─────────────────────────────────────────────────────
 extern "C" {
 
 JNIEXPORT jobjectArray JNICALL
-Java_com_egleba_app_AppActivityTest_getTestNames(JNIEnv* env, jclass)
-{
+Java_com_egleba_app_NativeDoctestTests_getTestNames(JNIEnv *env,
+                                                    jclass) {
     try {
-        constexpr std::string_view string_class = "java/lang/String";
-        jclass                     sc = env->FindClass(string_class.data());
-        if (!sc) {
-            env->ExceptionClear();
-            throw std::runtime_error(
-                std::format("FindClass failed for {}", string_class));
-        }
+        auto sc = env->FindClass("java/lang/String");
+        auto tests = egleba::doctest::get_all_tests();
+        auto out = env->NewObjectArray(static_cast<jsize>(tests.size()), sc,
+                                       nullptr);
 
-        const std::set<std::string> tests = egleba::doctest::get_all_tests();
-        jobjectArray                out =
-            env->NewObjectArray(static_cast<jsize>(tests.size()), sc, nullptr);
-        env->DeleteLocalRef(sc);
-
-        if (!out) {
-            throw std::runtime_error(
-                std::format("NewObjectArray failed (size={})", tests.size()));
-        }
-
-        for (jsize i = 0; const auto& name : tests) {
-            jstring js = env->NewStringUTF(name.c_str());
-            if (!js) {
-                throw std::runtime_error(
-                    std::format("NewStringUTF failed for '{}'", name));
-            }
-
+        jsize i = 0;
+        for (const auto &name: tests) {
+            auto js = env->NewStringUTF(name.c_str());
             env->SetObjectArrayElement(out, i++, js);
             env->DeleteLocalRef(js);
-
-            if (env->ExceptionCheck()) {
-                env->ExceptionClear();
-                throw std::runtime_error(std::format(
-                    "SetObjectArrayElement failed at index {}", i - 1));
-            }
         }
-
+        env->DeleteLocalRef(sc);
         return out;
-    } catch (const std::exception& e) {
-        throw_java_exception(env, e.what());
-        return nullptr;
+    } catch (const std::exception &e) {
+        throw_java(env, e.what());
     } catch (...) {
-        throw_java_exception(env, "Unknown C++ exception in getTestNames");
-        return nullptr;
+        throw_java(env, "C++ exception in getTestNames");
     }
+    return nullptr;
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_egleba_app_AppActivityTest_runTest(JNIEnv* env, jclass, jstring jname)
-{
+Java_com_egleba_app_NativeDoctestTests_runTest(JNIEnv *env,
+                                               jclass,
+                                               jstring jname) {
     try {
-        const jni_utf_chars name(env, jname);
+        jni_string name(env, jname);
 
         doctest::Context ctx{};
         ctx.setOption("test-case", name.c_str());
@@ -196,13 +133,12 @@ Java_com_egleba_app_AppActivityTest_runTest(JNIEnv* env, jclass, jstring jname)
         ctx.setOption("no-exitcode", true);
 
         return ctx.run() == 0 ? JNI_TRUE : JNI_FALSE;
-    } catch (const std::exception& e) {
-        throw_java_exception(env, e.what());
-        return JNI_FALSE;
+    } catch (const std::exception &e) {
+        throw_java(env, e.what());
     } catch (...) {
-        throw_java_exception(env, "Unknown C++ exception in runTest");
-        return JNI_FALSE;
+        throw_java(env, "C++ exception in runTest");
     }
+    return JNI_FALSE;
 }
 
 } // extern "C"
