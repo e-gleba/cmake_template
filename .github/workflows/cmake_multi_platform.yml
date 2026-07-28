@@ -57,7 +57,7 @@ jobs:
 
         steps:
             - name: checkout
-              uses: actions/checkout@v6
+              uses: actions/checkout@v7
 
             - name: install linux system deps
               if: runner.os == 'Linux'
@@ -71,7 +71,7 @@ jobs:
                     libdbus-1-dev libudev-dev libasound2-dev
 
             - name: cache cpm sources
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               with:
                   path: .cpm_cache
                   key: cpm-${{ matrix.artifact-name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
@@ -149,7 +149,7 @@ jobs:
 
         steps:
             - name: checkout
-              uses: actions/checkout@v6
+              uses: actions/checkout@v7
 
             - name: install build tools
               run: |
@@ -157,13 +157,13 @@ jobs:
                   sudo apt-get install -y --no-install-recommends ninja-build
 
             - name: cache llvm-mingw toolchain
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               with:
                   path: llvm_mingw
                   key: llvm-mingw-${{ hashFiles('cmake/toolchains/llvm_mingw.cmake') }}
 
             - name: cache cpm sources
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               with:
                   path: .cpm_cache
                   key: cpm-${{ matrix.artifact-name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
@@ -200,7 +200,7 @@ jobs:
 
         steps:
             - name: checkout
-              uses: actions/checkout@v6
+              uses: actions/checkout@v7
 
             - name: setup jdk 17
               uses: actions/setup-java@v5
@@ -209,14 +209,14 @@ jobs:
                   distribution: temurin
 
             - name: setup gradle
-              uses: gradle/actions/setup-gradle@v5
+              uses: gradle/actions/setup-gradle@v6
               with:
                   build-scan-publish: true
                   build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
                   build-scan-terms-of-use-agree: "yes"
 
             - name: cache cpm sources
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               with:
                   path: ${{ github.workspace }}/.cpm_cache
                   key: cpm-android-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
@@ -250,7 +250,7 @@ jobs:
 
         steps:
             - name: checkout
-              uses: actions/checkout@v6
+              uses: actions/checkout@v7
 
             - name: setup jdk 17
               uses: actions/setup-java@v5
@@ -259,14 +259,14 @@ jobs:
                   distribution: temurin
 
             - name: setup gradle
-              uses: gradle/actions/setup-gradle@v5
+              uses: gradle/actions/setup-gradle@v6
               with:
                   build-scan-publish: true
                   build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
                   build-scan-terms-of-use-agree: "yes"
 
             - name: cache cpm sources
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               with:
                   path: ${{ github.workspace }}/.cpm_cache
                   key: cpm-android-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
