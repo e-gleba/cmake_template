@@ -51,7 +51,7 @@ jobs:
                     - os: ubuntu-latest
                       preset: gcc-full
                       artifact-name: linux-gcc
-                    - os: windows-latest
+                    - os: windows-2022  # Pin to windows-2022 for VS 2022
                       preset: msvc-full
                       artifact-name: windows-msvc
 
