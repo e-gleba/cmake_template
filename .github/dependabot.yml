@@ -15,9 +15,6 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
-    labels:
-      - "dependencies"
-      - "github-actions"
     groups:
       github-actions:
         patterns:
