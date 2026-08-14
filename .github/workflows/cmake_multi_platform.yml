@@ -209,7 +209,7 @@ jobs:
                   distribution: temurin
 
             - name: setup gradle
-              uses: gradle/actions/setup-gradle@v6.2.0
+              uses: gradle/actions/setup-gradle@v6.3.0
               with:
                   build-scan-publish: true
                   build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
@@ -259,7 +259,7 @@ jobs:
                   distribution: temurin
 
             - name: setup gradle
-              uses: gradle/actions/setup-gradle@v6.2.0
+              uses: gradle/actions/setup-gradle@v6.3.0
               with:
                   build-scan-publish: true
                   build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
