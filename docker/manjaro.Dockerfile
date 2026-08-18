@@ -1,24 +1,30 @@
 # syntax=docker/dockerfile:1
+#
+# Rolling-release validator (Arch/Manjaro). Bleeding-edge GCC/Clang.
+# Source is not baked in — mount the repo at /app.
+#
+#   docker build -t cmake-template:manjaro -f docker/manjaro.Dockerfile docker
+#   docker run --rm -v "$PWD:/app" -w /app cmake-template:manjaro \
+#     cmake --workflow --preset=gcc-full
 
-# ── Build Stage ────────────────────────────────────────────────────────
-# Rolling-release validation image based on Manjaro (Arch Linux).
-# Provides bleeding-edge compiler versions for testing compatibility
-# with latest GCC/Clang releases before they reach stable distros.
-FROM manjarolinux/base:latest AS build
+# latest is the point of a rolling validator. Dependabot still watches it.
+# hadolint ignore=DL3006
+FROM manjarolinux/base:latest
 
-LABEL maintainer="e-gleba" \
-      description="cmake_template build environment on Manjaro (rolling release)" \
-      org.opencontainers.image.source="https://github.com/e-gleba/cmake_template"
+ARG SOURCE=""
+
+LABEL org.opencontainers.image.title="cmake_template manjaro toolchain" \
+      org.opencontainers.image.description="Rolling GCC + Clang + CMake + Ninja" \
+      org.opencontainers.image.source="${SOURCE}" \
+      org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
-# ── System Dependencies ──────────────────────────────────────────────
-# base-devel provides gcc, make, glibc headers (pthread.h, dlfcn.h).
-# BuildKit cache mount persists pacman packages between builds.
-# Ref: https://docs.docker.com/build/cache/optimize/#use-cache-mounts
-RUN --mount=type=cache,target=/var/cache/pacman/pkg \
-    pacman -Syu --noconfirm && \
-    pacman -S --needed --noconfirm \
+# base-devel = gcc, make, glibc headers. Cache mount for pacman pkgs.
+# https://docs.docker.com/build/cache/optimize/#use-cache-mounts
+RUN --mount=type=cache,target=/var/cache/pacman/pkg,sharing=locked \
+    pacman -Syu --noconfirm \
+    && pacman -S --needed --noconfirm \
         base-devel \
         clang \
         lld \
@@ -28,21 +34,9 @@ RUN --mount=type=cache,target=/var/cache/pacman/pkg \
         doxygen \
         graphviz \
         pkgconf \
-        # SDL3 / graphics prerequisites (optional but pre-installed)
         wayland \
         libxkbcommon \
         mesa \
-    && yes | pacman -Scc
+    && pacman -Scc --noconfirm
 
-# ── Source ─────────────────────────────────────────────────────────--
-# Copy after dependency installation to maximize layer cache hits.
-COPY . .
-
-# ── Validation ────────────────────────────────────────────────────────
-# Fail fast if CMakePresets.json is malformed or presets are missing.
-RUN cmake --list-presets 2>&1 | head -20
-
-# ── Entrypoint ────────────────────────────────────────────────────────
-# Default: full CI workflow (configure → build → test → package).
-# Override with `docker run --entrypoint bash` for interactive use.
 ENTRYPOINT ["cmake", "--workflow", "--preset=gcc-full"]
