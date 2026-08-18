@@ -1,0 +1,134 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+#
+# One-click GitHub Release.
+#
+# Pipeline (jobs run in parallel where they can):
+#   docker    → reusable publish-docker.yml  (optional, matrix per image)
+#   packages  → reusable cmake_multi_platform.yml (native / cross / android)
+#   publish   → tag + gh release, attach CPack/APK artifacts from `packages`
+#
+# Adapt:
+#   - version is an input — never hardcoded
+#   - add/remove docker images in publish-docker.yml matrix
+#   - add package globs in the "Collect release assets" step if you add formats
+#   - permissions below are the union of what the called workflows need
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag (e.g. v1.0.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark as pre-release"
+        required: false
+        type: boolean
+        default: false
+      publish_docker:
+        description: "Build and push toolchain images to GHCR"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+  id-token: write
+  attestations: write
+
+jobs:
+  docker:
+    name: docker
+    if: ${{ inputs.publish_docker }}
+    uses: ./.github/workflows/publish-docker.yml
+    with:
+      tag: ${{ inputs.version }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+
+  packages:
+    name: packages
+    uses: ./.github/workflows/cmake_multi_platform.yml
+    permissions:
+      contents: read
+
+  publish:
+    name: tag and github release
+    needs: [docker, packages]
+    if: >-
+      !cancelled()
+      && needs.packages.result == 'success'
+      && (needs.docker.result == 'success' || needs.docker.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Validate version
+        run: |
+          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::version must look like v1.2.3 or v1.2.3-rc.1 (got '${VERSION}')"
+            exit 1
+          fi
+          if git ls-remote --tags --exit-code "https://github.com/${{ github.repository }}.git" \
+               "refs/tags/${VERSION}" >/dev/null; then
+            echo "::error::tag ${VERSION} already exists"
+            exit 1
+          fi
+          echo "Releasing ${VERSION} at ${{ github.sha }}"
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Collect release assets
+        id: assets
+        run: |
+          mapfile -t files < <(find artifacts -type f \(
+            -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.xz' -o -name '*.apk'
+          \) | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::no package artifacts (zip / tar.gz / tar.xz / apk)"
+            echo "## Artifacts on this run" >> "$GITHUB_STEP_SUMMARY"
+            find artifacts -type f | sort | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY" || true
+            exit 1
+          fi
+          {
+            echo "## Release assets (${#files[@]})"
+            printf -- '- `%s`\n' "${files[@]}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Persist as a NUL-separated list for the next step.
+          printf '%s\0' "${files[@]}" > /tmp/release-assets
+
+      - name: Create GitHub Release
+        env:
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          mapfile -d '' files < /tmp/release-assets
+          args=(
+            "${VERSION}"
+            --repo "${{ github.repository }}"
+            --target "${{ github.sha }}"
+            --title "${VERSION}"
+            --generate-notes
+          )
+          if [ "${PRERELEASE}" = "true" ]; then
+            args+=(--prerelease)
+          fi
+          gh release create "${args[@]}" "${files[@]}"
+          echo "Created ${{ github.server_url }}/${{ github.repository }}/releases/tag/${VERSION}" \
+            >> "$GITHUB_STEP_SUMMARY"
