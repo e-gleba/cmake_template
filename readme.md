@@ -7,11 +7,14 @@
 <p align="center">
   <a href="https://github.com/e-gleba/cmake_template/blob/main/license.md"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
   <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&label=ci" alt="ci"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/releases"><img src="https://img.shields.io/github/v/release/e-gleba/cmake_template" alt="release"/></a>
   <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-23%2F26-00599C?logo=cplusplus&logoColor=white" alt="C++ Standard"/></a>
   <a href="https://cmake.org"><img src="https://img.shields.io/badge/CMake-3.31%2B-064F8C?logo=cmake" alt="CMake"/></a>
 </p>
 
 <p align="center">
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/release.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-release-2ea44f" alt="Run release"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/publish-docker.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-publish--docker-2ea44f" alt="Run publish-docker"/></a>
   <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-ci-2ea44f" alt="Run CI"/></a>
   <a href="https://github.com/e-gleba/cmake_template/actions/workflows/renovate.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-renovate-2ea44f" alt="Run Renovate"/></a>
 </p>
@@ -39,6 +42,8 @@ cmake --workflow --preset=android-arm64-full
 cmake --workflow --preset=llvm-mingw-aarch64-full
 ```
 
+**Release:** click [▶ run release](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml), type `v1.2.3`. Builds every platform, optionally pushes GHCR images, tags, attaches CPack/APK artifacts.
+
 ---
 
 ## Why this template?
@@ -51,6 +56,7 @@ cmake --workflow --preset=llvm-mingw-aarch64-full
 | **CMake Presets** | Basic or none | ✅ 10+ configure presets, 15+ build presets, workflow presets, schema v10 |
 | **Packaging** | ❌ | ✅ CPack: tar.gz, zip, txz per platform |
 | **Reproducible CI** | Manual Docker | ✅ Docker images + GitHub Actions matrix |
+| **One-click release** | ❌ | ✅ `workflow_dispatch` + GHCR + CPack/APK attach |
 | **Code quality** | Maybe clang-format | ✅ clang-tidy, clang-format, `.cmake-format.yaml`, pre-commit hooks, `.editorconfig` |
 | **C++ Standard** | 17 | ✅ **23 / 26** |
 
@@ -158,7 +164,7 @@ cmake --workflow --preset=llvm-mingw-x86_64-full
 |---|---|
 | [Presets & Platforms](docs/presets.md) | All CMake presets, platform support, cross-compilation details |
 | [Architecture](docs/architecture.md) | CMake design decisions, directory structure, `PROJECT_IS_TOP_LEVEL` pattern |
-| [Docker Guide](docs/docker.md) | Docker images for CI, local reproducible builds |
+| [Docker Guide](docs/docker.md) | Docker images, GHCR publish, one-click release |
 | [Contributing](docs/contributing.md) | How to contribute, code style, pre-commit setup |
 | [References](docs/references.md) | Professional CMake, modern CMake, toolchain references |
 | [Issue: Android native testing strategy](https://github.com/e-gleba/cmake_template/issues/23) | GTest vs doctest, Activity lifecycle, XCTest, CI/CD — research-backed |
