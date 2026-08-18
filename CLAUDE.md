@@ -10,8 +10,9 @@ This file helps AI assistants (Claude, Cursor, Copilot) understand the project c
 - **Generator**: Ninja Multi-Config (except MSVC preset)
 - **Package Manager**: CPM.cmake (CMake-based, no external package manager like Conan/vcpkg yet)
 - **Test Framework**: doctest + CTest presets
-- **CI**: GitHub Actions (`cmake_multi_platform.yml`)
-- **Docker**: Fedora-based reproducible build images
+- **CI**: GitHub Actions (`cmake_multi_platform.yml`, reusable)
+- **Release**: `release.yml` (dispatch) pipes CI + optional `publish-docker.yml`
+- **Docker**: Official-base toolchain images in `docker/` (no source COPY)
 
 ## Directory Layout Rules
 
@@ -29,7 +30,8 @@ This file helps AI assistants (Claude, Cursor, Copilot) understand the project c
 │   └── CMakeLists.txt
 ├── tools/                      # Helper scripts (format, lint, etc.)
 ├── docker/
-│   └── fedora.Dockerfile       # Primary reproducible image
+│   ├── fedora.Dockerfile       # Primary toolchain (official fedora:44)
+│   └── manjaro.Dockerfile      # Rolling validator
 ├── android-project/            # Android manifest scaffolding
 ├── docs/
 │   └── references.md           # Curated external links (do NOT bloat README)
@@ -85,10 +87,13 @@ cmake --build build/gcc --target cpplint  # cppcheck/cpplint
 
 ## CI / GitHub Actions Rules
 
-- The main workflow is `.github/workflows/cmake_multi_platform.yml`.
+- Every workflow file starts with `# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json`.
+- Build matrix lives in `.github/workflows/cmake_multi_platform.yml` (`workflow_call` so `release.yml` can reuse it). Do not duplicate jobs.
+- Release is `.github/workflows/release.yml` (`workflow_dispatch`, version input). It pipes `publish-docker.yml` + the multi-platform workflow, then `gh release create`.
+- Docker images: add a row to `publish-docker.yml` `jobs.publish.strategy.matrix.include`. No hardcoded image names — `ghcr.io/${{ github.repository }}/<name>`.
 - New matrix entries must use existing presets from `CMakePresets.json`.
 - Do NOT add platform-specific hack scripts in CI — encode logic in presets or Docker.
-- Docker builds must be reproducible: pin Fedora/LLVM/CMake versions in `docker/fedora.Dockerfile`.
+- Pin official base images in `docker/*.Dockerfile`. Dependabot watches `/docker`.
 
 ## Cross-Compilation Conventions
 
