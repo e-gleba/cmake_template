@@ -96,23 +96,21 @@ jobs:
           path: artifacts
 
       - name: Collect release assets
-        id: assets
         run: |
-          mapfile -t files < <(find artifacts -type f \(
-            -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.xz' -o -name '*.apk'
-          \) | sort)
+          # Single line: a line break after \( makes shellcheck misparse the
+          # predicate list as commands (SC2215/SC2288).
+          find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.xz' -o -name '*.apk' \) -print0 | sort -z > /tmp/release-assets
+          mapfile -d '' files < /tmp/release-assets
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::error::no package artifacts (zip / tar.gz / tar.xz / apk)"
             echo "## Artifacts on this run" >> "$GITHUB_STEP_SUMMARY"
-            find artifacts -type f | sort | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY" || true
+            find artifacts -type f | sort >> "$GITHUB_STEP_SUMMARY" || true
             exit 1
           fi
           {
             echo "## Release assets (${#files[@]})"
-            printf -- '- `%s`\n' "${files[@]}"
+            printf -- '- %s\n' "${files[@]}"
           } >> "$GITHUB_STEP_SUMMARY"
-          # Persist as a NUL-separated list for the next step.
-          printf '%s\0' "${files[@]}" > /tmp/release-assets
 
       - name: Create GitHub Release
         env:
