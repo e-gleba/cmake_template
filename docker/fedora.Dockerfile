@@ -1,54 +1,43 @@
 # syntax=docker/dockerfile:1
+#
+# Toolchain image for native Linux builds (gcc / clang / ninja / cmake).
+# Source is not baked in — mount the repo at /app.
+#
+#   docker build -t cmake-template:fedora -f docker/fedora.Dockerfile docker
+#   docker run --rm -v "$PWD:/app" -w /app cmake-template:fedora \
+#     cmake --workflow --preset=gcc-full
 
-# ── Build Stage ────────────────────────────────────────────────────────
-# Full development environment with GCC, Clang, CMake, Ninja, and
-# documentation tools. Intended for CI pipelines and reproducible
-# local builds, not as a minimal runtime image.
-FROM fedora:latest AS build
+# Pin the current stable. Dependabot / Renovate bump this tag.
+FROM fedora:44
 
-LABEL maintainer="e-gleba" \
-      description="cmake_template build environment (GCC + Clang, CMake 3.31+, Ninja)" \
-      org.opencontainers.image.source="https://github.com/e-gleba/cmake_template"
+ARG SOURCE=""
+
+LABEL org.opencontainers.image.title="cmake_template fedora toolchain" \
+      org.opencontainers.image.description="GCC + Clang + CMake 3.31+ + Ninja" \
+      org.opencontainers.image.source="${SOURCE}" \
+      org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
-# ── System Dependencies ──────────────────────────────────────────────
-# Single RUN layer minimizes image size. BuildKit cache mount persists
-# dnf metadata between builds for faster local iteration.
-# Ref: https://docs.docker.com/build/cache/optimize/#use-cache-mounts
-RUN --mount=type=cache,target=/var/cache/dnf \
-    dnf -y upgrade --refresh && \
-    dnf -y install \
-        # Core toolchain
+# Single RUN + BuildKit cache mount. Official fedora packages only.
+# https://docs.docker.com/build/cache/optimize/#use-cache-mounts
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    dnf -y upgrade --refresh \
+    && dnf -y install \
         gcc-c++ \
         clang \
         clang-tools-extra \
         lld \
-        # Build system
         cmake \
         ninja-build \
         git \
-        # Documentation
         doxygen \
         graphviz \
-        # pkg-config for dependency discovery
         pkgconf-pkg-config \
-        # SDL3 / graphics prerequisites (optional but pre-installed)
         wayland-devel \
         libxkbcommon-devel \
         mesa-libEGL-devel \
     && dnf clean all
 
-# ── Source ───────────────────────────────────────────────────────────
-# Copy after dependency installation to maximize layer cache hits
-# when only source files change.
-COPY . .
-
-# ── Validation ───────────────────────────────────────────────────────
-# Fail fast if CMakePresets.json is malformed or presets are missing.
-RUN cmake --list-presets 2>&1 | head -20
-
-# ── Entrypoint ────────────────────────────────────────────────────────
-# Default: full CI workflow (configure → build → test → package).
-# Override with `docker run --entrypoint bash` for interactive use.
+# Override: docker run --entrypoint bash … for a shell.
 ENTRYPOINT ["cmake", "--workflow", "--preset=gcc-full"]
