@@ -20,8 +20,8 @@ LABEL org.opencontainers.image.title="cmake_template manjaro toolchain" \
 
 WORKDIR /app
 
-# base-devel = gcc, make, glibc headers. Cache mount for pacman pkgs.
-# https://docs.docker.com/build/cache/optimize/#use-cache-mounts
+# Rolling image — pinning pkg versions would freeze the validator.
+# hadolint ignore=DL3018,DL3033
 RUN --mount=type=cache,target=/var/cache/pacman/pkg,sharing=locked \
     pacman -Syu --noconfirm \
     && pacman -S --needed --noconfirm \
