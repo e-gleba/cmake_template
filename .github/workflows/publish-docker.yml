@@ -4,9 +4,8 @@
 #
 # Adapt: add a row to jobs.publish.strategy.matrix.include.
 #   name — image suffix (ghcr.io/<owner>/<repo>/<name>)
-#   file — Dockerfile path, relative to the repo root
+#   file — Dockerfile name inside docker/
 # Image names, tags, and labels come from github.repository + docker/metadata-action.
-# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: publish-docker
 
 on:
@@ -55,9 +54,9 @@ jobs:
       matrix:
         include:
           - name: fedora
-            file: docker/fedora.Dockerfile
+            file: fedora.Dockerfile
           - name: manjaro
-            file: docker/manjaro.Dockerfile
+            file: manjaro.Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -87,12 +86,14 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: docker
-          file: ${{ matrix.file }}
+          file: docker/${{ matrix.file }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
           sbom: true
+          build-args: |
+            SOURCE=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
