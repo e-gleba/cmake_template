@@ -9,7 +9,6 @@
   <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&label=ci" alt="ci"/></a>
   <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-23%2F26-00599C?logo=cplusplus&logoColor=white" alt="C++ Standard"/></a>
   <a href="https://cmake.org"><img src="https://img.shields.io/badge/CMake-3.31%2B-064F8C?logo=cmake" alt="CMake"/></a>
-  <a href="docs/contributing.md"><img src="https://img.shields.io/badge/Contributing-Guide-4CAF50" alt="Contributing Guide"/></a>
 </p>
 
 <p align="center">
