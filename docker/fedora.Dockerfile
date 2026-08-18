@@ -19,8 +19,9 @@ LABEL org.opencontainers.image.title="cmake_template fedora toolchain" \
 
 WORKDIR /app
 
-# Single RUN + BuildKit cache mount. Official fedora packages only.
-# https://docs.docker.com/build/cache/optimize/#use-cache-mounts
+# Distro packages track the image tag (fedora:44). Pinning each RPM
+# would fight Dependabot and add no reproducibility here.
+# hadolint ignore=DL3041
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     dnf -y upgrade --refresh \
     && dnf -y install \
