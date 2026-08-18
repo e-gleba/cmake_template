@@ -1,12 +1,10 @@
 cpmaddpackage(
     NAME
     lua
-    GITHUB_REPOSITORY
-    lua/lua
+    GIT_REPOSITORY
+    https://github.com/lua/lua.git
     VERSION
     5.5.0
-    EXCLUDE_FROM_ALL
-    ON
     DOWNLOAD_ONLY
     YES)
 
@@ -15,41 +13,32 @@ if(lua_ADDED)
         GLOB
         lua_sources
         CONFIGURE_DEPENDS
-        ${lua_SOURCE_DIR}/*.c)
+        "${lua_SOURCE_DIR}/*.c")
     list(
         REMOVE_ITEM
         lua_sources
-        "${lua_SOURCE_DIR}/lua.c"
-        "${lua_SOURCE_DIR}/luac.c"
-        "${lua_SOURCE_DIR}/onelua.c")
+        "${lua_SOURCE_DIR}/lua.c" # Interpreter
+        "${lua_SOURCE_DIR}/luac.c" # Compiler
+        "${lua_SOURCE_DIR}/onelua.c" # Single-file build
+    )
+
     add_library(lua STATIC ${lua_sources})
-    target_include_directories(lua PUBLIC $<BUILD_INTERFACE:${lua_SOURCE_DIR}>)
-    # Build as C
-    set_target_properties(lua PROPERTIES LINKER_LANGUAGE C)
-endif()
+    add_library(lua::lua ALIAS lua)
 
-option(SOL2_PATCHED "whether sol2 patch has been applied" OFF)
+    target_include_directories(lua SYSTEM
+                               PUBLIC "$<BUILD_INTERFACE:${lua_SOURCE_DIR}>")
 
-if(NOT SOL2_PATCHED)
-    set(SOL2_PATCHED
-        ON
-        CACHE BOOL "whether sol2 patch has been applied" FORCE)
+    target_compile_features(lua PUBLIC c_std_23)
 
-    cpmaddpackage(
-        NAME
-        sol2
-        GIT_REPOSITORY
-        https://github.com/ThePhD/sol2.git
-        VERSION
-        3.3.0
-        PATCHES
-        "${CMAKE_SOURCE_DIR}/cmake/patches/sol2_emplace_fix.patch")
-else()
-    cpmaddpackage(
-        NAME
-        sol2
-        GIT_REPOSITORY
-        https://github.com/ThePhD/sol2.git
-        VERSION
-        3.3.0)
+    # Professional Lua configuration
+    target_compile_definitions(
+        lua
+        PUBLIC LUA_COMPAT_5_3=0 # Disable Lua 5.3 compatibility bloat
+               $<$<CONFIG:Debug>:LUA_USE_APICHECK> # API checking in debug only
+    )
+
+    # Performance: computed goto (GCC/Clang only)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_definitions(lua PRIVATE LUA_USE_JUMPTABLE)
+    endif()
 endif()
