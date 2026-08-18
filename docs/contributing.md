@@ -71,6 +71,16 @@ pre-commit install
 - pre-commit
 - Docker for reproducible CI-like builds
 
+## Releasing
+
+Click [▶ run release](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml). Input `vX.Y.Z`. That workflow:
+
+1. Optionally publishes toolchain images (`publish-docker.yml`, one job per matrix row).
+2. Reuses `cmake_multi_platform.yml` — no duplicated build jobs.
+3. Tags the SHA and attaches CPack / APK artifacts.
+
+Workflow YAML starts with `# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json` so editors validate locally. Add a Docker image by adding a matrix row in `publish-docker.yml`. Dependabot watches `.github/workflows` and `docker/`.
+
 ## Standards
 
 - **CMake**: Modern, target-based. Prefer presets over cache variables in docs. Document toolchain specifics.

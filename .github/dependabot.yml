@@ -3,7 +3,7 @@ version: 2
 
 updates:
   # ─── GitHub Actions ────────────────────────────────────────────────────────
-  # Keep CI/CD actions up to date (checkout, setup-python, cache, upload-artifact, etc.)
+  # Keep CI/CD actions up to date (checkout, cache, upload-artifact, docker/*).
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -17,6 +17,24 @@ updates:
       include: "scope"
     groups:
       github-actions:
+        patterns:
+          - "*"
+
+  # ─── Docker base images ────────────────────────────────────────────────────
+  # fedora.Dockerfile + manjaro.Dockerfile live under docker/.
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      docker:
         patterns:
           - "*"
 

@@ -25,9 +25,14 @@ on:
     release:
         types: [published]
     workflow_dispatch:
+    # Called by release.yml — same matrix, no duplicated jobs.
+    workflow_call:
 
+# github.workflow is the *caller* name when this file is reused.
+# Prefix with this file's identity so a release call cannot share
+# a concurrency group with release.yml itself.
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
+    group: cmake-multiplatform-${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
 
 permissions:
@@ -37,7 +42,7 @@ env:
     CPM_SOURCE_CACHE: ${{ github.workspace }}/.cpm_cache
 
 jobs:
-    # ── native builds ───────────────────────────────────────────────────────────
+    # ── native builds ───────────────────────────────────────────
     native:
         name: native / ${{ matrix.artifact-name }}
         runs-on: ${{ matrix.os }}
@@ -80,7 +85,7 @@ jobs:
             - name: build
               run: cmake --workflow --preset ${{ matrix.preset }}
 
-            # ── Documentation (Clang only) ───────────────────────────────────
+            # ── Documentation (Clang only) ───────────────────────────
             - name: build documentation
               if: matrix.preset == 'clang-full'
               run: cmake --build --preset clang-docs
@@ -109,12 +114,14 @@ jobs:
             - name: documentation summary
               if: matrix.preset == 'clang-full' && always()
               run: |
-                  echo "## Documentation build result" >> $GITHUB_STEP_SUMMARY
-                  echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-                  echo "- Trigger: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
-                  echo "- Ref: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-                  echo "- Preset: \`clang-docs\`" >> $GITHUB_STEP_SUMMARY
-                  echo "- Artifact: \`doxygen_html_${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+                  {
+                    echo "## Documentation build result"
+                    echo "- Status: ${{ job.status }}"
+                    echo "- Trigger: \`${{ github.event_name }}\`"
+                    echo "- Ref: \`${{ github.ref_name }}\`"
+                    echo "- Preset: \`clang-docs\`"
+                    echo "- Artifact: \`doxygen_html_${{ github.run_id }}\`"
+                  } >> "$GITHUB_STEP_SUMMARY"
             # ──────────────────────────────────────────────────────────────────
             - name: upload zip artifact
               uses: actions/upload-artifact@v7
@@ -132,7 +139,7 @@ jobs:
                   if-no-files-found: ignore
                   compression-level: 0
 
-    # ── cross-compile: Linux → Windows (llvm-mingw) ─────────────────────────────
+    # ── cross-compile: Linux → Windows (llvm-mingw) ───────────────────────────
     cross-windows:
         name: cross-windows / ${{ matrix.artifact-name }}
         runs-on: ubuntu-latest
@@ -180,7 +187,7 @@ jobs:
                   if-no-files-found: ignore
                   compression-level: 0
 
-    # ── android APK build ────────────────────────────────────────────────────────
+    # ── android APK build ────────────────────────────────────────
     build-apk:
         name: android / ${{ matrix.build-type }}
         runs-on: ubuntu-latest
@@ -237,7 +244,7 @@ jobs:
                   if-no-files-found: error
                   compression-level: 0
 
-    # ── android instrumented tests ──────────────────────────────────────────────
+    # ── android instrumented tests ──────────────────────────────────
     android-test:
         name: android / instrumented-tests
         runs-on: ubuntu-latest
