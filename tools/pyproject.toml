@@ -7,7 +7,7 @@ name = "cmake-template-tools"
 version = "0.1.0"
 description = "CMake template tooling"
 requires-python = ">=3.14"
-dependencies = ["dearpygui==2.3.0"]
+dependencies = ["dearpygui==2.3.1"]
 
 [project.scripts]
 tool = "tool:main"
