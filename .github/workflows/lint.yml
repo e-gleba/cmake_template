@@ -56,5 +56,5 @@ jobs:
 
       - name: Lint ${{ matrix.file }}
         run: |
-          docker run --rm -i hadolint/hadolint:2.14.0 \
+          docker run --rm -i hadolint/hadolint:v2.15.1 \
             < "${{ matrix.file }}"
