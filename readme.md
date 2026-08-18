@@ -14,11 +14,16 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-ci-2ea44f" alt="Run CI"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/renovate.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-renovate-2ea44f" alt="Run Renovate"/></a>
+</p>
+
+<p align="center">
   <b>The only CMake template with Android NDK, Linux→Windows cross-compilation, and Gradle Managed Devices — out of the box.</b>
 </p>
 
 <p align="center">
-  <a href="https://github.com/e-gleba/cmake_template/generate"><img src="https://img.shields.io/badge/Use%20this%20template-%E2%9C%A8%20Generate%20new%20repo-238636?style=for-the-badge&logo=github&labelColor=1C1C1C" alt="Use this template"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/generate"><img src="https://img.shields.io/badge/Use%20this%20template-Generate%20new%20repo-238636?style=for-the-badge&logo=github&labelColor=1C1C1C" alt="Use this template"/></a>
 </p>
 
 ---
@@ -40,8 +45,6 @@ cmake --workflow --preset=llvm-mingw-aarch64-full
 
 ## Why this template?
 
-Most CMake starters stop at "it builds on my machine." This one ships to production.
-
 | You need | Most templates | This template |
 |---|---|---|
 | **Android NDK** | ❌ Not even mentioned | ✅ 4 presets (arm64, arm32, x64, x86), API 24, `c++_shared`, Prefab |
@@ -53,14 +56,6 @@ Most CMake starters stop at "it builds on my machine." This one ships to product
 | **Code quality** | Maybe clang-format | ✅ clang-tidy, clang-format, `.cmake-format.yaml`, pre-commit hooks, `.editorconfig` |
 | **C++ Standard** | 17 | ✅ **23 / 26** |
 
-### Unique capabilities
-
-- **Android NDK out of the box** — not just a toolchain file. A full Gradle project with `externalNativeBuild`, `prefab = true`, managed virtual devices, and `connectedCheck` test harness. Builds `.so` or `.aar`. See `android-project/`.
-- **Cross-compile from Linux to Windows** — llvm-mingw toolchain included in `cmake/toolchains/`. Build `.exe` binaries for x86_64, i686, and aarch64 Windows — no Windows machine needed.
-- **One-command workflows** — `cmake --workflow --preset=gcc-full` runs configure → build → test → package. No glue scripts.
-- **Professional CMake architecture** — `CMAKE_CURRENT_LIST_DIR` everywhere (safe for `add_subdirectory`/`FetchContent`), cross-compilation-aware `CMAKE_FIND_ROOT_PATH`, build-type-safe flag management.
-- **Honest roadmap** — every missing feature is a tracked issue, not a hidden gap. See [open issues](https://github.com/e-gleba/cmake_template/issues).
-
 ---
 
 ## Quick Start
@@ -68,7 +63,7 @@ Most CMake starters stop at "it builds on my machine." This one ships to product
 ### 1. Create your repo from this template
 
 <p align="center">
-  <a href="https://github.com/e-gleba/cmake_template/generate"><b>🎯 Click here: Use this template → Create new repository</b></a>
+  <a href="https://github.com/e-gleba/cmake_template/generate"><b>Click here: Use this template → Create new repository</b></a>
 </p>
 
 Then clone your new repo:
@@ -153,43 +148,9 @@ cmake --workflow --preset=llvm-mingw-x86_64-full
 | **Code coverage** | ❌ [#10](https://github.com/e-gleba/cmake_template/issues/10) | ✅ codecov | ✅ codecov | ❌ |
 | **macOS/iOS (Xcode)** | ❌ [#20](https://github.com/e-gleba/cmake_template/issues/20) | Limited | ❌ | ❌ |
 | **vcpkg** | ❌ [#3](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ |
-| **GitHub Stars** | ⭐ *you are here* | 1,700+ | 1,900+ | 900+ |
+| **GitHub Stars** | *you are here* | 1,700+ | 1,900+ | 900+ |
 | **Age** | ~1 year | 3 years | 5 years | 11 years |
 | **License** | MIT | Unlicense | Unlicense | MIT |
-
-> **Honest assessment:** This template leads in cross-compilation engineering (Android NDK, Linux→Win, Presets, CPack). It trails in sanitizers, fuzz testing, and code coverage — all actively tracked in the [roadmap](https://github.com/e-gleba/cmake_template/issues). It does not include Qt, OpenGL, or JUCE scaffolding — those are well covered by specialized templates.
-
----
-
-## Project Structure
-
-```
-.
-├── CMakeLists.txt           # Root: project(), CPM, code quality, CTest, CPack
-├── CMakePresets.json        # 10+ configure, 15+ build, workflow presets
-├── cmake/
-│   ├── toolchains/          # llvm-mingw.cmake, future ios.cmake
-│   ├── code_quality/        # clang-tidy, clang-format, cpplint configs
-│   └── description/         # package_description.cmake
-├── src/                     # Library sources
-│   └── CMakeLists.txt
-├── tests/                   # doctest-based tests
-│   ├── CMakeLists.txt       # Shared lib on Android, executable on desktop
-│   ├── doctest_android_jni.cpp  # JNI bridge for Android instrumentation
-│   └── doctest_example.cpp
-├── android-project/         # Gradle project with AGP, GMD, AndroidJUnitRunner
-│   ├── app/
-│   │   ├── build.gradle     # externalNativeBuild → ../../CMakeLists.txt
-│   │   └── src/
-│   │       ├── main/        # NativeActivity entry point
-│   │       └── androidTest/ # Instrumented test wrappers
-│   ├── build.gradle
-│   └── settings.gradle
-├── docker/                  # Dockerfiles for CI reproducibility
-├── scripts/                 # Build helpers
-├── docs/                    # Architecture, presets, Docker guides
-└── tools/                   # IWYU mappings, code quality configs
-```
 
 ---
 
@@ -234,25 +195,6 @@ I help teams reduce C++ build friction and ship cross-platform products faster.
 | 📍 **Location** | Remote-first, worldwide |
 
 </p>
-
----
-
-## Roadmap
-
-All planned features are tracked as GitHub issues with the `enhancement` label.
-
-| Priority | Issue | Feature |
-|---|---|---|
-| 🔴 P0 | [#20](https://github.com/e-gleba/cmake_template/issues/20) | macOS/iOS Xcode presets + XCTest |
-| 🔴 P0 | [#9](https://github.com/e-gleba/cmake_template/issues/9) | Sanitizers (ASan/UBSan/TSan) |
-| 🟡 P1 | [#10](https://github.com/e-gleba/cmake_template/issues/10) | Code coverage (codecov/CodeQL) |
-| 🟡 P1 | [#2](https://github.com/e-gleba/cmake_template/issues/2) | WebAssembly (Emscripten) |
-| 🟡 P1 | [#3](https://github.com/e-gleba/cmake_template/issues/3) | vcpkg compatibility |
-| 🟢 P2 | [#5](https://github.com/e-gleba/cmake_template/issues/5) | C++20 modules |
-| 🟢 P2 | [#11](https://github.com/e-gleba/cmake_template/issues/11) | Steam Runtime / Steam Deck |
-| 🟢 P2 | [#8](https://github.com/e-gleba/cmake_template/issues/8) | Prebuilt / air-gapped dependency mode |
-
-[View all issues →](https://github.com/e-gleba/cmake_template/issues)
 
 ---
 
