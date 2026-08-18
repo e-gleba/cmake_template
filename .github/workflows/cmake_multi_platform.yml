@@ -114,12 +114,14 @@ jobs:
             - name: documentation summary
               if: matrix.preset == 'clang-full' && always()
               run: |
-                  echo "## Documentation build result" >> $GITHUB_STEP_SUMMARY
-                  echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-                  echo "- Trigger: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
-                  echo "- Ref: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-                  echo "- Preset: \`clang-docs\`" >> $GITHUB_STEP_SUMMARY
-                  echo "- Artifact: \`doxygen_html_${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+                  {
+                    echo "## Documentation build result"
+                    echo "- Status: ${{ job.status }}"
+                    echo "- Trigger: \`${{ github.event_name }}\`"
+                    echo "- Ref: \`${{ github.ref_name }}\`"
+                    echo "- Preset: \`clang-docs\`"
+                    echo "- Artifact: \`doxygen_html_${{ github.run_id }}\`"
+                  } >> "$GITHUB_STEP_SUMMARY"
             # ──────────────────────────────────────────────────────────────────
             - name: upload zip artifact
               uses: actions/upload-artifact@v7
