@@ -5,12 +5,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&style=for-the-badge&labelColor=1C1C1C&logo=github&label=CI" alt="CI"/></a>
-  <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-23%2F26-00599C?style=for-the-badge&logo=cplusplus&logoColor=white&labelColor=1C1C1C" alt="C++ Standard"/></a>
-  <a href="https://cmake.org"><img src="https://img.shields.io/badge/CMake-3.31%2B-064F8C?style=for-the-badge&logo=cmake&logoColor=white&labelColor=1C1C1C" alt="CMake"/></a>
-  <a href="https://github.com/e-gleba/cmake_template/blob/main/license.md"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge&labelColor=1C1C1C" alt="License"/></a>
-  <a href="https://github.com/e-gleba/cmake_template/stargazers"><img src="https://img.shields.io/github/stars/e-gleba/cmake_template?style=for-the-badge&labelColor=1C1C1C&logo=github&color=F4C542" alt="Stars"/></a>
-  <a href="docs/contributing.md"><img src="https://img.shields.io/badge/Contributing-Guide-4CAF50?style=for-the-badge&labelColor=1C1C1C" alt="Contributing Guide"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/blob/main/license.md"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&label=ci" alt="ci"/></a>
+  <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-23%2F26-00599C?logo=cplusplus&logoColor=white" alt="C++ Standard"/></a>
+  <a href="https://cmake.org"><img src="https://img.shields.io/badge/CMake-3.31%2B-064F8C?logo=cmake" alt="CMake"/></a>
+  <a href="docs/contributing.md"><img src="https://img.shields.io/badge/Contributing-Guide-4CAF50" alt="Contributing Guide"/></a>
 </p>
 
 <p align="center">
@@ -23,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/e-gleba/cmake_template/generate"><img src="https://img.shields.io/badge/Use%20this%20template-Generate%20new%20repo-238636?style=for-the-badge&logo=github&labelColor=1C1C1C" alt="Use this template"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/generate"><img src="https://img.shields.io/badge/Use%20this%20template-Generate%20new%20repo-238636?logo=github" alt="Use this template"/></a>
 </p>
 
 ---
@@ -198,8 +197,6 @@ I help teams reduce C++ build friction and ship cross-platform products faster.
 
 ---
 
-## License
-
-MIT — see [license.md](license.md).
-
-This is not a "source available" or dual-licensed project. Use it for anything — commercial products, internal tools, or as a base for your own template. Attribution appreciated but not required.
+<div align="center">
+<sub>MIT — use it for anything: commercial products, internal tools, or as a base for your own template · <a href="license.md">license.md</a></sub>
+</div>
