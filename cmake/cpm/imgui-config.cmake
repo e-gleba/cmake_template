@@ -55,6 +55,14 @@ endif()
 # already exists (desktop GL via find_package(OpenGL) elsewhere); on
 # Emscripten the GLES3/WebGL2 symbols come from the emcc link flags on the
 # final executable (-sUSE_WEBGL2=1 -sFULL_ES3=1), so no OpenGL target there.
+#
+# To enable the desktop OpenGL path, call find_package(OpenGL) before this
+# config runs. Platform packages needed for that:
+#   Windows : vcpkg install opengl --triplet=x64-windows
+#   Fedora  : sudo dnf install mesa-libGL-devel mesa-libGLU-devel
+#   Arch    : sudo pacman -S mesa glu
+#   Ubuntu  : sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev
+#   macOS   : OpenGL.framework is included in the SDK
 if(TARGET SDL3::SDL3 AND (TARGET OpenGL::GL OR EMSCRIPTEN))
     add_library(imgui_sdl3_opengl3 STATIC EXCLUDE_FROM_ALL
                 ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
