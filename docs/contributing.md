@@ -73,11 +73,14 @@ pre-commit install
 
 ## Releasing
 
-Click [▶ run release](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml). Input `vX.Y.Z`. That workflow:
+Click [▶ run release](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml). Inputs: `version` (`vX.Y.Z`) and `next_version` (`X.Y.Z`, no `v`). That workflow:
 
 1. Optionally publishes toolchain images (`publish-docker.yml`, one job per matrix row).
 2. Reuses `cmake_multi_platform.yml` — no duplicated build jobs.
 3. Tags the SHA and attaches CPack / APK artifacts.
+4. Opens a PR that bumps `project(VERSION)` in `CMakeLists.txt` to `next_version`, then squash-merges it. The just-shipped tag keeps the old version so packages match their tag.
+
+Requires **Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"**. If merge is blocked (reviews / checks), the PR stays open.
 
 Workflow YAML starts with `# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json` so editors validate locally. Add a Docker image by adding a matrix row in `publish-docker.yml`. Dependabot watches `.github/workflows` and `docker/`.
 

@@ -6,9 +6,10 @@
 #   docker    → reusable publish-docker.yml  (optional, matrix per image)
 #   packages  → reusable cmake_multi_platform.yml (native / cross / android)
 #   publish   → tag + gh release, attach CPack/APK artifacts from `packages`
+#   bump      → after publish: PR that bumps project(VERSION) on main, then merge
 #
 # Adapt:
-#   - version is an input — never hardcoded
+#   - version / next_version are inputs — never hardcoded
 #   - add/remove docker images in publish-docker.yml matrix
 #   - add package globs in the "Collect release assets" step if you add formats
 #   - permissions below are the union of what the called workflows need
@@ -19,6 +20,10 @@ on:
     inputs:
       version:
         description: "Release tag (e.g. v1.0.0)"
+        required: true
+        type: string
+      next_version:
+        description: "Next CMake project() VERSION, no v prefix (e.g. 1.0.1) — bot opens+merges a PR after the release"
         required: true
         type: string
       prerelease:
@@ -42,6 +47,7 @@ permissions:
   actions: read
   id-token: write
   attestations: write
+  pull-requests: write
 
 jobs:
   docker:
@@ -130,3 +136,98 @@ jobs:
           gh release create "${args[@]}" "${files[@]}"
           echo "Created ${{ github.server_url }}/${{ github.repository }}/releases/tag/${VERSION}" \
             >> "$GITHUB_STEP_SUMMARY"
+
+  # After the tag+artifacts exist. Does not rewrite the just-shipped
+  # project(VERSION) — packages always match their own tag. Prepares
+  # main for the NEXT release via a PR (not a direct push to main).
+  bump_cmake_version:
+    name: bump cmake version via pr
+    needs: publish
+    if: >-
+      !cancelled()
+      && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    # Two release runs must never race the bump PR:
+    # queue the jobs, never cancel them mid-push.
+    concurrency:
+      group: post-release-cmake-version-bump
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Bound once via env — never expand a workflow input into shell
+      # source (zizmor template-injection).
+      NEXT_VERSION: ${{ inputs.next_version }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validate next_version
+        run: |
+          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf "::error::next_version must be plain semver, no v prefix (e.g. 1.0.1) — got '%s'\n" "${NEXT_VERSION}"
+            exit 1
+          fi
+          current=$(grep -E '^[[:space:]]*VERSION[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$' CMakeLists.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+          if [[ -z "${current}" ]]; then
+            echo "::error::could not read the current project version from CMakeLists.txt"
+            exit 1
+          fi
+          # sort -V: smaller of the two sorts first, so an equal or
+          # lower next_version sorts first — reject both.
+          lowest=$(printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -V | head -n1)
+          if [[ "${lowest}" == "${NEXT_VERSION}" ]]; then
+            printf "::error::next_version (%s) must be greater than the current project version (%s)\n" "${NEXT_VERSION}" "${current}"
+            exit 1
+          fi
+          echo "current=${current}" >> "${GITHUB_ENV}"
+          echo "Bumping project(VERSION) ${current} → ${NEXT_VERSION} (release ${VERSION})"
+
+      - name: Bump project version
+        run: |
+          sed -i -E "s/^([[:space:]]*VERSION[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/\1${NEXT_VERSION}/" CMakeLists.txt
+          grep -E "^[[:space:]]*VERSION[[:space:]]+${NEXT_VERSION}[[:space:]]*$" CMakeLists.txt
+
+      - name: Open and merge bump PR
+        run: |
+          branch="chore/bump-cmake-version-${NEXT_VERSION}-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${branch}"
+          git add CMakeLists.txt
+          git commit -m "chore: bump CMake project version to ${NEXT_VERSION}"
+          git push origin "HEAD:${branch}"
+
+          pr_url=$(gh pr create \
+            --base main \
+            --head "${branch}" \
+            --title "chore: bump CMake project version to ${NEXT_VERSION}" \
+            --body "$(cat <<EOF
+          Post-release bump. Tag \`${VERSION}\` already published with \`project(VERSION)\` ${current}.
+
+          Prepares main for the next release so packages always ship the version of their own tag.
+
+          - \`CMakeLists.txt\` \`project(VERSION)\`: ${current} → ${NEXT_VERSION}
+
+          Opened by the [release workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+          EOF
+          )")
+
+          echo "Opened ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
+
+          # Leave the PR open if merge is blocked (reviews / checks).
+          # Settings → Actions → General → "Allow GitHub Actions to create
+          # and approve pull requests" must be on, or gh pr create fails.
+          if gh pr merge --squash --delete-branch; then
+            echo "Merged ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "::warning::could not merge ${pr_url} — merge it manually"
+            echo "Merge blocked — merge ${pr_url} manually" >> "${GITHUB_STEP_SUMMARY}"
+          fi
