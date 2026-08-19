@@ -187,6 +187,49 @@ jobs:
                   if-no-files-found: ignore
                   compression-level: 0
 
+    # ── cross-compile: Linux → WebAssembly (emscripten) ───────────────────────
+    web:
+        name: web / emscripten
+        runs-on: ubuntu-latest
+        steps:
+            - name: checkout
+              uses: actions/checkout@v7
+
+            - name: install build tools
+              run: |
+                  sudo apt-get update -qq
+                  sudo apt-get install -y --no-install-recommends ninja-build
+
+            - name: setup emsdk
+              uses: emscripten-core/setup-emsdk@v16
+              with:
+                  version: "6.0.7"
+                  actions-cache-folder: emsdk-cache
+
+            - name: cache cpm sources
+              uses: actions/cache@v6
+              with:
+                  path: .cpm_cache
+                  key: cpm-web-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+                  restore-keys: cpm-web-
+
+            # configure + build + ctest (doctest suite runs under Node.js
+            # via CMAKE_CROSSCOMPILING_EMULATOR, set by the emsdk toolchain)
+            - name: build and test
+              run: cmake --workflow --preset emscripten-full
+
+            # Self-contained static site — deploy to any static host as-is
+            - name: upload web bundle
+              uses: actions/upload-artifact@v7
+              with:
+                  name: web-emscripten-bundle
+                  path: |
+                      build/emscripten/**/web_app.html
+                      build/emscripten/**/web_app.js
+                      build/emscripten/**/web_app.wasm
+                  if-no-files-found: error
+                  compression-level: 0
+
     # ── android APK build ────────────────────────────────────────
     build-apk:
         name: android / ${{ matrix.build-type }}

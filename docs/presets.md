@@ -15,7 +15,7 @@ This document merges and expands the previous `presets.md` and `platforms.md` in
 - **Reproducibility**: Docker images, pinned NDK, llvm-mingw in PATH, explicit cache vars.
 - **Extensibility**: Easy to add your own presets that inherit from these.
 
-**Cross-compilation is first-class** — not an afterthought. Android NDK presets, llvm-mingw Windows cross presets, and planned Xcode presets demonstrate production-grade toolchain management.
+**Cross-compilation is first-class** — not an afterthought. Android NDK presets, llvm-mingw Windows cross presets, an Emscripten WebAssembly preset, and planned Xcode presets demonstrate production-grade toolchain management.
 
 ## Quick Start Reference
 
@@ -35,6 +35,11 @@ cmake --workflow --preset=android-arm64-full
 
 # 4. Linux → Windows cross (requires llvm-mingw on PATH)
 cmake --workflow --preset=llvm-mingw-x86_64-full
+
+# 5. WebAssembly (requires emsdk activated — EMSDK env var)
+cmake --workflow --preset=emscripten-full
+# → build/emscripten/Release/src/web_app.{html,js,wasm}
+# → doctest suite runs under Node.js via ctest
 ```
 
 See `CMakePresets.json` for the full list (10+ configure presets + derived build/test/package/workflow variants).
@@ -74,6 +79,26 @@ Uses **[llvm-mingw](https://github.com/mstorsjo/llvm-mingw)** — modern, LLVM-b
 
 **Why llvm-mingw over MSVC cross?** Smaller toolchain, no Visual Studio dependency on Linux host, better integration with Ninja.
 
+### WebAssembly (Emscripten)
+
+Uses the **upstream emsdk toolchain file** — nothing is vendored into `cmake/toolchains/`. The preset points `CMAKE_TOOLCHAIN_FILE` at `$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake`, so the toolchain always matches the installed SDK.
+
+| Preset | Output | Notes |
+|--------|--------|-------|
+| `emscripten` | `wasm32` | `emscripten-release` / `emscripten-debug` builds; `emscripten-full` workflow |
+
+**Setup**: install [emsdk](https://emscripten.org/docs/getting_started/downloads.html) and activate it (`source emsdk_env.sh`) so `EMSDK` is in the environment, then:
+
+```bash
+cmake --workflow --preset=emscripten-full
+```
+
+This configures, builds, and runs the doctest suite under Node.js — the Emscripten toolchain auto-detects `node` as `CMAKE_CROSSCOMPILING_EMULATOR`, and ctest prepends it to the test command. SDL3 is built static-only (wasm has no dynamic linking).
+
+The graphical `web_app` demo (SDL3 + OpenGL/GLES + Dear ImGui, shaders inlined — zero assets) is emitted as a self-contained static site at `build/emscripten/Release/src/web_app.{html,js,wasm}`. Serve it locally with `npx serve build/emscripten/Release/src` or deploy the three files to any static host.
+
+clang-tidy co-compilation is disabled for this preset — host clang-tidy cannot parse the emscripten sysroot reliably.
+
 ### Planned: Apple Platforms (macOS, iOS, Xcode)
 
 **See [#20](https://github.com/e-gleba/cmake_template/issues/20) — "feat(platform): add macOS and iOS presets with Xcode generator support"**
@@ -103,7 +128,7 @@ Contributions toward #20 are highly encouraged (help wanted label).
 
 ### Workflows (CMake 3.25+)
 
-Workflow presets chain multiple steps. Current full workflows skip tests for cross targets (sensible default; runtime testing requires emulator or target hardware).
+Workflow presets chain multiple steps. Current full workflows skip tests for cross targets (sensible default; runtime testing requires emulator or target hardware). The Emscripten workflow is the exception: wasm runs under Node.js, so `emscripten-full` includes a real `ctest` step.
 
 Example output of a full workflow includes CPack artifacts ready for distribution.
 
@@ -121,6 +146,7 @@ Example output of a full workflow includes CPack artifacts ready for distributio
 ### Troubleshooting Common Issues
 
 - **NDK not found**: Explicitly set `ANDROID_NDK_HOME` or use Android Studio's NDK.
+- **emsdk not found**: Activate emsdk first (`source emsdk_env.sh`) — the `emscripten` preset reads `$EMSDK`.
 - **llvm-mingw**: Verify with `x86_64-w64-mingw32-g++ --version`.
 - **Permission errors on Android**: API level and ABI must match target device/emulator.
 - **CPack package names**: Controlled via `CPACK_*` variables in presets or CMakeLists.
@@ -128,7 +154,7 @@ Example output of a full workflow includes CPack artifacts ready for distributio
 
 ## Comparison to Other Templates
 
-This template's preset matrix is more extensive than most for cross-platform C++ (Android + Windows cross out-of-box). The planned Apple support will make it one of the broadest.
+This template's preset matrix is more extensive than most for cross-platform C++ (Android + Windows cross + WebAssembly out-of-box). The planned Apple support will make it one of the broadest.
 
 See the main README for detailed feature comparison.
 

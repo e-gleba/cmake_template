@@ -58,8 +58,14 @@ endif()
 #   Arch    : sudo pacman -S mesa glu
 #   Ubuntu  : sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev
 #   macOS   : OpenGL.framework is included in the SDK
+#   Web     : no package — GLES3/WebGL2 symbols come from the emcc link
+#             flags on the final executable (-sUSE_WEBGL2=1 -sFULL_ES3=1)
 
-if(TARGET SDL3::SDL3 AND TARGET OpenGL::GL)
+if(NOT EMSCRIPTEN)
+    find_package(OpenGL QUIET)
+endif()
+
+if(TARGET SDL3::SDL3 AND (TARGET OpenGL::GL OR EMSCRIPTEN))
     add_library(imgui_sdl3_opengl3 STATIC)
     add_library(imgui::sdl3_opengl3 ALIAS imgui_sdl3_opengl3)
 
@@ -75,8 +81,16 @@ if(TARGET SDL3::SDL3 AND TARGET OpenGL::GL)
         imgui_sdl3_opengl3 SYSTEM
         PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/backends>)
 
-    target_link_libraries(imgui_sdl3_opengl3 PUBLIC imgui::imgui SDL3::SDL3
-                                                    OpenGL::GL)
+    target_link_libraries(imgui_sdl3_opengl3 PUBLIC imgui::imgui SDL3::SDL3)
+
+    if(EMSCRIPTEN)
+        # The OpenGL3 backend defaults to ES2 on Emscripten — force the
+        # GLES3/WebGL2 code path to match the SDL3 GL context.
+        target_compile_definitions(imgui_sdl3_opengl3
+                                   PRIVATE IMGUI_IMPL_OPENGL_ES3)
+    else()
+        target_link_libraries(imgui_sdl3_opengl3 PUBLIC OpenGL::GL)
+    endif()
 
     target_compile_features(imgui_sdl3_opengl3 PUBLIC cxx_std_23)
 else()
@@ -86,7 +100,7 @@ else()
                 "imgui: SDL3::SDL3 target missing — skipping SDL3+OpenGL3 backend."
         )
     endif()
-    if(NOT TARGET OpenGL::GL)
+    if(NOT TARGET OpenGL::GL AND NOT EMSCRIPTEN)
         message(
             STATUS
                 "imgui: OpenGL::GL target missing — skipping SDL3+OpenGL3 backend."

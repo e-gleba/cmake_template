@@ -5,7 +5,9 @@ block(
     sdl_dbus
     sdl_ibus
     sdl_libdecor
-    sdl_opengles)
+    sdl_opengles
+    sdl_shared
+    sdl_static)
 # Only mobile builds need the sensor subsystem
 set(sdl_sensor OFF)
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
@@ -28,6 +30,14 @@ endif()
 set(sdl_opengles ON)
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin|iOS")
     set(sdl_opengles OFF)
+endif()
+
+# Emscripten has no dynamic linking — build SDL3 static-only there
+set(sdl_shared ON)
+set(sdl_static OFF)
+if(EMSCRIPTEN)
+    set(sdl_shared OFF)
+    set(sdl_static ON)
 endif()
 endblock()
 
@@ -55,9 +65,9 @@ cpmaddpackage(
     # ---- build tooling ----
     "SDL_PRECOMPILED_HEADERS OFF"
     "SDL_CCACHE ON"
-    # ---- library type: shared only ----
-    "SDL_STATIC OFF"
-    "SDL_SHARED ON"
+    # ---- library type ----
+    "SDL_STATIC ${sdl_static}"
+    "SDL_SHARED ${sdl_shared}"
     # ---- core subsystems ----
     "SDL_AUDIO OFF"
     "SDL_VIDEO ON"
