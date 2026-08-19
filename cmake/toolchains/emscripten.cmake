@@ -70,12 +70,12 @@ cmake_path(SET sdk_toolchain NORMALIZE
 
 # --- Bootstrap if the toolchain file is missing ---------------------------
 if(NOT EXISTS "${sdk_toolchain}")
-    find_program(
-        EMSCRIPTEN_PYTHON
-        NAMES python3 python
-        DOC "python interpreter driving the emsdk installer")
-    mark_as_advanced(EMSCRIPTEN_PYTHON)
-    if(NOT EMSCRIPTEN_PYTHON)
+    # FindPython3 (3.12) locates the interpreter via the standard module:
+    # honours venvs, the Windows registry, and python3/python fallback, and
+    # exposes Python3_EXECUTABLE + Python3_VERSION. Only the Interpreter
+    # component is needed - emsdk is a pure-python tool.
+    find_package(Python3 COMPONENTS Interpreter)
+    if(NOT Python3_Interpreter_FOUND)
         message(
             FATAL_ERROR
             "python3 is required to bootstrap emsdk. "
@@ -119,7 +119,7 @@ if(NOT EXISTS "${sdk_toolchain}")
     # live progress instead of a silent hang.
     message(STATUS "Installing emscripten ${EMSCRIPTEN_SDK_VERSION}")
     execute_process(
-        COMMAND "${EMSCRIPTEN_PYTHON}" emsdk.py install
+        COMMAND "${Python3_EXECUTABLE}" emsdk.py install
                 "${EMSCRIPTEN_SDK_VERSION}"
         WORKING_DIRECTORY "${sdk_root}"
         ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
@@ -128,7 +128,7 @@ if(NOT EXISTS "${sdk_toolchain}")
     # --embedded keeps the `.emscripten` config inside the SDK: no $HOME
     # edits, and emcc finds it at build time without any environment.
     execute_process(
-        COMMAND "${EMSCRIPTEN_PYTHON}" emsdk.py activate --embedded
+        COMMAND "${Python3_EXECUTABLE}" emsdk.py activate --embedded
                 "${EMSCRIPTEN_SDK_VERSION}"
         WORKING_DIRECTORY "${sdk_root}"
         ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
