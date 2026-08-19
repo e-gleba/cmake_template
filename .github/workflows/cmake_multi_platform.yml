@@ -200,11 +200,14 @@ jobs:
                   sudo apt-get update -qq
                   sudo apt-get install -y --no-install-recommends ninja-build
 
-            - name: setup emsdk
-              uses: emscripten-core/setup-emsdk@v16
+            # cmake/toolchains/emscripten.cmake bootstraps the pinned emsdk
+            # into .emsdk/ on first configure — cache it between runs. The key
+            # tracks the toolchain file, so a version bump re-bootstraps.
+            - name: cache emsdk
+              uses: actions/cache@v6
               with:
-                  version: "6.0.7"
-                  actions-cache-folder: emsdk-cache
+                  path: .emsdk
+                  key: emsdk-${{ hashFiles('cmake/toolchains/emscripten.cmake') }}
 
             - name: cache cpm sources
               uses: actions/cache@v6
@@ -213,8 +216,9 @@ jobs:
                   key: cpm-web-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
                   restore-keys: cpm-web-
 
-            # configure + build + ctest (doctest suite runs under Node.js
-            # via CMAKE_CROSSCOMPILING_EMULATOR, set by the emsdk toolchain)
+            # configure + build + ctest (doctest suite runs under Node.js via
+            # CMAKE_CROSSCOMPILING_EMULATOR — system node or the SDK-bundled
+            # one, wired up by the toolchain wrapper)
             - name: build and test
               run: cmake --workflow --preset emscripten-full
 

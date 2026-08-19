@@ -36,7 +36,7 @@ cmake --workflow --preset=android-arm64-full
 # 4. Linux → Windows cross (requires llvm-mingw on PATH)
 cmake --workflow --preset=llvm-mingw-x86_64-full
 
-# 5. WebAssembly (requires emsdk activated — EMSDK env var)
+# 5. WebAssembly (zero setup — emsdk auto-bootstraps into .emsdk/)
 cmake --workflow --preset=emscripten-full
 # → build/emscripten/src/emscripten/Release/web_app.{html,js,wasm}
 # → doctest suite runs under Node.js via ctest
@@ -81,19 +81,25 @@ Uses **[llvm-mingw](https://github.com/mstorsjo/llvm-mingw)** — modern, LLVM-b
 
 ### WebAssembly (Emscripten)
 
-Uses the **upstream emsdk toolchain file** — nothing is vendored into `cmake/toolchains/`. The preset points `CMAKE_TOOLCHAIN_FILE` at `$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake`, so the toolchain always matches the installed SDK.
+**Zero setup.** The preset uses `cmake/toolchains/emscripten.cmake` — a thin wrapper that locates a usable emsdk and then defers to the upstream toolchain file shipped inside the SDK. On first configure it downloads a pinned emsdk release into the repo-local `.emsdk/` (gitignored), installs it, and activates it with `--embedded` — the `.emscripten` config lives inside the SDK, so nothing touches `$HOME` or the rest of the system. Delete `.emsdk/` to reset.
+
+Resolution order:
+
+1. `EMSDK` environment variable (existing install, e.g. CI) — used as-is, never modified
+2. `-DEMSCRIPTEN_SDK_ROOT=/path` — custom SDK location
+3. `<repo>/.emsdk` — bootstrapped here on first use
+
+Knobs: `-DEMSCRIPTEN_SDK_VERSION=x.y.z` to change the pinned release (default `6.0.7`), `-DEMSCRIPTEN_SDK_TARBALL_SHA256=...` for an optional integrity pin. The only host requirement is `python3` on `PATH` (emsdk is a python tool).
 
 | Preset | Output | Notes |
 |--------|--------|-------|
 | `emscripten` | `wasm32` | `emscripten-release` / `emscripten-debug` builds; `emscripten-full` workflow |
 
-**Setup**: install [emsdk](https://emscripten.org/docs/getting_started/downloads.html) and activate it (`source emsdk_env.sh`) so `EMSDK` is in the environment, then:
-
 ```bash
 cmake --workflow --preset=emscripten-full
 ```
 
-This configures, builds, and runs the doctest suite under Node.js — the Emscripten toolchain auto-detects `node` as `CMAKE_CROSSCOMPILING_EMULATOR`, and ctest prepends it to the test command. SDL3 is built static-only (wasm has no dynamic linking).
+This configures, builds, and runs the doctest suite under Node.js — the toolchain wires `CMAKE_CROSSCOMPILING_EMULATOR` to a system `node` or the one bundled with emsdk, and ctest prepends it to the test command. SDL3 is built static-only (wasm has no dynamic linking).
 
 The graphical `web_app` demo (sources in `src/emscripten/`: SDL3 + OpenGL/GLES + Dear ImGui, shaders inlined — zero assets) is emitted as a self-contained static site at `build/emscripten/src/emscripten/Release/web_app.{html,js,wasm}`. Serve it locally with `npx serve build/emscripten/src/emscripten/Release` or deploy the three files to any static host.
 
@@ -146,7 +152,7 @@ Example output of a full workflow includes CPack artifacts ready for distributio
 ### Troubleshooting Common Issues
 
 - **NDK not found**: Explicitly set `ANDROID_NDK_HOME` or use Android Studio's NDK.
-- **emsdk not found**: Activate emsdk first (`source emsdk_env.sh`) — the `emscripten` preset reads `$EMSDK`.
+- **emsdk bootstrap fails**: Ensure `python3` is on `PATH`, then delete the partial `.emsdk/` and re-configure. To use a system emsdk instead, activate it (`source emsdk_env.sh`) so `EMSDK` is set before configuring.
 - **llvm-mingw**: Verify with `x86_64-w64-mingw32-g++ --version`.
 - **Permission errors on Android**: API level and ABI must match target device/emulator.
 - **CPack package names**: Controlled via `CPACK_*` variables in presets or CMakeLists.

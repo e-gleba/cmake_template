@@ -145,9 +145,9 @@
         {
             "name": "emscripten",
             "displayName": "Emscripten (WebAssembly)",
-            "description": "Cross-compile to WebAssembly via the upstream emsdk toolchain file. Requires emsdk activated (EMSDK env var). Tests run under Node.js. clang-tidy co-compilation is disabled: host tidy cannot parse the emscripten sysroot.",
+            "description": "Cross-compile to WebAssembly. Zero setup: cmake/toolchains/emscripten.cmake bootstraps a pinned emsdk into .emsdk/ on first configure (an existing EMSDK env var is respected). Tests run under Node.js. clang-tidy co-compilation is disabled: host tidy cannot parse the emscripten sysroot.",
             "inherits": "base",
-            "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/emscripten.cmake",
             "cacheVariables": {
                 "CMAKE_CXX_CLANG_TIDY": ""
             }
