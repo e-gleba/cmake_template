@@ -71,16 +71,10 @@ cmake_path(SET sdk_toolchain NORMALIZE
 # --- Bootstrap if the toolchain file is missing ---------------------------
 if(NOT EXISTS "${sdk_toolchain}")
     # FindPython3 (3.12) locates the interpreter via the standard module:
-    # honours venvs, the Windows registry, and python3/python fallback, and
-    # exposes Python3_EXECUTABLE + Python3_VERSION. Only the Interpreter
-    # component is needed - emsdk is a pure-python tool.
-    find_package(Python3 COMPONENTS Interpreter)
-    if(NOT Python3_Interpreter_FOUND)
-        message(
-            FATAL_ERROR
-            "python3 is required to bootstrap emsdk. "
-            "Install it or point EMSDK at an existing SDK.")
-    endif()
+    # honours venvs, the Windows registry, and python3/python fallback. Only
+    # the Interpreter component is needed - emsdk is a pure-python tool.
+    # REQUIRED makes the module fail the configure itself when absent.
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
     if(NOT EXISTS "${sdk_root}/emsdk.py")
         set(url
