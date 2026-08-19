@@ -95,8 +95,9 @@ Add an image: one row in `jobs.publish.strategy.matrix.include`.
 1. Calls `publish-docker.yml` (optional, parallel, one job per image).
 2. Calls `cmake_multi_platform.yml` (same matrix as CI — no duplicated jobs).
 3. Tags `vX.Y.Z` and attaches CPack / APK artifacts via `gh release create`.
+4. Opens + squash-merges a PR that bumps `project(VERSION)` in `CMakeLists.txt` to the `next_version` you typed. The just-shipped tag stays at the old version.
 
-Click **▶ run release** on the README, type `v1.2.3`.
+Click **▶ run release** on the README, type `v1.2.3` and next CMake version `1.2.4`.
 
 ## Troubleshooting
 

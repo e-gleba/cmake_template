@@ -42,7 +42,7 @@ cmake --workflow --preset=android-arm64-full
 cmake --workflow --preset=llvm-mingw-aarch64-full
 ```
 
-**Release:** click [▶ run release](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml), type `v1.2.3`. Builds every platform, optionally pushes GHCR images, tags, attaches CPack/APK artifacts.
+**Release:** click [▶ run release](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml), type `v1.2.3` and next CMake version (`1.2.4`). Builds every platform, optionally pushes GHCR images, tags, attaches CPack/APK artifacts, then opens+merges a PR bumping `project(VERSION)` on main.
 
 ---
 
