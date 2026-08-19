@@ -8,6 +8,11 @@ install(TARGETS cli_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
                                 COMPONENT runtime
 )
 
+# ── WebAssembly deploy: SDL3 + OpenGL/GLES3 + Dear ImGui demo ────────
+if(EMSCRIPTEN)
+    add_subdirectory(emscripten)
+endif()
+
 if(NOT TARGET SDL3::SDL3-shared)
     return()
 endif()
@@ -37,7 +42,7 @@ if(TARGET Tracy::TracyClient)
     )
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+if(CMAKE_SYSTEM_NAME MATCHES "Android|Emscripten")
     return()
 endif()
 

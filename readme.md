@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <b>The only CMake template with Android NDK, Linux→Windows cross-compilation, and Gradle Managed Devices — out of the box.</b>
+  <b>The only CMake template with Android NDK, Linux→Windows cross-compilation, WebAssembly, and Gradle Managed Devices — out of the box.</b>
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 
 ---
 
-Production-ready C++ template for cross-platform projects. Targets C++23/26. Ninja Multi-Config, CPM, clang-tidy, clang-format, pre-commit hooks. Packages with CPack. Tests with doctest — instrumented on Android via Gradle Managed Devices. Zero friction from clone to package on **Linux, Windows, Android, and macOS**.
+Production-ready C++ template for cross-platform projects. Targets C++23/26. Ninja Multi-Config, CPM, clang-tidy, clang-format, pre-commit hooks. Packages with CPack. Tests with doctest — instrumented on Android via Gradle Managed Devices, run under Node.js on WebAssembly. Zero friction from clone to package on **Linux, Windows, Android, macOS, and WebAssembly**.
 
 ```bash
 # Desktop — full pipeline in one command
@@ -53,6 +53,7 @@ cmake --workflow --preset=llvm-mingw-aarch64-full
 | **Android NDK** | ❌ Not even mentioned | ✅ 4 presets (arm64, arm32, x64, x86), API 24, `c++_shared`, Prefab |
 | **Android instrumentation tests** | ❌ | ✅ `AndroidJUnitRunner`, Gradle Managed Devices (Pixel 6 ATD), doctest JNI bridge, [#23 native GTest strategy](https://github.com/e-gleba/cmake_template/issues/23) |
 | **Linux → Windows cross-compile** | ❌ | ✅ llvm-mingw toolchain: x86_64, i686, aarch64 |
+| **WebAssembly** | ❌ | ✅ Emscripten preset with zero-setup SDK bootstrap, SDL3 + ImGui + OpenGL web demo, doctest under Node.js |
 | **CMake Presets** | Basic or none | ✅ 10+ configure presets, 15+ build presets, workflow presets, schema v10 |
 | **Packaging** | ❌ | ✅ CPack: tar.gz, zip, txz per platform |
 | **Reproducible CI** | Manual Docker | ✅ Docker images + GitHub Actions matrix |
@@ -116,6 +117,14 @@ cmake --workflow --preset=llvm-mingw-x86_64-full
 # → build/llvm-mingw-x86_64/package/cxx_project-*.zip
 ```
 
+### 5. WebAssembly (zero setup)
+
+```bash
+# No emsdk install needed — the toolchain bootstraps a pinned SDK into .emsdk/
+cmake --workflow --preset=emscripten-full
+# → build/emscripten/src/emscripten/Release/web_app.{html,js,wasm}
+```
+
 ---
 
 ## Platform Matrix
@@ -131,7 +140,7 @@ cmake --workflow --preset=llvm-mingw-x86_64-full
 | **Android x86** | `android-x86` | Ninja Multi-Config | `gradlew connectedCheck` | — |
 | **macOS** | `clang` (native) | Ninja Multi-Config | `ctest` | `.tar.gz` |
 | **iOS / macOS Xcode** | [planned #20](https://github.com/e-gleba/cmake_template/issues/20) | Xcode | `xctest` / `xcodebuild test` | — |
-| **WebAssembly** | [planned #2](https://github.com/e-gleba/cmake_template/issues/2) | Emscripten | — | — |
+| **WebAssembly** | `emscripten` | Ninja Multi-Config | `ctest` via Node.js | `.html` + `.js` + `.wasm` |
 
 ---
 
@@ -144,7 +153,7 @@ cmake --workflow --preset=llvm-mingw-x86_64-full
 | **Android NDK** | ✅ 4 ABI | ❌ | ❌ | ❌ |
 | **Android instrumented tests** | ✅ GMD + doctest JNI | ❌ | ❌ | ❌ |
 | **Linux → Windows cross** | ✅ llvm-mingw (3 arch) | ❌ | ❌ | ❌ |
-| **WebAssembly** | ❌ [#2](https://github.com/e-gleba/cmake_template/issues/2) | ✅ + Pages deploy | ❌ | ❌ |
+| **WebAssembly** | ✅ Emscripten (SDL3 + ImGui + OpenGL demo) | ✅ + Pages deploy | ❌ | ❌ |
 | **Docker / CI** | ✅ + Actions matrix | ✅ Docker + Actions | ✅ GitHub Actions | ✅ |
 | **CPack packaging** | ✅ tar.gz / zip / txz | ❌ | ❌ | ❌ |
 | **Sanitizers** | ❌ [#9](https://github.com/e-gleba/cmake_template/issues/9) | ✅ ASan/UBSan | ✅ | ❌ |
@@ -166,7 +175,7 @@ cmake --workflow --preset=llvm-mingw-x86_64-full
 | [Architecture](docs/architecture.md) | CMake design decisions, directory structure, `PROJECT_IS_TOP_LEVEL` pattern |
 | [Docker Guide](docs/docker.md) | Docker images, GHCR publish, one-click release |
 | [Contributing](docs/contributing.md) | How to contribute, code style, pre-commit setup |
-| [References](docs/references.md) | Professional CMake, modern CMake, toolchain references |
+| [References](docs/references.md) | Curated external links (do NOT bloat README) |
 | [Issue: Android native testing strategy](https://github.com/e-gleba/cmake_template/issues/23) | GTest vs doctest, Activity lifecycle, XCTest, CI/CD — research-backed |
 
 ---

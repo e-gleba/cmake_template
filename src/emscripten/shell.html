@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+            name="description"
+            content="cmake_template web_app - SDL3 + OpenGL (WebGL2) + Dear ImGui compiled to WebAssembly"
+        />
+        <title>cmake_template &middot; web_app</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                height: 100%;
+                overflow: hidden;
+                background: #0b0e14;
+            }
+            #canvas {
+                display: block;
+                width: 100vw;
+                height: 100vh;
+                outline: none;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- context menu suppressed so ImGui right-click works in-page -->
+        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+        {{{ SCRIPT }}}
+    </body>
+</html>

@@ -187,6 +187,53 @@ jobs:
                   if-no-files-found: ignore
                   compression-level: 0
 
+    # ── cross-compile: Linux → WebAssembly (emscripten) ───────────────────────
+    web:
+        name: web / emscripten
+        runs-on: ubuntu-latest
+        steps:
+            - name: checkout
+              uses: actions/checkout@v7
+
+            - name: install build tools
+              run: |
+                  sudo apt-get update -qq
+                  sudo apt-get install -y --no-install-recommends ninja-build
+
+            # cmake/toolchains/emscripten.cmake bootstraps the pinned emsdk
+            # into .emsdk/ on first configure — cache it between runs. The key
+            # tracks the toolchain file, so a version bump re-bootstraps.
+            - name: cache emsdk
+              uses: actions/cache@v6
+              with:
+                  path: .emsdk
+                  key: emsdk-${{ hashFiles('cmake/toolchains/emscripten.cmake') }}
+
+            - name: cache cpm sources
+              uses: actions/cache@v6
+              with:
+                  path: .cpm_cache
+                  key: cpm-web-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+                  restore-keys: cpm-web-
+
+            # configure + build + ctest (doctest suite runs under Node.js via
+            # CMAKE_CROSSCOMPILING_EMULATOR — system node or the SDK-bundled
+            # one, wired up by the toolchain wrapper)
+            - name: build and test
+              run: cmake --workflow --preset emscripten-full
+
+            # Self-contained static site — deploy to any static host as-is
+            - name: upload web bundle
+              uses: actions/upload-artifact@v7
+              with:
+                  name: web-emscripten-bundle
+                  path: |
+                      build/emscripten/**/web_app.html
+                      build/emscripten/**/web_app.js
+                      build/emscripten/**/web_app.wasm
+                  if-no-files-found: error
+                  compression-level: 0
+
     # ── android APK build ────────────────────────────────────────
     build-apk:
         name: android / ${{ matrix.build-type }}
