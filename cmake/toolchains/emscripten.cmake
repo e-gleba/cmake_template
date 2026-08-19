@@ -108,14 +108,16 @@ if(NOT EXISTS "${sdk_toolchain}")
         file(REMOVE_RECURSE "${staging}")
     endif()
 
-    # One-time, ~2 GB. ECHO_OUTPUT_VARIABLE/ECHO_ERROR_VARIABLE (3.18) stream
-    # the installer's stdout/stderr through to the configure log so CI shows
-    # live progress instead of a silent hang.
+    # One-time, ~2 GB. COMMAND_ECHO (3.15) prints the exact command line, and
+    # ECHO_OUTPUT_VARIABLE/ECHO_ERROR_VARIABLE (3.18) stream its stdout/stderr
+    # through to the configure log - CI shows what ran and its live progress
+    # instead of a silent hang.
     message(STATUS "Installing emscripten ${EMSCRIPTEN_SDK_VERSION}")
     execute_process(
         COMMAND "${Python3_EXECUTABLE}" emsdk.py install
                 "${EMSCRIPTEN_SDK_VERSION}"
         WORKING_DIRECTORY "${sdk_root}"
+        COMMAND_ECHO STDOUT
         ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
         COMMAND_ERROR_IS_FATAL ANY)
 
@@ -125,6 +127,7 @@ if(NOT EXISTS "${sdk_toolchain}")
         COMMAND "${Python3_EXECUTABLE}" emsdk.py activate --embedded
                 "${EMSCRIPTEN_SDK_VERSION}"
         WORKING_DIRECTORY "${sdk_root}"
+        COMMAND_ECHO STDOUT
         ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
         COMMAND_ERROR_IS_FATAL ANY)
 endif()
