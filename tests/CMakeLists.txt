@@ -39,10 +39,12 @@ endif()
 # Emscripten: discovery is skipped when cross-compiling (see above), but
 # the suite runs fine under Node.js — the Emscripten toolchain sets
 # CMAKE_CROSSCOMPILING_EMULATOR to node when found, and ctest prepends
-# it to the test command automatically.
+# it to the test command automatically. emcc disables C++ exception
+# catching by default; doctest needs it.
+target_compile_options(tests
+                       PRIVATE $<$<PLATFORM_ID:Emscripten>:-fexceptions>)
+target_link_options(tests
+                    PRIVATE $<$<PLATFORM_ID:Emscripten>:-fexceptions>)
 if(EMSCRIPTEN)
-    # emcc disables C++ exception catching by default; doctest needs it.
-    target_compile_options(tests PRIVATE -fexceptions)
-    target_link_options(tests PRIVATE -fexceptions)
     add_test(NAME tests COMMAND tests)
 endif()

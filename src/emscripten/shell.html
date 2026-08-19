@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1"
+        />
+        <title>cmake_template — web_app</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                height: 100%;
+                overflow: hidden;
+                background: #0b0e14;
+            }
+            body {
+                display: grid;
+                place-items: center;
+            }
+            canvas.emscripten {
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas
+            id="canvas"
+            class="emscripten"
+            oncontextmenu="event.preventDefault()"
+        ></canvas>
+        <script>
+            var Module = { canvas: document.getElementById("canvas") };
+        </script>
+        {{{ SCRIPT }}}
+    </body>
+</html>

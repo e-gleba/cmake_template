@@ -591,7 +591,7 @@
         {
             "name": "emscripten-full",
             "displayName": "Emscripten WebAssembly Pipeline",
-            "description": "Configure, build, and test under Node.js. No package step — deploy build/emscripten/Release/src/web_app.{html,js,wasm} to any static host.",
+            "description": "Configure, build, and test under Node.js. No package step — deploy build/emscripten/src/emscripten/Release/web_app.{html,js,wasm} to any static host.",
             "steps": [
                 {
                     "type": "configure",

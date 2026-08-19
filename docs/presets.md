@@ -38,7 +38,7 @@ cmake --workflow --preset=llvm-mingw-x86_64-full
 
 # 5. WebAssembly (requires emsdk activated — EMSDK env var)
 cmake --workflow --preset=emscripten-full
-# → build/emscripten/Release/src/web_app.{html,js,wasm}
+# → build/emscripten/src/emscripten/Release/web_app.{html,js,wasm}
 # → doctest suite runs under Node.js via ctest
 ```
 
@@ -95,7 +95,7 @@ cmake --workflow --preset=emscripten-full
 
 This configures, builds, and runs the doctest suite under Node.js — the Emscripten toolchain auto-detects `node` as `CMAKE_CROSSCOMPILING_EMULATOR`, and ctest prepends it to the test command. SDL3 is built static-only (wasm has no dynamic linking).
 
-The graphical `web_app` demo (SDL3 + OpenGL/GLES + Dear ImGui, shaders inlined — zero assets) is emitted as a self-contained static site at `build/emscripten/Release/src/web_app.{html,js,wasm}`. Serve it locally with `npx serve build/emscripten/Release/src` or deploy the three files to any static host.
+The graphical `web_app` demo (sources in `src/emscripten/`: SDL3 + OpenGL/GLES + Dear ImGui, shaders inlined — zero assets) is emitted as a self-contained static site at `build/emscripten/src/emscripten/Release/web_app.{html,js,wasm}`. Serve it locally with `npx serve build/emscripten/src/emscripten/Release` or deploy the three files to any static host.
 
 clang-tidy co-compilation is disabled for this preset — host clang-tidy cannot parse the emscripten sysroot reliably.
 

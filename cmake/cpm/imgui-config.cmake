@@ -10,7 +10,9 @@ cpmaddpackage(
     DOWNLOAD_ONLY
     TRUE)
 
-add_library(imgui STATIC)
+# EXCLUDE_FROM_ALL: imgui is only compiled where a target actually links
+# it (currently the Emscripten web_app) — native builds skip it entirely.
+add_library(imgui STATIC EXCLUDE_FROM_ALL)
 add_library(imgui::imgui ALIAS imgui)
 
 target_sources(
@@ -20,8 +22,7 @@ target_sources(
             ${imgui_SOURCE_DIR}/imgui_draw.cpp
             ${imgui_SOURCE_DIR}/imgui_tables.cpp
             ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-            ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
-            ${imgui_SOURCE_DIR}/misc/freetype/imgui_freetype.cpp)
+            ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp)
 
 target_include_directories(
     imgui SYSTEM PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}>
@@ -29,6 +30,10 @@ target_include_directories(
 
 target_compile_features(imgui PUBLIC cxx_std_23)
 
+# FreeType rasterizer is opt-in: imgui_freetype.cpp hard-includes
+# <ft2build.h>, so it may only be compiled when FreeType is actually
+# available (it is not in the Emscripten sysroot, for one).
+find_package(Freetype QUIET)
 if(Freetype_FOUND)
     if(NOT TARGET Freetype::Freetype)
         message(
@@ -66,7 +71,7 @@ if(NOT EMSCRIPTEN)
 endif()
 
 if(TARGET SDL3::SDL3 AND (TARGET OpenGL::GL OR EMSCRIPTEN))
-    add_library(imgui_sdl3_opengl3 STATIC)
+    add_library(imgui_sdl3_opengl3 STATIC EXCLUDE_FROM_ALL)
     add_library(imgui::sdl3_opengl3 ALIAS imgui_sdl3_opengl3)
 
     target_sources(
@@ -81,16 +86,15 @@ if(TARGET SDL3::SDL3 AND (TARGET OpenGL::GL OR EMSCRIPTEN))
         imgui_sdl3_opengl3 SYSTEM
         PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/backends>)
 
-    target_link_libraries(imgui_sdl3_opengl3 PUBLIC imgui::imgui SDL3::SDL3)
-
-    if(EMSCRIPTEN)
-        # The OpenGL3 backend defaults to ES2 on Emscripten — force the
-        # GLES3/WebGL2 code path to match the SDL3 GL context.
-        target_compile_definitions(imgui_sdl3_opengl3
-                                   PRIVATE IMGUI_IMPL_OPENGL_ES3)
-    else()
-        target_link_libraries(imgui_sdl3_opengl3 PUBLIC OpenGL::GL)
-    endif()
+    # GLES3/WebGL2 on Emscripten (the OpenGL3 backend defaults to ES2
+    # there — override), system OpenGL everywhere else.
+    target_link_libraries(
+        imgui_sdl3_opengl3
+        PUBLIC imgui::imgui SDL3::SDL3
+               $<$<NOT:$<PLATFORM_ID:Emscripten>>:OpenGL::GL>)
+    target_compile_definitions(
+        imgui_sdl3_opengl3
+        PRIVATE $<$<PLATFORM_ID:Emscripten>:IMGUI_IMPL_OPENGL_ES3>)
 
     target_compile_features(imgui_sdl3_opengl3 PUBLIC cxx_std_23)
 else()
