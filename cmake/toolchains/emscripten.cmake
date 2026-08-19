@@ -7,7 +7,7 @@
 # Resolution order:
 #   1. `EMSDK` environment variable (existing install, e.g. CI) - used as-is
 #   2. `EMSCRIPTEN_SDK_ROOT` cache entry (custom SDK location)
-#   3. `<repo>/.emsdk` - downloaded and activated here on first use
+#   3. `<git-root>/.emsdk` - downloaded and activated here on first use
 #
 # Knobs (pass with `-D`):
 #   EMSCRIPTEN_SDK_VERSION        pinned emsdk release to bootstrap
@@ -21,7 +21,7 @@ set(EMSCRIPTEN_SDK_VERSION
     CACHE STRING "emsdk release to bootstrap when none is installed")
 set(EMSCRIPTEN_SDK_ROOT
     ""
-    CACHE PATH "emsdk location (default: <repo>/.emsdk)")
+    CACHE PATH "emsdk location (default: <git-root>/.emsdk)")
 set(EMSCRIPTEN_SDK_TARBALL_SHA256
     ""
     CACHE STRING "optional SHA256 pin for the emsdk source tarball")
@@ -47,9 +47,22 @@ if(DEFINED ENV{EMSDK})
 elseif(EMSCRIPTEN_SDK_ROOT)
     cmake_path(SET sdk_root NORMALIZE "${EMSCRIPTEN_SDK_ROOT}")
 else()
-    # The repo root is two levels up from this file (cmake/toolchains/).
-    cmake_path(SET sdk_root NORMALIZE
-               "${CMAKE_CURRENT_LIST_DIR}/../../.emsdk")
+    # Anchor the default at the git work-tree root (not a relative ../../) so
+    # the path stays correct no matter where this toolchain file is moved.
+    find_package(Git QUIET)
+    if(Git_FOUND)
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
+            WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
+            OUTPUT_VARIABLE git_root
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET)
+    endif()
+    if(NOT git_root)
+        # Fallback for a source tree without git metadata (e.g. an archive).
+        cmake_path(SET git_root NORMALIZE "${CMAKE_CURRENT_LIST_DIR}/../..")
+    endif()
+    cmake_path(SET sdk_root NORMALIZE "${git_root}/.emsdk")
 endif()
 
 cmake_path(SET sdk_toolchain NORMALIZE
@@ -101,12 +114,15 @@ if(NOT EXISTS "${sdk_toolchain}")
         file(REMOVE_RECURSE "${staging}")
     endif()
 
-    # One-time, ~2 GB. Output flows through so CI logs show live progress.
+    # One-time, ~2 GB. ECHO_OUTPUT_VARIABLE/ECHO_ERROR_VARIABLE (3.18) stream
+    # the installer's stdout/stderr through to the configure log so CI shows
+    # live progress instead of a silent hang.
     message(STATUS "Installing emscripten ${EMSCRIPTEN_SDK_VERSION}")
     execute_process(
         COMMAND "${EMSCRIPTEN_PYTHON}" emsdk.py install
                 "${EMSCRIPTEN_SDK_VERSION}"
         WORKING_DIRECTORY "${sdk_root}"
+        ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
         COMMAND_ERROR_IS_FATAL ANY)
 
     # --embedded keeps the `.emscripten` config inside the SDK: no $HOME
@@ -115,6 +131,7 @@ if(NOT EXISTS "${sdk_toolchain}")
         COMMAND "${EMSCRIPTEN_PYTHON}" emsdk.py activate --embedded
                 "${EMSCRIPTEN_SDK_VERSION}"
         WORKING_DIRECTORY "${sdk_root}"
+        ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
         COMMAND_ERROR_IS_FATAL ANY)
 endif()
 
@@ -133,7 +150,7 @@ include("${sdk_toolchain}")
 
 # ctest needs a JS runtime to execute the test suite. The upstream toolchain
 # only looks for a system node; fall back to the one bundled with the emsdk.
-# find_program() searches PATH plus the emsdk's node/<ver>/bin directories.
+# find_program() searches the emsdk's node/<ver>/bin directories, then PATH.
 if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
     file(GLOB node_bin_dirs LIST_DIRECTORIES true "${sdk_root}/node/*/bin")
     find_program(
@@ -153,11 +170,7 @@ if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
 endif()
 
 # --- Summary --------------------------------------------------------------
-message(STATUS "Emscripten toolchain configured")
-message(STATUS "  sdk root   : ${sdk_root}")
-message(STATUS "  toolchain  : ${sdk_toolchain}")
-if(CMAKE_CROSSCOMPILING_EMULATOR)
-    message(STATUS "  ctest node : ${CMAKE_CROSSCOMPILING_EMULATOR}")
-endif()
+include(CMakePrintHelpers)
+cmake_print_variables(sdk_root sdk_toolchain CMAKE_CROSSCOMPILING_EMULATOR)
 
 endblock()
