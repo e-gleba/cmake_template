@@ -9,14 +9,15 @@ add_executable(web_app main.cpp)
 
 set_target_properties(web_app PROPERTIES SUFFIX ".html")
 
-# imgui::sdl3_opengl3 is the SDL3+OpenGL3 Dear ImGui backend alias defined
-# in cmake/cpm/imgui-config.cmake.
+# Target names match the rest of the project (see src/CMakeLists.txt):
+#   imgui::sdl3_opengl3   - Dear ImGui SDL3+OpenGL3 backend (cmake/cpm/imgui-config.cmake)
+#   Microsoft.GSL::GSL    - GSL v4.x exported alias
 target_link_libraries(
     web_app
     PRIVATE warnings
             SDL3::SDL3-static
             imgui::sdl3_opengl3
-            gsl::gsl)
+            Microsoft.GSL::GSL)
 
 target_link_options(
     web_app
