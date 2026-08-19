@@ -1,514 +1,584 @@
 /// @file main.cpp
-/// Self-contained SDL3 + OpenGL + Dear ImGui demo (target: web_app).
+/// @brief Emscripten/WebAssembly demo - SDL3 callbacks + OpenGL + Dear ImGui.
 ///
-/// Cross-compiled to WebAssembly by the emscripten preset: SDL3 creates
-/// a WebGL2 / GLES3 context and emcc emits a static site
-/// (web_app.{html,js,wasm}). The code stays desktop-portable (OpenGL
-/// 3.3 core) so a native target can reuse it unchanged.
+/// Renders an animated plasma shader on a buffer-less fullscreen triangle
+/// (vertices are derived from `gl_VertexID`, so no VBO/VAO state exists) with
+/// a Dear ImGui control overlay. Targets WebGL2 (GLSL ES 3.00) under
+/// Emscripten and desktop OpenGL 3.3 Core elsewhere; every GL entry point is
+/// resolved through `SDL_GL_GetProcAddress`, so no loader library (glad/glew)
+/// is linked.
 ///
-/// Renders a fullscreen-triangle plasma - about the cheapest animated
-/// shader possible: no textures, no buffers, vertex positions derived
-/// from gl_VertexID. Shaders are inlined as constexpr string views, so
-/// the web build needs zero asset preloading.
+/// The app follows the SDL3 callback model: the browser drives
+/// `SDL_AppIterate` from `requestAnimationFrame` and maps the tab close
+/// button to `SDL_EVENT_QUIT`. All mutable state lives in one `app_state`
+/// whose ownership is handed to SDL through `void** appstate`.
 
-#define SDL_MAIN_USE_CALLBACKS 1
+// Must be defined before <SDL3/SDL_main.h> so SDL routes `main` through the
+// SDL_App* callbacks at the bottom of this file. Required on Emscripten,
+// where the browser event loop must stay in control of the thread.
+#define SDL_MAIN_USE_CALLBACKS
+
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-
-#if defined(__EMSCRIPTEN__)
-#include <GLES3/gl3.h>
-#else
 #include <SDL3/SDL_opengl.h>
-#include <SDL3/SDL_opengl_glext.h>
-#endif
 
-#include <array>
-#include <gsl/gsl>
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl3.h>
-#include <new>
+
+#include <gsl/narrow>
+#include <gsl/util>
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 namespace {
 
-/// GLSL version header per backend: WebGL2 / GLES3 on Emscripten, GL 3.3
-/// core on desktop. GLES fragment shaders also need a default precision.
+// ---------------------------------------------------------------------------
+// configuration
+// ---------------------------------------------------------------------------
+
+namespace config {
+
+inline constexpr std::string_view app_name = "cmake_template - web_app";
+inline constexpr std::string_view app_version = "1.0.0";
+inline constexpr std::string_view app_id = "com.e-gleba.cmake_template.web_app";
+
+inline constexpr int window_width = 1280;
+inline constexpr int window_height = 720;
+
+inline constexpr float speed_default = 1.0F;
+inline constexpr float speed_min = 0.0F;
+inline constexpr float speed_max = 4.0F;
+
+} // namespace config
+
+// ---------------------------------------------------------------------------
+// shaders - inlined, so the web bundle ships zero asset files
+// ---------------------------------------------------------------------------
+
+namespace shaders {
+
+// GLSL ES 3.00 allows `layout(location=)` only on vertex inputs and fragment
+// outputs - never on varyings between stages - so `uv` is matched by name.
 #if defined(__EMSCRIPTEN__)
-constexpr std::string_view vertex_header{ "#version 300 es\n" };
-constexpr std::string_view fragment_header{ "#version 300 es\n"
-                                            "precision mediump float;\n" };
-constexpr const char*      imgui_glsl_version{ "#version 300 es" };
+inline constexpr std::string_view vertex_header = "#version 300 es\n";
+inline constexpr std::string_view fragment_header =
+    "#version 300 es\n"
+    "precision highp float;\n";
 #else
-constexpr std::string_view vertex_header{ "#version 330 core\n" };
-constexpr std::string_view fragment_header{ "#version 330 core\n" };
-constexpr const char*      imgui_glsl_version{ "#version 330 core" };
+inline constexpr std::string_view vertex_header = "#version 330 core\n";
+inline constexpr std::string_view fragment_header = "#version 330 core\n";
 #endif
 
-/// Fullscreen triangle: 3 vertices, zero buffers - positions and UVs are
-/// derived from the vertex id, so no VBO/EBO is ever created.
-constexpr std::string_view vertex_source{ R"glsl(
-out vec2 v_uv;
+/// Fullscreen triangle generated analytically from `gl_VertexID` - three
+/// vertices, no buffers, covering the whole viewport.
+inline constexpr std::string_view vertex_body = R"glsl(
+out vec2 uv;
 
 void main()
 {
-    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
-    v_uv = p;
-    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+    const vec2 position =
+        vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)) * 2.0 - 1.0;
+    uv = position * 0.5 + 0.5;
+    gl_Position = vec4(position, 0.0, 1.0);
 }
-)glsl" };
+)glsl";
 
-/// Cheap plasma: one length, one sin, one cosine palette per pixel.
-constexpr std::string_view fragment_source{ R"glsl(
-in vec2 v_uv;
-out vec4 frag_color;
+/// Animated plasma: sine octaves through a cosine palette (Inigo Quilez's
+/// cheap procedural coloring) with a soft vignette. Uniform-driven so the UI
+/// steers it live.
+inline constexpr std::string_view fragment_body = R"glsl(
+in vec2 uv;
 
+layout(location = 0) out vec4 frag_color;
+
+uniform vec2 u_resolution;
 uniform float u_time;
-uniform vec2  u_resolution;
 uniform float u_speed;
 
 vec3 palette(float t)
 {
-    return 0.5 + 0.5 * cos(6.2831853 * (t + vec3(0.0, 0.33, 0.67)));
+    const vec3 a = vec3(0.5);
+    const vec3 b = vec3(0.5);
+    const vec3 c = vec3(1.0);
+    const vec3 d = vec3(0.263, 0.416, 0.557);
+    return a + b * cos(6.2831853 * (c * t + d));
 }
 
 void main()
 {
-    vec2 uv = (v_uv * u_resolution - 0.5 * u_resolution) / u_resolution.y;
+    const vec2 p =
+        (uv * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
+    const float t = u_time * u_speed;
 
-    float d = length(uv);
-    float t = u_time * u_speed;
+    float v = sin(p.x * 3.0 + t) + sin((p.y + t) * 0.5)
+            + sin((p.x + p.y + t) * 0.5);
+    const vec2 q = p + 0.5 * vec2(cos(t * 0.7), sin(t * 0.9));
+    v = v * 0.25 + 0.25 * sin(length(q) * 4.0 - t);
 
-    vec3 color = palette(d * 0.6 + t * 0.15);
-    color *= 0.35 + 0.65 * (0.5 + 0.5 * sin(d * 12.0 - t * 2.5));
-
+    const vec3 color = palette(v + t * 0.1) * (1.0 - 0.125 * dot(p, p));
     frag_color = vec4(color, 1.0);
 }
-)glsl" };
+)glsl";
 
-/// Minimal GL entry-point table - exactly what the renderer below uses.
-/// Resolved once through SDL_GL_GetProcAddress, which returns core and
-/// extension symbols on every SDL3 GL backend (WebGL included), so the
-/// demo needs no external GL loader dependency.
-struct gl_api final
-{
-    GLuint (*create_shader)(GLenum stage){};
-    void (*shader_source)(GLuint shader, GLsizei count,
-                          const GLchar* const* string, const GLint* length){};
-    void (*compile_shader)(GLuint shader){};
-    void (*get_shader_iv)(GLuint shader, GLenum pname, GLint* params){};
-    void (*get_shader_info_log)(GLuint shader, GLsizei buf_size,
-                                GLsizei* length, GLchar* info_log){};
-    void (*delete_shader)(GLuint shader){};
-    GLuint (*create_program)(){};
-    void (*attach_shader)(GLuint program, GLuint shader){};
-    void (*link_program)(GLuint program){};
-    void (*get_program_iv)(GLuint program, GLenum pname, GLint* params){};
-    void (*get_program_info_log)(GLuint program, GLsizei buf_size,
-                                 GLsizei* length, GLchar* info_log){};
-    void (*use_program)(GLuint program){};
-    void (*delete_program)(GLuint program){};
-    GLint (*get_uniform_location)(GLuint program, const GLchar* name){};
-    void (*uniform_1f)(GLint location, GLfloat v0){};
-    void (*uniform_2f)(GLint location, GLfloat v0, GLfloat v1){};
-    void (*gen_vertex_arrays)(GLsizei n, GLuint* arrays){};
-    void (*bind_vertex_array)(GLuint array){};
-    void (*delete_vertex_arrays)(GLsizei n, const GLuint* arrays){};
-    void (*draw_arrays)(GLenum mode, GLint first, GLsizei count){};
-    void (*viewport)(GLint x, GLint y, GLsizei width, GLsizei height){};
-    void (*clear_color)(GLfloat red, GLfloat green, GLfloat blue,
-                        GLfloat alpha){};
-    void (*clear)(GLenum mask){};
+/// GLSL handed to the driver as a (header, body) string pair - the canonical
+/// `glShaderSource` way to inject the platform `#version` without any string
+/// concatenation.
+struct source {
+    std::string_view header;
+    std::string_view body;
 };
 
-/// Resolve every entry point. A context missing any of these cannot run
-/// the demo at all, so fail fast and log the missing symbol.
-[[nodiscard]] bool load_gl_api(gl_api& api) noexcept
-{
-    bool ok = true;
+inline constexpr source vertex{vertex_header, vertex_body};
+inline constexpr source fragment{fragment_header, fragment_body};
 
-    const auto bind = [&ok](const char* name, auto& slot) noexcept {
-        // Function-pointer to function-pointer cast: ISO C++ legal, so
-        // no -Wpedantic diagnostic (unlike routing through void*).
-        using proc_t = std::decay_t<decltype(slot)>;
-        slot = reinterpret_cast<proc_t>(SDL_GL_GetProcAddress(name));
-        if (slot == nullptr) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                         "missing GL entry point: %s",
+} // namespace shaders
+
+// ---------------------------------------------------------------------------
+// GL entry points
+// ---------------------------------------------------------------------------
+
+/// The exact GL subset this renderer needs, resolved once at startup through
+/// `SDL_GL_GetProcAddress` - valid for desktop GL, WebGL2 and WGL alike.
+/// Namespace scope mirrors how loader libraries (glad/glew) expose GL, so
+/// `shader_program` can release its handle without the table being threaded
+/// through every call site.
+struct gl_api {
+    PFNGLGETSTRINGPROC GetString = nullptr;
+    PFNGLVIEWPORTPROC Viewport = nullptr;
+    PFNGLCLEARCOLORPROC ClearColor = nullptr;
+    PFNGLCLEARPROC Clear = nullptr;
+    PFNGLDRAWARRAYSPROC DrawArrays = nullptr;
+    PFNGLCREATESHADERPROC CreateShader = nullptr;
+    PFNGLSHADERSOURCEPROC ShaderSource = nullptr;
+    PFNGLCOMPILESHADERPROC CompileShader = nullptr;
+    PFNGLGETSHADERIVPROC GetShaderiv = nullptr;
+    PFNGLGETSHADERINFOLOGPROC GetShaderInfoLog = nullptr;
+    PFNGLDELETESHADERPROC DeleteShader = nullptr;
+    PFNGLCREATEPROGRAMPROC CreateProgram = nullptr;
+    PFNGLATTACHSHADERPROC AttachShader = nullptr;
+    PFNGLLINKPROGRAMPROC LinkProgram = nullptr;
+    PFNGLGETPROGRAMIVPROC GetProgramiv = nullptr;
+    PFNGLGETPROGRAMINFOLOGPROC GetProgramInfoLog = nullptr;
+    PFNGLDELETEPROGRAMPROC DeleteProgram = nullptr;
+    PFNGLUSEPROGRAMPROC UseProgram = nullptr;
+    PFNGLGETUNIFORMLOCATIONPROC GetUniformLocation = nullptr;
+    PFNGLUNIFORM1FPROC Uniform1f = nullptr;
+    PFNGLUNIFORM2FPROC Uniform2f = nullptr;
+};
+
+gl_api gl{};
+
+[[nodiscard]] bool resolve_gl_entry_points() noexcept
+{
+    bool resolved = true;
+    const auto bind = [&resolved](const char* name, auto& entry) noexcept {
+        // Function-pointer to function-pointer cast: ISO C++ legal, unlike
+        // routing through `void*` (which -Wpedantic diagnoses).
+        entry = reinterpret_cast<std::decay_t<decltype(entry)>>(
+            SDL_GL_GetProcAddress(name));
+        if (entry == nullptr) {
+            SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "GL entry point missing: %s",
                          name);
-            ok = false;
+            resolved = false;
         }
     };
 
-    bind("glCreateShader", api.create_shader);
-    bind("glShaderSource", api.shader_source);
-    bind("glCompileShader", api.compile_shader);
-    bind("glGetShaderiv", api.get_shader_iv);
-    bind("glGetShaderInfoLog", api.get_shader_info_log);
-    bind("glDeleteShader", api.delete_shader);
-    bind("glCreateProgram", api.create_program);
-    bind("glAttachShader", api.attach_shader);
-    bind("glLinkProgram", api.link_program);
-    bind("glGetProgramiv", api.get_program_iv);
-    bind("glGetProgramInfoLog", api.get_program_info_log);
-    bind("glUseProgram", api.use_program);
-    bind("glDeleteProgram", api.delete_program);
-    bind("glGetUniformLocation", api.get_uniform_location);
-    bind("glUniform1f", api.uniform_1f);
-    bind("glUniform2f", api.uniform_2f);
-    bind("glGenVertexArrays", api.gen_vertex_arrays);
-    bind("glBindVertexArray", api.bind_vertex_array);
-    bind("glDeleteVertexArrays", api.delete_vertex_arrays);
-    bind("glDrawArrays", api.draw_arrays);
-    bind("glViewport", api.viewport);
-    bind("glClearColor", api.clear_color);
-    bind("glClear", api.clear);
-
-    return ok;
+    bind("glGetString", gl.GetString);
+    bind("glViewport", gl.Viewport);
+    bind("glClearColor", gl.ClearColor);
+    bind("glClear", gl.Clear);
+    bind("glDrawArrays", gl.DrawArrays);
+    bind("glCreateShader", gl.CreateShader);
+    bind("glShaderSource", gl.ShaderSource);
+    bind("glCompileShader", gl.CompileShader);
+    bind("glGetShaderiv", gl.GetShaderiv);
+    bind("glGetShaderInfoLog", gl.GetShaderInfoLog);
+    bind("glDeleteShader", gl.DeleteShader);
+    bind("glCreateProgram", gl.CreateProgram);
+    bind("glAttachShader", gl.AttachShader);
+    bind("glLinkProgram", gl.LinkProgram);
+    bind("glGetProgramiv", gl.GetProgramiv);
+    bind("glGetProgramInfoLog", gl.GetProgramInfoLog);
+    bind("glDeleteProgram", gl.DeleteProgram);
+    bind("glUseProgram", gl.UseProgram);
+    bind("glGetUniformLocation", gl.GetUniformLocation);
+    bind("glUniform1f", gl.Uniform1f);
+    bind("glUniform2f", gl.Uniform2f);
+    return resolved;
 }
 
-/// Compile one shader stage from version header + body chunks.
-/// Returns 0 on failure and logs the compiler output.
-[[nodiscard]] GLuint compile_shader(const gl_api&          gl,
-                                    const GLenum           stage,
-                                    const std::string_view header,
-                                    const std::string_view body) noexcept
-{
-    const GLuint shader = gl.create_shader(stage);
+// ---------------------------------------------------------------------------
+// renderer
+// ---------------------------------------------------------------------------
 
-    const std::array chunks{ header.data(), body.data() };
-    const std::array lengths{ gsl::narrow_cast<GLint>(header.size()),
-                              gsl::narrow_cast<GLint>(body.size()) };
-    gl.shader_source(shader,
-                     gsl::narrow_cast<GLsizei>(chunks.size()),
-                     chunks.data(),
-                     lengths.data());
-    gl.compile_shader(shader);
+/// Owning RAII wrapper for a compiled and linked GL program. Move-only;
+/// releases its handle on destruction while a GL context is current.
+class shader_program {
+public:
+    shader_program() noexcept = default;
+    ~shader_program() { destroy(); }
 
-    GLint status = GL_FALSE;
-    gl.get_shader_iv(shader, GL_COMPILE_STATUS, &status);
-    if (status == GL_TRUE) {
+    shader_program(const shader_program&) = delete;
+    shader_program& operator=(const shader_program&) = delete;
+
+    shader_program(shader_program&& other) noexcept
+        : id_(std::exchange(other.id_, 0u)) {}
+
+    shader_program& operator=(shader_program&& other) noexcept
+    {
+        if (this != &other) {
+            destroy();
+            id_ = std::exchange(other.id_, 0u);
+        }
+        return *this;
+    }
+
+    /// Compiles both stages and links. On any failure: logs the driver info
+    /// log, releases every intermediate object, leaves `*this` empty.
+    [[nodiscard]] bool build(const shaders::source& vertex,
+                             const shaders::source& fragment) noexcept
+    {
+        destroy();
+
+        const GLuint vertex_shader = compile(GL_VERTEX_SHADER, vertex);
+        if (vertex_shader == 0u) {
+            return false;
+        }
+        const auto vertex_guard = gsl::finally(
+            [&] { gl.DeleteShader(vertex_shader); });
+
+        const GLuint fragment_shader = compile(GL_FRAGMENT_SHADER, fragment);
+        if (fragment_shader == 0u) {
+            return false;
+        }
+        const auto fragment_guard = gsl::finally(
+            [&] { gl.DeleteShader(fragment_shader); });
+
+        id_ = gl.CreateProgram();
+        gl.AttachShader(id_, vertex_shader);
+        gl.AttachShader(id_, fragment_shader);
+        gl.LinkProgram(id_);
+
+        GLint linked = GL_FALSE;
+        gl.GetProgramiv(id_, GL_LINK_STATUS, &linked);
+        if (linked != GL_TRUE) {
+            std::array<GLchar, info_log_size> log{};
+            gl.GetProgramInfoLog(id_, gsl::narrow_cast<GLsizei>(log.size()),
+                                 nullptr, log.data());
+            SDL_LogError(SDL_LOG_CATEGORY_RENDER, "program link failed: %s",
+                         log.data());
+            destroy();
+            return false;
+        }
+        return true;
+    }
+
+    void destroy() noexcept
+    {
+        if (id_ != 0u) {
+            gl.DeleteProgram(id_);
+            id_ = 0u;
+        }
+    }
+
+    void bind() const noexcept { gl.UseProgram(id_); }
+
+    /// Returns -1 for unknown or optimized-out uniforms; GL silently ignores
+    /// uploads to location -1, so call sites need no checks.
+    [[nodiscard]] GLint uniform_location(const char* name) const noexcept
+    {
+        return gl.GetUniformLocation(id_, name);
+    }
+
+private:
+    [[nodiscard]] static GLuint compile(GLenum stage,
+                                        const shaders::source& source) noexcept
+    {
+        const GLuint shader = gl.CreateShader(stage);
+
+        const std::array<const GLchar*, 2> parts{source.header.data(),
+                                                 source.body.data()};
+        const std::array<GLint, 2> lengths{
+            gsl::narrow_cast<GLint>(source.header.size()),
+            gsl::narrow_cast<GLint>(source.body.size())};
+        gl.ShaderSource(shader, gsl::narrow_cast<GLsizei>(parts.size()),
+                        parts.data(), lengths.data());
+        gl.CompileShader(shader);
+
+        GLint compiled = GL_FALSE;
+        gl.GetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+        if (compiled != GL_TRUE) {
+            std::array<GLchar, info_log_size> log{};
+            gl.GetShaderInfoLog(shader, gsl::narrow_cast<GLsizei>(log.size()),
+                                nullptr, log.data());
+            SDL_LogError(SDL_LOG_CATEGORY_RENDER,
+                         "%s shader compile failed: %s",
+                         stage == GL_VERTEX_SHADER ? "vertex" : "fragment",
+                         log.data());
+            gl.DeleteShader(shader);
+            return 0u;
+        }
         return shader;
     }
 
-    std::array<GLchar, 4096> log{};
-    gl.get_shader_info_log(shader,
-                           gsl::narrow_cast<GLsizei>(log.size()),
-                           nullptr,
-                           log.data());
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                 "shader compilation failed:\n%s",
-                 log.data());
-    gl.delete_shader(shader);
-    return 0;
-}
+    static constexpr std::size_t info_log_size = 1024;
 
-/// Link a vertex + fragment shader pair. Returns 0 on failure and logs
-/// the linker output.
-[[nodiscard]] GLuint link_program(const gl_api& gl,
-                                  const GLuint  vertex_shader,
-                                  const GLuint  fragment_shader) noexcept
-{
-    const GLuint program = gl.create_program();
-    gl.attach_shader(program, vertex_shader);
-    gl.attach_shader(program, fragment_shader);
-    gl.link_program(program);
-
-    GLint status = GL_FALSE;
-    gl.get_program_iv(program, GL_LINK_STATUS, &status);
-    if (status == GL_TRUE) {
-        return program;
-    }
-
-    std::array<GLchar, 4096> log{};
-    gl.get_program_info_log(program,
-                            gsl::narrow_cast<GLsizei>(log.size()),
-                            nullptr,
-                            log.data());
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                 "program link failed:\n%s",
-                 log.data());
-    gl.delete_program(program);
-    return 0;
-}
-
-/// Application state carried through the SDL3 callbacks.
-/// SDL passes this opaque pointer to every callback after init.
-struct app_state final
-{
-    SDL_Window*   window{};
-    SDL_GLContext gl_context{};
-    gl_api        gl{};
-    GLuint        program{};
-    GLuint        vao{};
-    GLint         u_time{};
-    GLint         u_resolution{};
-    GLint         u_speed{};
-    Uint64        start_ticks{};
-    float         speed{ 1.0F };
-    bool          show_demo_window{};
-    bool          imgui_ready{};
+    GLuint id_ = 0u;
 };
 
-/// Release everything SDL_AppInit may have acquired. Safe on partially
-/// initialized state: members are zero-initialized and every resource is
-/// checked before destruction.
-void destroy_app(app_state* state) noexcept
+// ---------------------------------------------------------------------------
+// application state
+// ---------------------------------------------------------------------------
+
+/// Everything the demo owns. SDL holds the instance between callbacks;
+/// `shutdown` releases it in reverse order of initialization.
+struct app_state {
+    SDL_Window* window = nullptr;
+    SDL_GLContext gl_context = nullptr;
+    bool imgui_initialized = false;
+    shader_program program;
+
+    GLint uniform_resolution = -1;
+    GLint uniform_time = -1;
+    GLint uniform_speed = -1;
+
+    std::uint64_t start_ticks_ns = 0;
+    std::uint64_t frame_count = 0;
+    float speed = config::speed_default;
+    bool show_demo_window = false;
+};
+
+[[nodiscard]] bool create_window_and_context(app_state& app) noexcept
 {
-    if (state == nullptr) {
-        return;
-    }
-    if (state->imgui_ready) {
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplSDL3_Shutdown();
-        ImGui::DestroyContext();
-    }
-    if (state->program != 0) {
-        state->gl.delete_program(state->program);
-    }
-    if (state->vao != 0) {
-        state->gl.delete_vertex_arrays(1, &state->vao);
-    }
-    if (state->gl_context != nullptr) {
-        SDL_GL_DestroyContext(state->gl_context);
-    }
-    if (state->window != nullptr) {
-        SDL_DestroyWindow(state->window);
-    }
-    delete state;
-}
-
-} // namespace
-
-/// Called once at startup. Creates the window, GL context, shader program
-/// and ImGui backends.
-/// @param appstate  [out] Pointer to application state; SDL manages lifetime.
-/// @param argc      Argument count forwarded from the platform entry point.
-/// @param argv      Argument vector forwarded from the platform entry point.
-/// @return SDL_APP_CONTINUE on success, SDL_APP_FAILURE on error.
-SDL_AppResult SDL_AppInit(void**                 appstate,
-                          [[maybe_unused]] int   argc,
-                          [[maybe_unused]] char* argv[])
-{
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "SDL_Init failed: %s",
-                     SDL_GetError());
-        return SDL_APP_FAILURE;
-    }
-
-    // GL attributes must be set before the window is created.
 #if defined(__EMSCRIPTEN__)
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                        SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 #else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
                         SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,
+                        SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // macOS
 #endif
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0); // fullscreen triangle: no depth
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 
-    constexpr int window_width  = 1280;
-    constexpr int window_height = 720;
-
-    SDL_Window* window =
-        SDL_CreateWindow("cmake_template | SDL3 + OpenGL + ImGui",
-                         window_width,
-                         window_height,
-                         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
-                             SDL_WINDOW_HIGH_PIXEL_DENSITY);
-    if (window == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "SDL_CreateWindow failed: %s",
-                     SDL_GetError());
-        return SDL_APP_FAILURE;
+    app.window = SDL_CreateWindow(config::app_name.data(), config::window_width,
+                                  config::window_height,
+                                  SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
+                                      | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    if (app.window == nullptr) {
+        SDL_LogCritical(SDL_LOG_CATEGORY_VIDEO, "SDL_CreateWindow failed: %s",
+                        SDL_GetError());
+        return false;
     }
 
-    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-    if (gl_context == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "SDL_GL_CreateContext failed: %s",
-                     SDL_GetError());
-        SDL_DestroyWindow(window);
-        return SDL_APP_FAILURE;
-    }
-    if (!SDL_GL_MakeCurrent(window, gl_context)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "SDL_GL_MakeCurrent failed: %s",
-                     SDL_GetError());
-        SDL_GL_DestroyContext(gl_context);
-        SDL_DestroyWindow(window);
-        return SDL_APP_FAILURE;
+    app.gl_context = SDL_GL_CreateContext(app.window);
+    if (app.gl_context == nullptr) {
+        SDL_LogCritical(SDL_LOG_CATEGORY_VIDEO,
+                        "SDL_GL_CreateContext failed: %s", SDL_GetError());
+        return false;
     }
 
-    // Vsync where the platform allows it; the browser always uses rAF.
-    (void)SDL_GL_SetSwapInterval(1);
-
-    auto* state = new (std::nothrow) app_state{};
-    if (state == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "failed to allocate app_state");
-        SDL_GL_DestroyContext(gl_context);
-        SDL_DestroyWindow(window);
-        return SDL_APP_FAILURE;
-    }
-    state->window      = window;
-    state->gl_context  = gl_context;
-    state->start_ticks = SDL_GetTicks();
-
-    if (!load_gl_api(state->gl)) {
-        destroy_app(state);
-        return SDL_APP_FAILURE;
+    if (!SDL_GL_MakeCurrent(app.window, app.gl_context)) {
+        SDL_LogCritical(SDL_LOG_CATEGORY_VIDEO, "SDL_GL_MakeCurrent failed: %s",
+                        SDL_GetError());
+        return false;
     }
 
-    const GLuint vertex_shader = compile_shader(
-        state->gl, GL_VERTEX_SHADER, vertex_header, vertex_source);
-    const GLuint fragment_shader =
-        vertex_shader != 0 ? compile_shader(state->gl,
-                                            GL_FRAGMENT_SHADER,
-                                            fragment_header,
-                                            fragment_source)
-                           : 0;
-    if (vertex_shader != 0 && fragment_shader != 0) {
-        state->program =
-            link_program(state->gl, vertex_shader, fragment_shader);
+    // Vsync where possible; the browser always vsyncs via rAF anyway.
+    if (!SDL_GL_SetSwapInterval(1)) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, "vsync unavailable: %s",
+                    SDL_GetError());
     }
-    if (vertex_shader != 0) {
-        state->gl.delete_shader(vertex_shader);
-    }
-    if (fragment_shader != 0) {
-        state->gl.delete_shader(fragment_shader);
-    }
-    if (state->program == 0) {
-        destroy_app(state);
-        return SDL_APP_FAILURE;
-    }
-
-    state->u_time = state->gl.get_uniform_location(state->program, "u_time");
-    state->u_resolution =
-        state->gl.get_uniform_location(state->program, "u_resolution");
-    state->u_speed =
-        state->gl.get_uniform_location(state->program, "u_speed");
-
-    // A bound VAO is mandatory in a core profile. It stays empty - the
-    // triangle is generated from gl_VertexID.
-    state->gl.gen_vertex_arrays(1, &state->vao);
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-
-    if (!ImGui_ImplSDL3_InitForOpenGL(window, gl_context)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "ImGui SDL3 backend init failed");
-        ImGui::DestroyContext();
-        destroy_app(state);
-        return SDL_APP_FAILURE;
-    }
-    if (!ImGui_ImplOpenGL3_Init(imgui_glsl_version)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "ImGui OpenGL3 backend init failed");
-        ImGui_ImplSDL3_Shutdown();
-        ImGui::DestroyContext();
-        destroy_app(state);
-        return SDL_APP_FAILURE;
-    }
-    state->imgui_ready = true;
-
-    // Publish only on success: SDL zero-initializes *appstate before
-    // this call, and SDL_AppQuit may still run after a failed init -
-    // a dangling pointer here would double-free.
-    *appstate = state;
-    return SDL_APP_CONTINUE;
+    return true;
 }
 
-/// Called once per frame by SDL. Renders the plasma and the ImGui overlay.
-SDL_AppResult SDL_AppIterate(void* appstate)
+[[nodiscard]] bool init_imgui(app_state& app) noexcept
 {
-    auto*       state = static_cast<app_state*>(appstate);
-    const auto& gl    = state->gl;
+    IMGUI_CHECKVERSION();
+    if (ImGui::CreateContext() == nullptr) {
+        SDL_LogError(SDL_LOG_CATEGORY_RENDER, "ImGui::CreateContext failed");
+        return false;
+    }
+    ImGui::StyleColorsDark();
 
+    if (!ImGui_ImplSDL3_InitForOpenGL(app.window, app.gl_context)) {
+        SDL_LogError(SDL_LOG_CATEGORY_RENDER,
+                     "ImGui_ImplSDL3_InitForOpenGL failed");
+        return false;
+    }
+    if (!ImGui_ImplOpenGL3_Init(shaders::vertex_header.data())) {
+        SDL_LogError(SDL_LOG_CATEGORY_RENDER, "ImGui_ImplOpenGL3_Init failed");
+        return false;
+    }
+    app.imgui_initialized = true;
+    return true;
+}
+
+/// Idempotent teardown, valid for partially-initialized states (init failure
+/// path) and the normal `SDL_AppQuit` path alike. GL objects are released
+/// while the context is still current.
+void shutdown(app_state& app) noexcept
+{
+    if (app.imgui_initialized) {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplSDL3_Shutdown();
+        ImGui::DestroyContext();
+        app.imgui_initialized = false;
+    }
+    app.program.destroy();
+    if (app.gl_context != nullptr) {
+        SDL_GL_DestroyContext(app.gl_context);
+        app.gl_context = nullptr;
+    }
+    if (app.window != nullptr) {
+        SDL_DestroyWindow(app.window);
+        app.window = nullptr;
+    }
+    SDL_Quit();
+}
+
+void render_scene(app_state& app) noexcept
+{
+    int width = 0;
+    int height = 0;
+    SDL_GetWindowSizeInPixels(app.window, &width, &height); // high-DPI aware
+    if (width <= 0 || height <= 0) {
+        return; // minimized or zero-size framebuffer: nothing to draw
+    }
+
+    gl.Viewport(0, 0, width, height);
+    gl.ClearColor(0.02F, 0.02F, 0.03F, 1.0F);
+    gl.Clear(GL_COLOR_BUFFER_BIT);
+
+    const auto elapsed_ns = SDL_GetTicksNS() - app.start_ticks_ns;
+    const float time_seconds = gsl::narrow_cast<float>(elapsed_ns) * 1.0e-9F;
+
+    app.program.bind();
+    gl.Uniform2f(app.uniform_resolution, gsl::narrow_cast<float>(width),
+                 gsl::narrow_cast<float>(height));
+    gl.Uniform1f(app.uniform_time, time_seconds);
+    gl.Uniform1f(app.uniform_speed, app.speed);
+    gl.DrawArrays(GL_TRIANGLES, 0, 3);
+}
+
+void render_ui(app_state& app) noexcept
+{
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::SetNextWindowPos(ImVec2{ 16.0F, 16.0F }, ImGuiCond_FirstUseEver);
-    ImGui::Begin("plasma", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
-    ImGui::SliderFloat("speed", &state->speed, 0.0F, 4.0F);
-    ImGui::Checkbox("imgui demo window", &state->show_demo_window);
+    ImGui::SetNextWindowPos(ImVec2(16.0F, 16.0F), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("web_app", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted("SDL3 + OpenGL + Dear ImGui on WebAssembly");
+        ImGui::Separator();
+        ImGui::SliderFloat("speed", &app.speed, config::speed_min,
+                           config::speed_max, "%.2fx");
+        ImGui::Checkbox("Dear ImGui demo window", &app.show_demo_window);
+        ImGui::Separator();
+        ImGui::TextDisabled("%.1f fps | frame %llu", ImGui::GetIO().Framerate,
+                            static_cast<unsigned long long>(app.frame_count));
+    }
     ImGui::End();
 
-    if (state->show_demo_window) {
-        ImGui::ShowDemoWindow(&state->show_demo_window);
+    if (app.show_demo_window) {
+        ImGui::ShowDemoWindow(&app.show_demo_window);
     }
 
     ImGui::Render();
-
-    int pixel_width  = 0;
-    int pixel_height = 0;
-    if (!SDL_GetWindowSizeInPixels(state->window,
-                                   &pixel_width,
-                                   &pixel_height)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "SDL_GetWindowSizeInPixels failed: %s",
-                     SDL_GetError());
-        return SDL_APP_FAILURE;
-    }
-
-    gl.viewport(0, 0, pixel_width, pixel_height);
-    gl.clear_color(0.02F, 0.03F, 0.05F, 1.0F);
-    gl.clear(GL_COLOR_BUFFER_BIT);
-
-    const float seconds =
-        gsl::narrow_cast<float>(SDL_GetTicks() - state->start_ticks) /
-        1000.0F;
-
-    gl.use_program(state->program);
-    gl.uniform_1f(state->u_time, seconds);
-    gl.uniform_2f(state->u_resolution,
-                  gsl::narrow_cast<GLfloat>(pixel_width),
-                  gsl::narrow_cast<GLfloat>(pixel_height));
-    gl.uniform_1f(state->u_speed, state->speed);
-    gl.bind_vertex_array(state->vao);
-    gl.draw_arrays(GL_TRIANGLES, 0, 3);
-
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
 
-    if (!SDL_GL_SwapWindow(state->window)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "SDL_GL_SwapWindow failed: %s",
-                     SDL_GetError());
+} // namespace
+
+// ---------------------------------------------------------------------------
+// SDL3 application callbacks (entry points, browser-driven)
+// ---------------------------------------------------------------------------
+
+/// One-time init: SDL, window + GL context, GL entry points, shader program,
+/// Dear ImGui. The state is published to SDL only after full success - SDL
+/// zero-initializes `*appstate` and may still call `SDL_AppQuit` after a
+/// failed init, so partial ownership must never escape.
+SDL_AppResult SDL_AppInit(void** appstate, int /*argc*/, char** /*argv*/)
+{
+    SDL_SetAppMetadata(config::app_name.data(), config::app_version.data(),
+                       config::app_id.data());
+
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init failed: %s",
+                        SDL_GetError());
         return SDL_APP_FAILURE;
     }
+
+    auto app = std::make_unique<app_state>();
+
+    // Order matters: context before GL resolution, program before ImGui.
+    if (!create_window_and_context(*app) || !resolve_gl_entry_points()
+        || !app->program.build(shaders::vertex, shaders::fragment)
+        || !init_imgui(*app)) {
+        shutdown(*app);
+        return SDL_APP_FAILURE;
+    }
+
+    app->uniform_resolution = app->program.uniform_location("u_resolution");
+    app->uniform_time = app->program.uniform_location("u_time");
+    app->uniform_speed = app->program.uniform_location("u_speed");
+    app->start_ticks_ns = SDL_GetTicksNS();
+
+    const auto* renderer =
+        reinterpret_cast<const char*>(gl.GetString(GL_RENDERER));
+    const auto* version =
+        reinterpret_cast<const char*>(gl.GetString(GL_VERSION));
+    SDL_Log("web_app ready - renderer: %s | %s",
+            renderer != nullptr ? renderer : "unknown",
+            version != nullptr ? version : "unknown");
+
+    *appstate = app.release();
     return SDL_APP_CONTINUE;
 }
 
-/// Called for every pending event. Feeds ImGui and handles quit requests.
-SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
+/// One frame: scene, UI, swap. Under Emscripten SDL calls this from
+/// `requestAnimationFrame`, so it is implicitly vsynced and paused in
+/// background tabs.
+SDL_AppResult SDL_AppIterate(void* appstate)
 {
-    auto* state = static_cast<app_state*>(appstate);
+    auto& app = *static_cast<app_state*>(appstate);
 
+    render_scene(app);
+    render_ui(app);
+    SDL_GL_SwapWindow(app.window);
+
+    ++app.frame_count;
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppEvent(void* /*appstate*/, SDL_Event* event)
+{
     ImGui_ImplSDL3_ProcessEvent(event);
 
     if (event->type == SDL_EVENT_QUIT) {
-        return SDL_APP_SUCCESS;
-    }
-    if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED &&
-        event->window.windowID == SDL_GetWindowID(state->window)) {
-        return SDL_APP_SUCCESS;
+        return SDL_APP_SUCCESS; // browser tab closed / window close button
     }
     return SDL_APP_CONTINUE;
 }
 
-/// Called once on shutdown. Frees application state; SDL calls SDL_Quit()
-/// for us.
-void SDL_AppQuit(void* appstate, [[maybe_unused]] SDL_AppResult result)
+/// Final callback - also invoked after a failed `SDL_AppInit` (with nullptr
+/// state in that case, since ownership was never handed over).
+void SDL_AppQuit(void* appstate, SDL_AppResult /*result*/)
 {
-    destroy_app(static_cast<app_state*>(appstate));
-    // SDL_Quit() is called automatically by SDL after this returns
+    if (appstate == nullptr) {
+        return;
+    }
+    const std::unique_ptr<app_state> app(static_cast<app_state*>(appstate));
+    shutdown(*app);
 }

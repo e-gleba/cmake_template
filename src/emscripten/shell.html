@@ -2,11 +2,12 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1"
+            name="description"
+            content="cmake_template web_app - SDL3 + OpenGL (WebGL2) + Dear ImGui compiled to WebAssembly"
         />
-        <title>cmake_template — web_app</title>
+        <title>cmake_template &middot; web_app</title>
         <style>
             html,
             body {
@@ -15,26 +16,17 @@
                 overflow: hidden;
                 background: #0b0e14;
             }
-            body {
-                display: grid;
-                place-items: center;
-            }
-            canvas.emscripten {
+            #canvas {
                 display: block;
-                width: 100%;
-                height: 100%;
+                width: 100vw;
+                height: 100vh;
+                outline: none;
             }
         </style>
     </head>
     <body>
-        <canvas
-            id="canvas"
-            class="emscripten"
-            oncontextmenu="event.preventDefault()"
-        ></canvas>
-        <script>
-            var Module = { canvas: document.getElementById("canvas") };
-        </script>
+        <!-- context menu suppressed so ImGui right-click works in-page -->
+        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
         {{{ SCRIPT }}}
     </body>
 </html>
