@@ -26,40 +26,28 @@ set(EMSCRIPTEN_SDK_TARBALL_SHA256
     CACHE STRING "optional SHA256 pin for the emsdk source tarball")
 mark_as_advanced(EMSCRIPTEN_SDK_TARBALL_SHA256)
 
-# Location of the real toolchain inside any emsdk checkout, relative to its
-# root. Read by the functions below through CMake's dynamic scoping.
+# block()/endblock() (CMake 3.25) gives this script its own variable scope:
+# the bootstrap's locals stay out of the toolchain's global scope, which is
+# otherwise shared with the whole project. Only the cache entries above and
+# the EMSDK/EM_CONFIG environment set below escape.
+block(SCOPE_FOR VARIABLES)
+
 set(emsdk_toolchain_relpath
     "upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
 
-# emsdk_resolve_root(<out-var>)
-#
-# Writes the emsdk location to <out-var> following the resolution order
-# documented in the file header.
-function(emsdk_resolve_root out_var)
-    if(DEFINED ENV{EMSDK} AND EXISTS "$ENV{EMSDK}/${emsdk_toolchain_relpath}")
-        set(root "$ENV{EMSDK}")
-    elseif(EMSCRIPTEN_SDK_ROOT)
-        set(root "${EMSCRIPTEN_SDK_ROOT}")
-    else()
-        # CMAKE_CURRENT_FUNCTION_LIST_DIR is the directory of the file that
-        # DEFINES this function; CMAKE_CURRENT_LIST_DIR would be the caller's
-        # directory instead. ABSOLUTE (not REALPATH) because `.emsdk` does
-        # not exist yet on first configure.
-        get_filename_component(
-            root "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../.emsdk" ABSOLUTE)
-    endif()
-    set(${out_var}
-        "${root}"
-        PARENT_SCOPE)
-endfunction()
+# --- Resolve the SDK root -------------------------------------------------
+if(DEFINED ENV{EMSDK} AND EXISTS "$ENV{EMSDK}/${emsdk_toolchain_relpath}")
+    set(sdk_root "$ENV{EMSDK}")
+elseif(EMSCRIPTEN_SDK_ROOT)
+    set(sdk_root "${EMSCRIPTEN_SDK_ROOT}")
+else()
+    # ABSOLUTE (not REALPATH): `.emsdk` does not exist yet on first run.
+    get_filename_component(sdk_root "${CMAKE_CURRENT_LIST_DIR}/../../.emsdk"
+                           ABSOLUTE)
+endif()
 
-# emsdk_bootstrap(<root>)
-#
-# Downloads and activates the pinned emsdk into <root>. Every step is guarded
-# by a filesystem check, so re-configures and interrupted setups resume
-# instead of restarting - important because this file is re-evaluated by
-# every try_compile().
-function(emsdk_bootstrap root)
+# --- Bootstrap if the toolchain file is missing ---------------------------
+if(NOT EXISTS "${sdk_root}/${emsdk_toolchain_relpath}")
     find_program(
         EMSCRIPTEN_PYTHON
         NAMES python3 python
@@ -72,14 +60,14 @@ function(emsdk_bootstrap root)
             "Install it or point EMSDK at an existing SDK.")
     endif()
 
-    if(NOT EXISTS "${root}/emsdk.py")
+    if(NOT EXISTS "${sdk_root}/emsdk.py")
         set(url
             "https://github.com/emscripten-core/emsdk/archive/refs/tags/${EMSCRIPTEN_SDK_VERSION}.tar.gz"
         )
         set(staging "${CMAKE_BINARY_DIR}/_emsdk_bootstrap")
 
         message(
-            STATUS "Downloading emsdk ${EMSCRIPTEN_SDK_VERSION} -> ${root}")
+            STATUS "Downloading emsdk ${EMSCRIPTEN_SDK_VERSION} -> ${sdk_root}")
         set(download_args TLS_VERIFY ON SHOW_PROGRESS STATUS status)
         if(EMSCRIPTEN_SDK_TARBALL_SHA256)
             list(APPEND download_args EXPECTED_HASH
@@ -94,11 +82,11 @@ function(emsdk_bootstrap root)
         endif()
 
         # Extract next to the target so the rename stays on one filesystem.
-        get_filename_component(parent "${root}" DIRECTORY)
+        get_filename_component(parent "${sdk_root}" DIRECTORY)
         file(ARCHIVE_EXTRACT INPUT "${staging}/emsdk.tar.gz" DESTINATION
              "${parent}")
-        file(REMOVE_RECURSE "${root}")
-        file(RENAME "${parent}/emsdk-${EMSCRIPTEN_SDK_VERSION}" "${root}")
+        file(REMOVE_RECURSE "${sdk_root}")
+        file(RENAME "${parent}/emsdk-${EMSCRIPTEN_SDK_VERSION}" "${sdk_root}")
         file(REMOVE_RECURSE "${staging}")
     endif()
 
@@ -107,7 +95,7 @@ function(emsdk_bootstrap root)
     execute_process(
         COMMAND "${EMSCRIPTEN_PYTHON}" emsdk.py install
                 "${EMSCRIPTEN_SDK_VERSION}"
-        WORKING_DIRECTORY "${root}"
+        WORKING_DIRECTORY "${sdk_root}"
         COMMAND_ERROR_IS_FATAL ANY)
 
     # --embedded keeps the `.emscripten` config inside the SDK: no $HOME
@@ -115,33 +103,10 @@ function(emsdk_bootstrap root)
     execute_process(
         COMMAND "${EMSCRIPTEN_PYTHON}" emsdk.py activate --embedded
                 "${EMSCRIPTEN_SDK_VERSION}"
-        WORKING_DIRECTORY "${root}"
+        WORKING_DIRECTORY "${sdk_root}"
         COMMAND_ERROR_IS_FATAL ANY)
-endfunction()
-
-# emsdk_use_bundled_node(<root>)
-#
-# ctest needs a JS runtime to execute the test suite. The upstream toolchain
-# only looks for a system node; fall back to the one bundled with the emsdk.
-function(emsdk_use_bundled_node root)
-    if(CMAKE_CROSSCOMPILING_EMULATOR)
-        return()
-    endif()
-    file(GLOB node "${root}/node/*/bin/node" "${root}/node/*/bin/node.exe")
-    if(node)
-        list(GET node 0 node)
-        set(CMAKE_CROSSCOMPILING_EMULATOR
-            "${node}"
-            PARENT_SCOPE)
-        message(STATUS "ctest emulator: ${node}")
-    endif()
-endfunction()
-
-emsdk_resolve_root(sdk_root)
-
-if(NOT EXISTS "${sdk_root}/${emsdk_toolchain_relpath}")
-    emsdk_bootstrap("${sdk_root}")
 endif()
+
 if(NOT EXISTS "${sdk_root}/${emsdk_toolchain_relpath}")
     message(
         FATAL_ERROR
@@ -155,4 +120,19 @@ set(ENV{EM_CONFIG} "${sdk_root}/.emscripten")
 
 include("${sdk_root}/${emsdk_toolchain_relpath}")
 
-emsdk_use_bundled_node("${sdk_root}")
+# ctest needs a JS runtime to execute the test suite. The upstream toolchain
+# only looks for a system node; fall back to the one bundled with the emsdk.
+if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
+    file(GLOB node "${sdk_root}/node/*/bin/node"
+         "${sdk_root}/node/*/bin/node.exe")
+    if(node)
+        list(GET node 0 node)
+        # Propagate out of the block() scope so ctest sees it.
+        set(CMAKE_CROSSCOMPILING_EMULATOR
+            "${node}"
+            PARENT_SCOPE)
+        message(STATUS "ctest emulator: ${node}")
+    endif()
+endif()
+
+endblock()
