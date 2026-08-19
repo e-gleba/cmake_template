@@ -6,13 +6,15 @@
 /// a Dear ImGui control overlay. Targets WebGL2 (GLSL ES 3.00) under
 /// Emscripten and desktop OpenGL 3.3 Core elsewhere.
 ///
-/// GL is reached through a tiny loader: SDL's <SDL3/SDL_opengl.h> only ever
-/// declares the desktop GL 1.x core prototypes, while the GL 2.0+ shader API
-/// exists there solely as `PFN*PROC` typedefs in the bundled glext. So the
-/// entry points this renderer needs are declared as function pointers (typed
-/// by those typedefs) and resolved once via `SDL_GL_GetProcAddress` - the
-/// canonical cross-platform GL3.3 / WebGL2 pattern, with no loader library
-/// (glad/glew) linked.
+/// GL access is split the way SDL3's headers actually expose it:
+///   * the GL 1.x core (glGetString, glViewport, glClearColor, glClear,
+///     glDrawArrays) is declared as real prototypes in <SDL3/SDL_opengl.h> on
+///     both desktop and Emscripten, so it is called directly;
+///   * the GL 2.0+ shader API exists only as `PFN*PROC` typedefs in the
+///     bundled glext (present on both paths), so those entry points are held
+///     as function pointers resolved once via `SDL_GL_GetProcAddress`.
+/// This is the canonical cross-platform GL3.3 / WebGL2 pattern and links no
+/// loader library (glad/glew).
 ///
 /// The app follows the SDL3 callback model: the browser drives
 /// `SDL_AppIterate` from `requestAnimationFrame` and maps the tab close
@@ -147,21 +149,18 @@ inline constexpr source fragment{version_directive, fragment_body};
 } // namespace shaders
 
 // ---------------------------------------------------------------------------
-// GL entry points - resolved once at startup through SDL_GL_GetProcAddress
+// GL 2.0+ shader entry points - resolved once via SDL_GL_GetProcAddress
 // ---------------------------------------------------------------------------
 
-/// The exact GL subset this renderer needs. Members are function pointers
-/// typed by SDL's bundled glext `PFN*PROC` typedefs (present on both the
-/// desktop and Emscripten paths), so the same table drives desktop GL 3.3
-/// and WebGL2. Namespace scope mirrors how loader libraries expose GL, so
+/// The GL 2.0+ shader subset this renderer needs. These functions have no
+/// prototypes in SDL's headers (only `PFN*PROC` typedefs in the bundled
+/// glext, present on both desktop and Emscripten), so they are held as
+/// function pointers. The GL 1.x core used elsewhere (glViewport, glClear,
+/// glClearColor, glDrawArrays, glGetString) has real prototypes and is called
+/// directly. Namespace scope mirrors how loader libraries expose GL, so
 /// `shader_program` can release its handle without threading the table
 /// through every call site.
-struct gl_api {
-    PFNGLGETSTRINGPROC GetString = nullptr;
-    PFNGLVIEWPORTPROC Viewport = nullptr;
-    PFNGLCLEARCOLORPROC ClearColor = nullptr;
-    PFNGLCLEARPROC Clear = nullptr;
-    PFNGLDRAWARRAYSPROC DrawArrays = nullptr;
+struct gl_shader_api {
     PFNGLCREATESHADERPROC CreateShader = nullptr;
     PFNGLSHADERSOURCEPROC ShaderSource = nullptr;
     PFNGLCOMPILESHADERPROC CompileShader = nullptr;
@@ -180,7 +179,7 @@ struct gl_api {
     PFNGLUNIFORM2FPROC Uniform2f = nullptr;
 };
 
-gl_api gl{};
+gl_shader_api gl{};
 
 [[nodiscard]] bool resolve_gl_entry_points() noexcept
 {
@@ -197,11 +196,6 @@ gl_api gl{};
         }
     };
 
-    bind("glGetString", gl.GetString);
-    bind("glViewport", gl.Viewport);
-    bind("glClearColor", gl.ClearColor);
-    bind("glClear", gl.Clear);
-    bind("glDrawArrays", gl.DrawArrays);
     bind("glCreateShader", gl.CreateShader);
     bind("glShaderSource", gl.ShaderSource);
     bind("glCompileShader", gl.CompileShader);
@@ -464,9 +458,9 @@ void render_scene(app_state& app) noexcept
         return; // minimized or zero-size framebuffer: nothing to draw
     }
 
-    gl.Viewport(0, 0, width, height);
-    gl.ClearColor(0.02F, 0.02F, 0.03F, 1.0F);
-    gl.Clear(GL_COLOR_BUFFER_BIT);
+    glViewport(0, 0, width, height);
+    glClearColor(0.02F, 0.02F, 0.03F, 1.0F);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     const auto elapsed_ns = SDL_GetTicksNS() - app.start_ticks_ns;
     const float time_seconds = gsl::narrow_cast<float>(elapsed_ns) * 1.0e-9F;
@@ -476,7 +470,7 @@ void render_scene(app_state& app) noexcept
                  gsl::narrow_cast<float>(height));
     gl.Uniform1f(app.uniform_time, time_seconds);
     gl.Uniform1f(app.uniform_speed, app.speed);
-    gl.DrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
 void render_ui(app_state& app) noexcept
@@ -543,9 +537,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int /*argc*/, char** /*argv*/)
     app->start_ticks_ns = SDL_GetTicksNS();
 
     const auto* renderer =
-        reinterpret_cast<const char*>(gl.GetString(GL_RENDERER));
+        reinterpret_cast<const char*>(glGetString(GL_RENDERER));
     const auto* version =
-        reinterpret_cast<const char*>(gl.GetString(GL_VERSION));
+        reinterpret_cast<const char*>(glGetString(GL_VERSION));
     SDL_Log("web_app ready - renderer: %s | %s",
             renderer != nullptr ? renderer : "unknown",
             version != nullptr ? version : "unknown");
