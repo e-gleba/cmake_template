@@ -10,25 +10,54 @@ cpmaddpackage(
     DOWNLOAD_ONLY
     TRUE)
 
-# EXCLUDE_FROM_ALL: imgui is only compiled where a target actually links
-# it (currently the Emscripten web_app) — native builds skip it entirely.
-add_library(imgui STATIC EXCLUDE_FROM_ALL)
-add_library(imgui::imgui ALIAS imgui)
+# Idempotent: find_package(imgui) may be reached from several directory
+# scopes, but the libraries below may only be defined once.
+include_guard(GLOBAL)
 
-target_sources(
+# imgui ships no build system of its own, so its libraries are defined here:
+#   imgui::imgui        - context, widgets, draw lists (platform-agnostic)
+#   imgui::sdl3_opengl3 - SDL3 platform + OpenGL3 renderer backend
+#
+# Both are EXCLUDE_FROM_ALL: imgui is only compiled where a target actually
+# links it (currently the Emscripten web_app) - native builds skip it.
+
+# imgui_add_library(<target> <alias-suffix>
+#                   SOURCES <src...> INCLUDES <dir...>
+#                   [DEFINES <def...>] [LINKS <dep...>])
+#
+# Defines a static imgui library plus its `imgui::<alias-suffix>` alias with
+# the shared skeleton: SYSTEM includes (third-party headers must not trip
+# our warning set), C++23, optional PRIVATE compile definitions and PUBLIC
+# links.
+function(imgui_add_library target alias)
+    cmake_parse_arguments(PARSE_ARGV 2 arg "" "" "SOURCES;INCLUDES;DEFINES;LINKS")
+
+    add_library(${target} STATIC EXCLUDE_FROM_ALL ${arg_SOURCES})
+    add_library(imgui::${alias} ALIAS ${target})
+    target_include_directories(${target} SYSTEM PUBLIC ${arg_INCLUDES})
+    target_compile_features(${target} PUBLIC cxx_std_23)
+
+    if(arg_DEFINES)
+        target_compile_definitions(${target} PRIVATE ${arg_DEFINES})
+    endif()
+    if(arg_LINKS)
+        target_link_libraries(${target} PUBLIC ${arg_LINKS})
+    endif()
+endfunction()
+
+imgui_add_library(
     imgui
-    PRIVATE ${imgui_SOURCE_DIR}/imgui.cpp
-            ${imgui_SOURCE_DIR}/imgui_demo.cpp
-            ${imgui_SOURCE_DIR}/imgui_draw.cpp
-            ${imgui_SOURCE_DIR}/imgui_tables.cpp
-            ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-            ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp)
-
-target_include_directories(
-    imgui SYSTEM PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}>
-                        $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/misc/cpp>)
-
-target_compile_features(imgui PUBLIC cxx_std_23)
+    imgui
+    SOURCES
+        ${imgui_SOURCE_DIR}/imgui.cpp
+        ${imgui_SOURCE_DIR}/imgui_demo.cpp
+        ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_tables.cpp
+        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
+    INCLUDES
+        $<BUILD_INTERFACE:${imgui_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/misc/cpp>)
 
 # FreeType rasterizer is opt-in: imgui_freetype.cpp hard-includes
 # <ft2build.h>, so it may only be compiled when FreeType is actually
@@ -71,32 +100,22 @@ if(NOT EMSCRIPTEN)
 endif()
 
 if(TARGET SDL3::SDL3 AND (TARGET OpenGL::GL OR EMSCRIPTEN))
-    add_library(imgui_sdl3_opengl3 STATIC EXCLUDE_FROM_ALL)
-    add_library(imgui::sdl3_opengl3 ALIAS imgui_sdl3_opengl3)
-
-    target_sources(
+    imgui_add_library(
         imgui_sdl3_opengl3
-        PRIVATE ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
-                ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp)
-
-    # Backends include <imgui.h> and <imgui_impl_*.h>.
-    # imgui::imgui already exposes ${imgui_SOURCE_DIR}; we only need the
-    # backends directory here.
-    target_include_directories(
-        imgui_sdl3_opengl3 SYSTEM
-        PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/backends>)
-
-    # GLES3/WebGL2 on Emscripten (the OpenGL3 backend defaults to ES2
-    # there — override), system OpenGL everywhere else.
-    target_link_libraries(
-        imgui_sdl3_opengl3
-        PUBLIC imgui::imgui SDL3::SDL3
-               $<$<NOT:$<PLATFORM_ID:Emscripten>>:OpenGL::GL>)
-    target_compile_definitions(
-        imgui_sdl3_opengl3
-        PRIVATE $<$<PLATFORM_ID:Emscripten>:IMGUI_IMPL_OPENGL_ES3>)
-
-    target_compile_features(imgui_sdl3_opengl3 PUBLIC cxx_std_23)
+        sdl3_opengl3
+        SOURCES
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
+            ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+        INCLUDES
+            $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/backends>
+        # GLES3/WebGL2 on Emscripten (the OpenGL3 backend defaults to ES2
+        # there — override), system OpenGL everywhere else.
+        DEFINES
+            $<$<PLATFORM_ID:Emscripten>:IMGUI_IMPL_OPENGL_ES3>
+        LINKS
+            imgui::imgui
+            SDL3::SDL3
+            $<$<NOT:$<PLATFORM_ID:Emscripten>>:OpenGL::GL>)
 else()
     if(NOT TARGET SDL3::SDL3)
         message(
