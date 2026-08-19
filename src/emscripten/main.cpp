@@ -72,8 +72,12 @@ inline constexpr float speed_max = 4.0F;
 
 namespace shaders {
 
-// GLSL ES 3.00 allows `layout(location=)` only on vertex inputs and fragment
-// outputs - never on varyings between stages - so `uv` is matched by name.
+// GLSL ES 3.00 notes that shaped the source below:
+//   * `layout(location=)` is allowed only on vertex inputs and fragment
+//     outputs - never on varyings between stages - so `uv` is matched by name.
+//   * a `const` local must be initialized from a constant expression, and
+//     `gl_VertexID` / uniforms are not constant, so runtime-derived locals are
+//     deliberately non-const (ANGLE rejects `const` here).
 #if defined(__EMSCRIPTEN__)
 inline constexpr std::string_view version_directive = "#version 300 es\n";
 #else
@@ -87,7 +91,7 @@ out vec2 uv;
 
 void main()
 {
-    const vec2 position =
+    vec2 position =
         vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)) * 2.0 - 1.0;
     uv = position * 0.5 + 0.5;
     gl_Position = vec4(position, 0.0, 1.0);
@@ -121,16 +125,15 @@ vec3 palette(float t)
 
 void main()
 {
-    const vec2 p =
-        (uv * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
-    const float t = u_time * u_speed;
+    vec2 p = (uv * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
+    float t = u_time * u_speed;
 
     float v = sin(p.x * 3.0 + t) + sin((p.y + t) * 0.5)
             + sin((p.x + p.y + t) * 0.5);
-    const vec2 q = p + 0.5 * vec2(cos(t * 0.7), sin(t * 0.9));
+    vec2 q = p + 0.5 * vec2(cos(t * 0.7), sin(t * 0.9));
     v = v * 0.25 + 0.25 * sin(length(q) * 4.0 - t);
 
-    const vec3 color = palette(v + t * 0.1) * (1.0 - 0.125 * dot(p, p));
+    vec3 color = palette(v + t * 0.1) * (1.0 - 0.125 * dot(p, p));
     frag_color = vec4(color, 1.0);
 }
 )glsl";
