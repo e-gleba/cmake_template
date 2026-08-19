@@ -51,19 +51,21 @@ if(TARGET Freetype::Freetype)
     target_compile_definitions(imgui PUBLIC IMGUI_ENABLE_FREETYPE)
 endif()
 
-# SDL3 + OpenGL3 renderer backend. OpenGL is linked only when its target
-# already exists (desktop GL via find_package(OpenGL) elsewhere); on
-# Emscripten the GLES3/WebGL2 symbols come from the emcc link flags on the
-# final executable (-sUSE_WEBGL2=1 -sFULL_ES3=1), so no OpenGL target there.
+# SDL3 + OpenGL3 renderer backend. Built when SDL3 is present and we are
+# either on Emscripten or a desktop OpenGL target is available.
 #
-# To enable the desktop OpenGL path, call find_package(OpenGL) before this
-# config runs. Platform packages needed for that:
+# OpenGL is linked only when the OpenGL::GL target already exists (desktop GL
+# via find_package(OpenGL) called before this config runs). On Emscripten the
+# GLES3/WebGL2 symbols come from the emcc link flags on the final executable
+# (-sUSE_WEBGL2=1 -sFULL_ES3=1), so no OpenGL target is needed there.
+#
+# Platform packages needed for the desktop find_package(OpenGL):
 #   Windows : vcpkg install opengl --triplet=x64-windows
 #   Fedora  : sudo dnf install mesa-libGL-devel mesa-libGLU-devel
 #   Arch    : sudo pacman -S mesa glu
 #   Ubuntu  : sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev
 #   macOS   : OpenGL.framework is included in the SDK
-if(TARGET SDL3::SDL3 AND (TARGET OpenGL::GL OR EMSCRIPTEN))
+if(TARGET SDL3::SDL3 AND (EMSCRIPTEN OR TARGET OpenGL::GL))
     add_library(imgui_sdl3_opengl3 STATIC EXCLUDE_FROM_ALL
                 ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
                 ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp)
@@ -76,9 +78,11 @@ if(TARGET SDL3::SDL3 AND (TARGET OpenGL::GL OR EMSCRIPTEN))
     target_compile_definitions(
         imgui_sdl3_opengl3
         PRIVATE $<$<PLATFORM_ID:Emscripten>:IMGUI_IMPL_OPENGL_ES3>)
-    target_link_libraries(
-        imgui_sdl3_opengl3
-        PUBLIC imgui::imgui
-               SDL3::SDL3
-               $<$<NOT:$<PLATFORM_ID:Emscripten>>:OpenGL::GL>)
+    target_link_libraries(imgui_sdl3_opengl3 PUBLIC imgui::imgui SDL3::SDL3)
+    # Link desktop OpenGL only when its target actually exists. A genexp
+    # cannot be used here: it would name OpenGL::GL unconditionally and fail
+    # at generate time when the target was never created.
+    if(TARGET OpenGL::GL)
+        target_link_libraries(imgui_sdl3_opengl3 PUBLIC OpenGL::GL)
+    endif()
 endif()
