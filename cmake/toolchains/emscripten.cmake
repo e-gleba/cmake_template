@@ -11,6 +11,7 @@
 #
 # Knobs (pass with `-D`):
 #   EMSCRIPTEN_SDK_VERSION        pinned emsdk release to bootstrap
+#   EMSCRIPTEN_SDK_ROOT           custom SDK location
 #   EMSCRIPTEN_SDK_TARBALL_SHA256 optional integrity pin for the tarball
 #
 # Requires python3 on PATH (emsdk is a python tool).
@@ -32,22 +33,30 @@ mark_as_advanced(EMSCRIPTEN_SDK_TARBALL_SHA256)
 # the EMSDK/EM_CONFIG environment set below escape.
 block(SCOPE_FOR VARIABLES)
 
-set(emsdk_toolchain_relpath
+# Path to the upstream toolchain file, relative to the SDK root. cmake_path()
+# (3.20) keeps every path operation lexical and platform-correct.
+cmake_path(
+    SET emsdk_toolchain_file
+    NORMALIZE
     "upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
 
 # --- Resolve the SDK root -------------------------------------------------
-if(DEFINED ENV{EMSDK} AND EXISTS "$ENV{EMSDK}/${emsdk_toolchain_relpath}")
-    set(sdk_root "$ENV{EMSDK}")
+# Priority: EMSDK env (existing install) > explicit cache entry > repo-local.
+if(DEFINED ENV{EMSDK})
+    cmake_path(SET sdk_root NORMALIZE "$ENV{EMSDK}")
 elseif(EMSCRIPTEN_SDK_ROOT)
-    set(sdk_root "${EMSCRIPTEN_SDK_ROOT}")
+    cmake_path(SET sdk_root NORMALIZE "${EMSCRIPTEN_SDK_ROOT}")
 else()
-    # ABSOLUTE (not REALPATH): `.emsdk` does not exist yet on first run.
-    get_filename_component(sdk_root "${CMAKE_CURRENT_LIST_DIR}/../../.emsdk"
-                           ABSOLUTE)
+    # The repo root is two levels up from this file (cmake/toolchains/).
+    cmake_path(SET sdk_root NORMALIZE
+               "${CMAKE_CURRENT_LIST_DIR}/../../.emsdk")
 endif()
 
+cmake_path(SET sdk_toolchain NORMALIZE
+           "${sdk_root}/${emsdk_toolchain_file}")
+
 # --- Bootstrap if the toolchain file is missing ---------------------------
-if(NOT EXISTS "${sdk_root}/${emsdk_toolchain_relpath}")
+if(NOT EXISTS "${sdk_toolchain}")
     find_program(
         EMSCRIPTEN_PYTHON
         NAMES python3 python
@@ -64,7 +73,8 @@ if(NOT EXISTS "${sdk_root}/${emsdk_toolchain_relpath}")
         set(url
             "https://github.com/emscripten-core/emsdk/archive/refs/tags/${EMSCRIPTEN_SDK_VERSION}.tar.gz"
         )
-        set(staging "${CMAKE_BINARY_DIR}/_emsdk_bootstrap")
+        cmake_path(SET staging NORMALIZE
+                   "${CMAKE_BINARY_DIR}/_emsdk_bootstrap")
 
         message(
             STATUS "Downloading emsdk ${EMSCRIPTEN_SDK_VERSION} -> ${sdk_root}")
@@ -82,11 +92,12 @@ if(NOT EXISTS "${sdk_root}/${emsdk_toolchain_relpath}")
         endif()
 
         # Extract next to the target so the rename stays on one filesystem.
-        get_filename_component(parent "${sdk_root}" DIRECTORY)
+        cmake_path(GET sdk_root PARENT_PATH sdk_parent)
         file(ARCHIVE_EXTRACT INPUT "${staging}/emsdk.tar.gz" DESTINATION
-             "${parent}")
+             "${sdk_parent}")
         file(REMOVE_RECURSE "${sdk_root}")
-        file(RENAME "${parent}/emsdk-${EMSCRIPTEN_SDK_VERSION}" "${sdk_root}")
+        file(RENAME "${sdk_parent}/emsdk-${EMSCRIPTEN_SDK_VERSION}"
+             "${sdk_root}")
         file(REMOVE_RECURSE "${staging}")
     endif()
 
@@ -107,7 +118,7 @@ if(NOT EXISTS "${sdk_root}/${emsdk_toolchain_relpath}")
         COMMAND_ERROR_IS_FATAL ANY)
 endif()
 
-if(NOT EXISTS "${sdk_root}/${emsdk_toolchain_relpath}")
+if(NOT EXISTS "${sdk_toolchain}")
     message(
         FATAL_ERROR
         "emsdk at '${sdk_root}' is incomplete - delete it and re-configure")
@@ -118,21 +129,35 @@ endif()
 set(ENV{EMSDK} "${sdk_root}")
 set(ENV{EM_CONFIG} "${sdk_root}/.emscripten")
 
-include("${sdk_root}/${emsdk_toolchain_relpath}")
+include("${sdk_toolchain}")
 
 # ctest needs a JS runtime to execute the test suite. The upstream toolchain
 # only looks for a system node; fall back to the one bundled with the emsdk.
+# find_program() searches PATH plus the emsdk's node/<ver>/bin directories.
 if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
-    file(GLOB node "${sdk_root}/node/*/bin/node"
-         "${sdk_root}/node/*/bin/node.exe")
-    if(node)
-        list(GET node 0 node)
+    file(GLOB node_bin_dirs LIST_DIRECTORIES true "${sdk_root}/node/*/bin")
+    find_program(
+        EMSCRIPTEN_NODE
+        NAMES node
+        PATHS ${node_bin_dirs}
+        NO_DEFAULT_PATH)
+    if(NOT EMSCRIPTEN_NODE)
+        find_program(EMSCRIPTEN_NODE NAMES node)
+    endif()
+    if(EMSCRIPTEN_NODE)
         # Propagate out of the block() scope so ctest sees it.
         set(CMAKE_CROSSCOMPILING_EMULATOR
-            "${node}"
+            "${EMSCRIPTEN_NODE}"
             PARENT_SCOPE)
-        message(STATUS "ctest emulator: ${node}")
     endif()
+endif()
+
+# --- Summary --------------------------------------------------------------
+message(STATUS "Emscripten toolchain configured")
+message(STATUS "  sdk root   : ${sdk_root}")
+message(STATUS "  toolchain  : ${sdk_toolchain}")
+if(CMAKE_CROSSCOMPILING_EMULATOR)
+    message(STATUS "  ctest node : ${CMAKE_CROSSCOMPILING_EMULATOR}")
 endif()
 
 endblock()
