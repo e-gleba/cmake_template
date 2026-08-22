@@ -75,7 +75,7 @@ file(
     WRITE "${format_runner}"
     [=[
 # Invoked by: cmake -D MODE=... -D CLANG_FORMAT=... -D FILE_LIST=... -P
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 4.4)
 file(STRINGS "${FILE_LIST}" sources)
 if(MODE STREQUAL "check")
     set(args --dry-run --Werror)

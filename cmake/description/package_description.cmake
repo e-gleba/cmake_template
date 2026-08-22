@@ -1,6 +1,6 @@
 # ─── Package Description ───────────────────────────────────────────
 # Sets CPack metadata and platform-specific packaging variables.
-# Loaded via find_package(package_description CONFIG REQUIRED).
+# Loaded from the root CMakeLists.txt via include(package_description).
 #
 # CMAKE_CURRENT_LIST_DIR = directory containing THIS file
 #                          (cmake/description/)
@@ -29,14 +29,14 @@ set(CPACK_PACKAGE_CONTACT "${PROJECT_CONTACT}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
 set(CPACK_PACKAGE_HOMEPAGE_URL "${PROJECT_HOMEPAGE_URL}")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CPACK_PACKAGE_NAME}"
-)# 3.12+: avoid version in path
+)# avoid version in install path
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_LICENSE_FILE}")
 set(CPACK_RESOURCE_FILE_README "${PROJECT_README_FILE}")
-set(CPACK_VERBATIM_VARIABLES YES) # 3.4+: always set, prevents escaping bugs
+set(CPACK_VERBATIM_VARIABLES YES) # always set, prevents escaping bugs
 
 # Long description: use dedicated file if present, fall back
 # to the project readme.  block() isolates the temp variable.
-block(SCOPE_FOR VARIABLES) # 3.25+: no manual unset() needed
+block(SCOPE_FOR VARIABLES) # no manual unset() needed
 set(pkg_desc_file "${CMAKE_CURRENT_LIST_DIR}/description.txt")
 if(EXISTS "${pkg_desc_file}")
     set(CPACK_PACKAGE_DESCRIPTION_FILE

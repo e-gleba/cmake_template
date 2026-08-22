@@ -1,23 +1,22 @@
 {
-    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
-    "version": 10,
+    "$schema": "https://json.schemastore.org/cmake-presets.json",
+    "version": 12,
     "cmakeMinimumRequired": {
-        "major": 3,
-        "minor": 31,
+        "major": 4,
+        "minor": 4,
         "patch": 0
     },
     "configurePresets": [
         {
             "name": "base",
             "displayName": "Base Configuration",
-            "description": "Ninja Multi-Config, compile_commands.json, color diagnostics, C++20 module scanning disabled",
+            "description": "Ninja Multi-Config, compile_commands.json, color diagnostics",
             "hidden": true,
             "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_COLOR_DIAGNOSTICS": "ON",
-                "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
                 "FETCHCONTENT_QUIET": "OFF"
             }
         },

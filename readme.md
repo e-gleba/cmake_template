@@ -9,7 +9,7 @@
   <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&label=ci" alt="ci"/></a>
   <a href="https://github.com/e-gleba/cmake_template/releases"><img src="https://img.shields.io/github/v/release/e-gleba/cmake_template" alt="release"/></a>
   <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-23%2F26-00599C?logo=cplusplus&logoColor=white" alt="C++ Standard"/></a>
-  <a href="https://cmake.org"><img src="https://img.shields.io/badge/CMake-3.31%2B-064F8C?logo=cmake" alt="CMake"/></a>
+  <a href="https://cmake.org"><img src="https://img.shields.io/badge/CMake-4.4%2B-064F8C?logo=cmake" alt="CMake"/></a>
 </p>
 
 <p align="center">
@@ -54,7 +54,7 @@ cmake --workflow --preset=llvm-mingw-aarch64-full
 | **Android instrumentation tests** | ❌ | ✅ `AndroidJUnitRunner`, Gradle Managed Devices (Pixel 6 ATD), doctest JNI bridge, [#23 native GTest strategy](https://github.com/e-gleba/cmake_template/issues/23) |
 | **Linux → Windows cross-compile** | ❌ | ✅ llvm-mingw toolchain: x86_64, i686, aarch64 |
 | **WebAssembly** | ❌ | ✅ Emscripten preset with zero-setup SDK bootstrap, SDL3 + ImGui + OpenGL web demo, doctest under Node.js |
-| **CMake Presets** | Basic or none | ✅ 10+ configure presets, 15+ build presets, workflow presets, schema v10 |
+| **CMake Presets** | Basic or none | ✅ 10+ configure presets, 15+ build presets, workflow presets, schema v12 |
 | **Packaging** | ❌ | ✅ CPack: tar.gz, zip, txz per platform |
 | **Reproducible CI** | Manual Docker | ✅ Docker images + GitHub Actions matrix |
 | **One-click release** | ❌ | ✅ `workflow_dispatch` + GHCR + CPack/APK attach |

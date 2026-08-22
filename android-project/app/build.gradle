@@ -75,7 +75,11 @@ android {
         externalNativeBuild {
             cmake {
                 path = file('../../CMakeLists.txt')
-                version = "3.31.6+"
+                // Floor matches cmake_minimum_required(VERSION 4.4). The SDK's
+                // own cmake packages lag Kitware (newest published: 4.1.0), so
+                // AGP resolves this from PATH — CI provides 4.4.2 via
+                // lukka/get-cmake, local installs via any CMake >= 4.4.2.
+                version = "4.4.2+"
             }
         }
     }

@@ -18,19 +18,13 @@ if(clang_tidy_exe)
     set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
     # ── Co-compilation (per-file, during build) ────────────────────
-    # -p ${CMAKE_BINARY_DIR}: since CMake 3.25 this changes how
-    # CMake constructs the clang-tidy invocation, avoiding a bug
-    # where clang-tidy finds wrong toolchain headers.
+    # -p ${CMAKE_BINARY_DIR}: point clang-tidy at the compilation
+    # database so it resolves the real flags and does not pick up
+    # wrong toolchain headers.
     # Ref: Professional CMake §32.1.1
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25")
-        set(CMAKE_CXX_CLANG_TIDY
-            "${clang_tidy_exe}" -p "${CMAKE_BINARY_DIR}"
-            CACHE STRING "clang-tidy co-compilation command")
-    else()
-        set(CMAKE_CXX_CLANG_TIDY
-            "${clang_tidy_exe}"
-            CACHE STRING "clang-tidy co-compilation command")
-    endif()
+    set(CMAKE_CXX_CLANG_TIDY
+        "${clang_tidy_exe}" -p "${CMAKE_BINARY_DIR}"
+        CACHE STRING "clang-tidy co-compilation command")
 
     # ── Copy .clang-tidy into build tree ───────────────────────────
     # Generated sources live in the build dir.  Without a

@@ -46,36 +46,32 @@ if(CMAKE_SYSTEM_NAME MATCHES "Android|Emscripten")
     return()
 endif()
 
-# ── RPATH: find libSDL3.so at runtime after install ──
-if(CMAKE_SYSTEM_NAME MATCHES "Darwin|iOS")
-    set_target_properties(
-        sdl_app
-        PROPERTIES INSTALL_RPATH "@executable_path/../${CMAKE_INSTALL_LIBDIR}"
-                   MACOSX_RPATH ON
-    )
-else()
-    set_target_properties(
-        sdl_app PROPERTIES INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}"
-                           BUILD_RPATH_USE_ORIGIN ON
-    )
-endif()
+# ── RPATH: find libSDL3 at runtime after install ─────────────────────
+# @executable_path on Apple, $ORIGIN elsewhere — one generator
+# expression instead of a per-platform if/else. INSTALL_RPATH supports
+# genexes, and CMP0095 (NEW at our 4.4 floor) escapes $ORIGIN correctly
+# in the install script.
+set_target_properties(
+    sdl_app
+    PROPERTIES
+        INSTALL_RPATH
+            "$<IF:$<PLATFORM_ID:Darwin,iOS>,@executable_path,$ORIGIN>/../${CMAKE_INSTALL_LIBDIR}"
+        BUILD_RPATH_USE_ORIGIN ON)
 
 install(TARGETS sdl_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
                                 COMPONENT runtime
 )
 
-# ── Windows: stage DLLs next to .exe for build-tree runs ──
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.21" AND CMAKE_SYSTEM_NAME STREQUAL
-                                                  "Windows"
-)
+# ── Windows: stage runtime DLLs next to the .exe for build-tree runs ─
+# $<TARGET_RUNTIME_DLLS> expands to nothing on other platforms, but
+# guarding keeps the custom command out of non-Windows build graphs.
+if(WIN32)
     add_custom_command(
         TARGET sdl_app
         POST_BUILD
-        COMMAND
-            ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:sdl_app>
-            $<TARGET_RUNTIME_DLLS:sdl_app>
-        COMMAND_EXPAND_LISTS
-    )
+        COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:sdl_app>
+                $<TARGET_RUNTIME_DLLS:sdl_app>
+        COMMAND_EXPAND_LISTS)
 endif()
 
 add_subdirectory(unity_build)
