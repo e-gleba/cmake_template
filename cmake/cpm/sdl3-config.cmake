@@ -125,7 +125,7 @@ if(NOT TARGET SDL3::SDL3)
 endif()
 
 # -------------------------------------------------------------------
-# Android: export SDL's Java bindings for the Gradle build
+# Android: export SDL's Java bindings + manifest/proguard for the Gradle build
 # -------------------------------------------------------------------
 # android-project compiles org.libsdl.app.* straight from the fetched SDL
 # tree, so bumping VERSION/GIT_TAG above updates the C++ and Java sides
@@ -137,35 +137,48 @@ endif()
 # coupling to the native build — a build-time target raced AGP's
 # compile*JavaWithJavac and broke CI (package org.libsdl.app does not exist).
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    # CPM sets <name>_SOURCE_DIR (lowercased) to the fetched tree. Use the
-    # plain configure-time variable — file(COPY) does NOT evaluate generator
-    # expressions, so $<TARGET_PROPERTY:...> would be a literal bad path.
-    if(NOT sdl3_SOURCE_DIR)
-        set(sdl3_SOURCE_DIR "${SDL3_SOURCE_DIR}")
-    endif()
-
+    # CPM needs git to clone SDL, so git is a hard requirement of this build.
     # Anchor the destination at the git work-tree root (not a relative ../..)
     # so the path stays correct no matter where this package config is moved.
-    # Same idiom as cmake/toolchains/emscripten.cmake.
-    find_package(Git QUIET)
-    if(Git_FOUND)
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
-            WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
-            OUTPUT_VARIABLE sdl3_repo_root
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET)
+    find_package(Git REQUIRED)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
+        WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
+        OUTPUT_VARIABLE sdl3_repo_root
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE sdl3_git_rc
+        ERROR_VARIABLE sdl3_git_err)
+    if(NOT sdl3_git_rc EQUAL 0 OR NOT sdl3_repo_root)
+        message(
+            FATAL_ERROR
+                "git rev-parse --show-toplevel failed (rc=${sdl3_git_rc}): "
+                "${sdl3_git_err}. Cannot locate the repo root to export the "
+                "SDL3 Java bindings.")
     endif()
-    if(NOT sdl3_repo_root)
-        # Fallback for a source tree without git metadata (e.g. an archive).
-        cmake_path(SET sdl3_repo_root NORMALIZE
-                   "${CMAKE_CURRENT_LIST_DIR}/../..")
+    cmake_path(SET sdl3_repo_root NORMALIZE "${sdl3_repo_root}")
+
+    # CPM exposes the fetched tree as <name>_SOURCE_DIR (lowercased). Accept
+    # the uppercased variant too, then hard-fail if neither names a real dir —
+    # file(COPY) silently no-ops on a missing source, which is exactly the
+    # "package org.libsdl.app does not exist" CI failure we must not mask.
+    set(sdl3_src_dir "${sdl3_SOURCE_DIR}")
+    if(NOT sdl3_src_dir)
+        set(sdl3_src_dir "${SDL3_SOURCE_DIR}")
+    endif()
+    set(sdl3_java_src
+        "${sdl3_src_dir}/android-project/app/src/main/java/org")
+    if(NOT IS_DIRECTORY "${sdl3_java_src}")
+        message(
+            FATAL_ERROR
+                "SDL3 Java sources not found at '${sdl3_java_src}'. "
+                "sdl3_SOURCE_DIR='${sdl3_SOURCE_DIR}' "
+                "SDL3_SOURCE_DIR='${SDL3_SOURCE_DIR}'. "
+                "CPM may not have fetched SDL3 before this block ran.")
     endif()
 
-    set(sdl3_java_src
-        "${sdl3_SOURCE_DIR}/android-project/app/src/main/java/org")
-    set(sdl3_java_dst
-        "${sdl3_repo_root}/android-project/app/build/generated/sdl3-java/org")
+    set(sdl3_android_gen
+        "${sdl3_repo_root}/android-project/app/build/generated/sdl3")
+    set(sdl3_java_dst "${sdl3_android_gen}/java/org")
 
     # file(COPY) is idempotent: re-copies only when contents differ, so a
     # re-configure after an SDL version bump refreshes the bindings.
@@ -174,7 +187,36 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
         DESTINATION "${sdl3_java_dst}"
         FILES_MATCHING
         PATTERN "*.java")
+
+    # Verify the copy actually produced sources — never let javac discover an
+    # empty srcDir as a cryptic "package does not exist" downstream.
+    file(GLOB sdl3_java_exported CONFIGURE_DEPENDS
+         "${sdl3_java_dst}/libsdl/app/*.java")
+    list(LENGTH sdl3_java_exported sdl3_java_count)
+    if(sdl3_java_count EQUAL 0)
+        message(
+            FATAL_ERROR
+                "SDL3 Java export produced no files in '${sdl3_java_dst}'. "
+                "Source dir was '${sdl3_java_src}'.")
+    endif()
     message(
-        STATUS "Exported SDL3 Java bindings -> ${sdl3_java_dst} "
-               "(from ${sdl3_java_src})")
+        STATUS
+            "Exported ${sdl3_java_count} SDL3 Java bindings -> ${sdl3_java_dst}"
+    )
+
+    # ---- SDL's base manifest + proguard rules ---------------------------
+    # Ship SDL's own AndroidManifest.xml / proguard-rules.pro alongside the
+    # app as the *base*; the app's files are merged over / appended to them by
+    # AGP, so an SDL bump never leaves a missing permission or JNI keep rule.
+    # The app still owns its Activity/manifest entries and any extra keeps —
+    # these are SDL's defaults, replaceable by editing the app's own files.
+    set(sdl3_base_dir "${sdl3_src_dir}/android-project/app/src/main")
+    if(EXISTS "${sdl3_base_dir}/AndroidManifest.xml")
+        file(COPY "${sdl3_base_dir}/AndroidManifest.xml"
+             DESTINATION "${sdl3_android_gen}")
+    endif()
+    if(EXISTS "${sdl3_base_dir}/../proguard-rules.pro")
+        file(COPY "${sdl3_base_dir}/../proguard-rules.pro"
+             DESTINATION "${sdl3_android_gen}")
+    endif()
 endif()
