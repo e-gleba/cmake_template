@@ -16,68 +16,13 @@
 #   public *;
 #}
 
-# SDL3 JNI entry points — mirrors the upstream android-project rules for the
-# SDL version pinned in cmake/cpm/sdl3-config.cmake (release-3.4.14)
--keep,includedescriptorclasses,allowoptimization class org.libsdl.app.SDLActivity {
-    java.lang.String nativeGetHint(java.lang.String); # Java-side doesn't use this, so it gets minified, but C-side still tries to register it
-    java.lang.String clipboardGetText();
-    boolean clipboardHasText();
-    void clipboardSetText(java.lang.String);
-    int createCustomCursor(int[], int, int, int, int);
-    void destroyCustomCursor(int);
-    android.app.Activity getContext();
-    boolean getManifestEnvironmentVariables();
-    android.view.Surface getNativeSurface();
-    void initTouch();
-    boolean isAndroidTV();
-    boolean isChromebook();
-    boolean isDeXMode();
-    boolean isTablet();
-    void manualBackButton();
-    int messageboxShowMessageBox(int, java.lang.String, java.lang.String, int[], int[], java.lang.String[], int[]);
-    void minimizeWindow();
-    boolean openURL(java.lang.String);
-    void requestPermission(java.lang.String, int);
-    boolean showToast(java.lang.String, int, int, int, int);
-    boolean sendMessage(int, int);
-    boolean setActivityTitle(java.lang.String);
-    boolean setCustomCursor(int);
-    void setOrientation(int, int, boolean, java.lang.String);
-    boolean setRelativeMouseEnabled(boolean);
-    boolean setSystemCursor(int);
-    void setWindowStyle(boolean);
-    boolean shouldMinimizeOnFocusLoss();
-    boolean showFileDialog(java.lang.String[], boolean, boolean, int);
-    boolean showTextInput(int, int, int, int, int);
-    boolean supportsRelativeMouse();
-    int openFileDescriptor(java.lang.String, java.lang.String);
-    boolean showFileDialog(java.lang.String[], boolean, int, java.lang.String, int);
-    java.lang.String getPreferredLocales();
-    java.lang.String formatLocale(java.util.Locale);
-    # Called from native (SDL_android.c) but missing from upstream's sample rules
-    void onNativePen(int, int, int, float, float, float);
-}
-
--keep,includedescriptorclasses,allowoptimization class org.libsdl.app.HIDDeviceManager {
-    void closeDevice(int);
-    boolean initialize(boolean, boolean);
-    boolean openDevice(int);
-    boolean readReport(int, byte[], boolean);
-    int writeReport(int, byte[], boolean);
-}
-
--keep,includedescriptorclasses,allowoptimization class org.libsdl.app.SDLAudioManager {
-    void registerAudioDeviceCallback();
-    void unregisterAudioDeviceCallback();
-    void audioSetThreadPriority(boolean, int);
-}
-
--keep,includedescriptorclasses,allowoptimization class org.libsdl.app.SDLControllerManager {
-    void joystickSetSensorsEnabled(int, boolean);
-    void pollInputDevices();
-    void joystickSetLED(int, int, int, int);
-    void pollHapticDevices();
-    void hapticRun(int, float, int);
-    void hapticRumble(int, float, float, int);
-    void hapticStop(int);
-}
+# No SDL3 rules here on purpose. SDL's own proguard-rules.pro ships from the
+# CPM-fetched tree (cmake/cpm/sdl3-config.cmake exports it to
+# build/generated/sdl3/) and build.gradle prepends it ahead of this file, so
+# an SDL version bump refreshes the JNI keeps automatically — duplicating
+# them here would silently pin them to one SDL version.
+#
+# SDL's onNative* methods need no keeps at all: they are `native` downcalls,
+# and the default proguard-android-optimize.txt already preserves native
+# method names for JNI linking (-keepclasseswithmembernames class * {
+# native <methods>; }).

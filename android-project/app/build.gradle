@@ -68,9 +68,9 @@ android {
         release {
             minifyEnabled = true
             shrinkResources = !isLibrary
-            // SDL's base proguard rules first, then the app's own (which keep
-            // the load-bearing onNativePen and any app-specific rules). AGP
-            // appends them in order, so an SDL bump refreshes the base set.
+            // SDL's base proguard rules first (exported from the CPM fetch),
+            // then the app's own for app-specific keeps. AGP appends them in
+            // order, so an SDL bump refreshes the base set.
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
                     file("${sdl3Gen}/proguard-rules.pro"),
                     'proguard-rules.pro'
