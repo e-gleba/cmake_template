@@ -8,13 +8,28 @@ find_program(
     DOC "clang-doc: generates C/C++ documentation from AST" OPTIONAL)
 
 if(NOT clang_doc_exe)
-    message(
-        NOTICE
-        "clang-doc not found - '${PROJECT_NAME}-clang-doc' target disabled\n"
-        "  fedora:  sudo dnf install clang-tools-extra\n"
-        "  ubuntu:  sudo apt install clang-tools-extra\n"
-        "  macos:   brew install llvm\n"
-        "  windows: choco install llvm")
+    message(NOTICE
+            "clang-doc not found - '${PROJECT_NAME}-clang-doc' target disabled"
+            [[
+  fedora:  sudo dnf install clang-tools-extra
+  ubuntu:  sudo apt install clang-tools-extra
+  alt:     sudo apt-get install clang-tools
+  macos:   brew install llvm
+  windows: choco install llvm]])
+    return()
+endif()
+
+# --- compile_commands.json ----------------------------------------------------
+# Enable here too: this module must work even when clang_tidy.cmake
+# (which also enables it) is not included first.
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+
+# Only Makefile/Ninja generators emit the database; on any other
+# generator the target would configure but always fail.
+if(NOT CMAKE_GENERATOR MATCHES "Ninja|Makefiles")
+    message(NOTICE
+            "clang-doc target disabled - generator '${CMAKE_GENERATOR}'"
+            " does not emit compile_commands.json")
     return()
 endif()
 

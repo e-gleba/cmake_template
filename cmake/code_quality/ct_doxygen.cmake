@@ -8,14 +8,12 @@
 find_package(Doxygen OPTIONAL_COMPONENTS dot)
 
 if(NOT DOXYGEN_FOUND)
-    message(
-        NOTICE
-        "Doxygen not found - documentation target disabled.\n"
-        "Install instructions:\n"
-        "  Fedora:  sudo dnf install doxygen graphviz\n"
-        "  Ubuntu:  sudo apt install doxygen graphviz\n"
-        "  macOS:   brew install doxygen graphviz\n"
-        "  Windows: choco install doxygen.install graphviz")
+    message(NOTICE [[doxygen not found - documentation target disabled
+  fedora:  sudo dnf install doxygen graphviz
+  ubuntu:  sudo apt install doxygen graphviz
+  alt:     sudo apt-get install doxygen graphviz
+  macos:   brew install doxygen graphviz
+  windows: choco install doxygen.install graphviz]])
     return()
 endif()
 

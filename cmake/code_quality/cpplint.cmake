@@ -9,12 +9,11 @@ find_program(
     DOC "cpplint: google C++ style checker" OPTIONAL)
 
 if(NOT cpplint_exe)
-    message(
-        NOTICE
-        "cpplint not found - cpplint linting disabled\n"
-        "  pip:     pip install cpplint\n"
-        "  fedora:  sudo dnf install cpplint\n"
-        "  macos:   brew install cpplint")
+    message(NOTICE [[cpplint not found - cpplint linting disabled
+  pip:     pip install cpplint
+  fedora:  sudo dnf install cpplint
+  ubuntu:  sudo apt install cpplint
+  macos:   brew install cpplint]])
     return()
 endif()
 

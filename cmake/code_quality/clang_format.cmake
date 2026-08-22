@@ -8,13 +8,12 @@ find_program(
     DOC "clang-format source reformatter" OPTIONAL)
 
 if(NOT clang_format_exe)
-    message(
-        NOTICE
-        "clang-format not found - format targets disabled\n"
-        "  fedora:  sudo dnf install clang-tools-extra\n"
-        "  ubuntu:  sudo apt install clang-format\n"
-        "  macos:   brew install llvm\n"
-        "  windows: choco install llvm")
+    message(NOTICE [[clang-format not found - format targets disabled
+  fedora:  sudo dnf install clang-tools-extra
+  ubuntu:  sudo apt install clang-format
+  alt:     sudo apt-get install clang-tools
+  macos:   brew install llvm
+  windows: choco install llvm]])
     return()
 endif()
 
