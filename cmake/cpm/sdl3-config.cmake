@@ -134,9 +134,16 @@ endif()
 # Configure-time copy, not a build target: the Java sources are dependency
 # sources (part of the fetched tree), not build artifacts, so they exist as
 # soon as CPM fetches SDL. Gradle's javac then sees them with no task-order
-# coupling to the native build — the previous build-time target raced AGP's
+# coupling to the native build — a build-time target raced AGP's
 # compile*JavaWithJavac and broke CI (package org.libsdl.app does not exist).
-if(CMAKE_SYSTEM_NAME STREQUAL "Android" AND TARGET SDL3-shared)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    # CPM sets <name>_SOURCE_DIR (lowercased) to the fetched tree. Use the
+    # plain configure-time variable — file(COPY) does NOT evaluate generator
+    # expressions, so $<TARGET_PROPERTY:...> would be a literal bad path.
+    if(NOT sdl3_SOURCE_DIR)
+        set(sdl3_SOURCE_DIR "${SDL3_SOURCE_DIR}")
+    endif()
+
     # Anchor the destination at the git work-tree root (not a relative ../..)
     # so the path stays correct no matter where this package config is moved.
     # Same idiom as cmake/toolchains/emscripten.cmake.
@@ -156,8 +163,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android" AND TARGET SDL3-shared)
     endif()
 
     set(sdl3_java_src
-        "$<TARGET_PROPERTY:SDL3-shared,SOURCE_DIR>/android-project/app/src/main/java/org"
-    )
+        "${sdl3_SOURCE_DIR}/android-project/app/src/main/java/org")
     set(sdl3_java_dst
         "${sdl3_repo_root}/android-project/app/build/generated/sdl3-java/org")
 
@@ -170,5 +176,5 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android" AND TARGET SDL3-shared)
         PATTERN "*.java")
     message(
         STATUS "Exported SDL3 Java bindings -> ${sdl3_java_dst} "
-               "(sdl3 ${sdl3_VERSION})")
+               "(from ${sdl3_java_src})")
 endif()
