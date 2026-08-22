@@ -1,0 +1,11 @@
+cpmaddpackage(
+    NAME
+    doxygen-awesome
+    GITHUB_REPOSITORY
+    jothepro/doxygen-awesome-css
+    VERSION
+    2.4.2
+    GIT_SHALLOW
+    YES
+    DOWNLOAD_ONLY
+    YES)
