@@ -50,9 +50,9 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     libsdl-org/SDL
     VERSION
-    3.4.4
+    3.4.14
     GIT_TAG
-    release-3.4.4
+    release-3.4.14
     GIT_SHALLOW
     ON
     GIT_PROGRESS
@@ -63,7 +63,6 @@ cpmaddpackage(
     TRUE
     OPTIONS
     # ---- build tooling ----
-    "SDL_PRECOMPILED_HEADERS OFF"
     "SDL_CCACHE ON"
     # ---- library type ----
     "SDL_STATIC ${sdl_static}"
@@ -95,7 +94,7 @@ cpmaddpackage(
     # ---- Linux desktop integration ----
     "SDL_DBUS ${sdl_dbus}"
     "SDL_IBUS ${sdl_ibus}"
-    "SDL_LIBDECOR ${sdl_libdecor}"
+    "SDL_WAYLAND_LIBDECOR ${sdl_libdecor}"
     # ---- input / misc ----
     "SDL_LIBUDEV OFF"
     "SDL_HIDAPI_LIBUSB OFF"
@@ -123,4 +122,26 @@ if(NOT TARGET SDL3::SDL3)
                         "Expected one of: SDL3::SDL3, SDL3-shared, SDL3-static."
         )
     endif()
+endif()
+
+# -------------------------------------------------------------------
+# Android: export SDL's Java bindings for the Gradle build
+# -------------------------------------------------------------------
+# android-project compiles org.libsdl.app.* straight from the fetched SDL
+# tree, so bumping VERSION/GIT_TAG above updates the C++ and Java sides
+# atomically — no vendored Java copy to keep in sync by hand.
+#
+# Build-time target, not configure-time file(COPY): `gradle clean` wipes
+# app/build/ but keeps .cxx/, so AGP can re-run the native build against a
+# cached CMake configure — a configure-time copy would never re-run and
+# javac would fail on missing sources.
+if(CMAKE_SYSTEM_NAME STREQUAL "Android" AND TARGET SDL3-shared)
+    add_custom_target(
+        sdl3_java_sync ALL
+        COMMAND
+            ${CMAKE_COMMAND} -E copy_directory
+            "$<TARGET_PROPERTY:SDL3-shared,SOURCE_DIR>/android-project/app/src/main/java/org"
+            "${CMAKE_CURRENT_LIST_DIR}/../../android-project/app/build/generated/sdl3-java/org"
+        COMMENT "Exporting SDL3 Java bindings to android-project"
+        VERBATIM)
 endif()

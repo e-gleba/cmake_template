@@ -268,10 +268,10 @@ jobs:
             - name: setup cmake
               uses: lukka/get-cmake@v4.4.2
 
-            - name: setup jdk 17
+            - name: setup jdk 21
               uses: actions/setup-java@v5
               with:
-                  java-version: "17"
+                  java-version: "21"
                   distribution: temurin
 
             - name: setup gradle
@@ -323,10 +323,10 @@ jobs:
             - name: setup cmake
               uses: lukka/get-cmake@v4.4.2
 
-            - name: setup jdk 17
+            - name: setup jdk 21
               uses: actions/setup-java@v5
               with:
-                  java-version: "17"
+                  java-version: "21"
                   distribution: temurin
 
             - name: setup gradle

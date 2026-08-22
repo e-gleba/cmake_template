@@ -16,6 +16,8 @@
 #   public *;
 #}
 
+# SDL3 JNI entry points — mirrors the upstream android-project rules for the
+# SDL version pinned in cmake/cpm/sdl3-config.cmake (release-3.4.14)
 -keep,includedescriptorclasses,allowoptimization class org.libsdl.app.SDLActivity {
     java.lang.String nativeGetHint(java.lang.String); # Java-side doesn't use this, so it gets minified, but C-side still tries to register it
     java.lang.String clipboardGetText();
@@ -23,20 +25,18 @@
     void clipboardSetText(java.lang.String);
     int createCustomCursor(int[], int, int, int, int);
     void destroyCustomCursor(int);
-    android.content.Context getContext();
+    android.app.Activity getContext();
     boolean getManifestEnvironmentVariables();
     android.view.Surface getNativeSurface();
     void initTouch();
     boolean isAndroidTV();
     boolean isChromebook();
     boolean isDeXMode();
-    boolean isScreenKeyboardShown();
     boolean isTablet();
     void manualBackButton();
     int messageboxShowMessageBox(int, java.lang.String, java.lang.String, int[], int[], java.lang.String[], int[]);
     void minimizeWindow();
     boolean openURL(java.lang.String);
-    void onNativePen(int, int, int , float , float , float);
     void requestPermission(java.lang.String, int);
     boolean showToast(java.lang.String, int, int, int, int);
     boolean sendMessage(int, int);
@@ -47,10 +47,15 @@
     boolean setSystemCursor(int);
     void setWindowStyle(boolean);
     boolean shouldMinimizeOnFocusLoss();
+    boolean showFileDialog(java.lang.String[], boolean, boolean, int);
     boolean showTextInput(int, int, int, int, int);
     boolean supportsRelativeMouse();
     int openFileDescriptor(java.lang.String, java.lang.String);
-    boolean showFileDialog(java.lang.String[], boolean, boolean, int);
+    boolean showFileDialog(java.lang.String[], boolean, int, java.lang.String, int);
+    java.lang.String getPreferredLocales();
+    java.lang.String formatLocale(java.util.Locale);
+    # Called from native (SDL_android.c) but missing from upstream's sample rules
+    void onNativePen(int, int, int, float, float, float);
 }
 
 -keep,includedescriptorclasses,allowoptimization class org.libsdl.app.HIDDeviceManager {
@@ -68,7 +73,9 @@
 }
 
 -keep,includedescriptorclasses,allowoptimization class org.libsdl.app.SDLControllerManager {
+    void joystickSetSensorsEnabled(int, boolean);
     void pollInputDevices();
+    void joystickSetLED(int, int, int, int);
     void pollHapticDevices();
     void hapticRun(int, float, int);
     void hapticRumble(int, float, float, int);
