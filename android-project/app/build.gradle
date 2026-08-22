@@ -88,8 +88,10 @@ android {
         main {
             assets.srcDirs = ['../../assets']
             // [info] org.libsdl.app.* is exported from the CPM-fetched SDL3 tree
-            // by the native build (cmake/cpm/sdl3-config.cmake) — bumping the SDL
-            // version there updates the C++ and Java sides atomically
+            // at CMake configure time (cmake/cpm/sdl3-config.cmake) — bumping
+            // the SDL version there updates the C++ and Java sides atomically.
+            // Configure-time (not a build target) so javac sees the sources
+            // with no task-order coupling to the native build.
             java.srcDirs += ['build/generated/sdl3-java']
             if (!excludeNativeLibs) {
                 jniLibs.srcDirs = ['libs']
@@ -206,14 +208,6 @@ android {
                 }
             }
         }
-    }
-}
-
-// [info] javac consumes the SDL3 Java bindings exported by the native build
-// (see sourceSets above), so it must run after the externalNativeBuild* tasks
-if (!excludeNativeLibs) {
-    tasks.matching { it.name.startsWith('compile') && it.name.endsWith('JavaWithJavac') }.configureEach {
-        dependsOn 'externalNativeBuildDebug', 'externalNativeBuildRelease'
     }
 }
 

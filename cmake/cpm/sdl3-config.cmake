@@ -131,17 +131,44 @@ endif()
 # tree, so bumping VERSION/GIT_TAG above updates the C++ and Java sides
 # atomically — no vendored Java copy to keep in sync by hand.
 #
-# Build-time target, not configure-time file(COPY): `gradle clean` wipes
-# app/build/ but keeps .cxx/, so AGP can re-run the native build against a
-# cached CMake configure — a configure-time copy would never re-run and
-# javac would fail on missing sources.
+# Configure-time copy, not a build target: the Java sources are dependency
+# sources (part of the fetched tree), not build artifacts, so they exist as
+# soon as CPM fetches SDL. Gradle's javac then sees them with no task-order
+# coupling to the native build — the previous build-time target raced AGP's
+# compile*JavaWithJavac and broke CI (package org.libsdl.app does not exist).
 if(CMAKE_SYSTEM_NAME STREQUAL "Android" AND TARGET SDL3-shared)
-    add_custom_target(
-        sdl3_java_sync ALL
-        COMMAND
-            ${CMAKE_COMMAND} -E copy_directory
-            "$<TARGET_PROPERTY:SDL3-shared,SOURCE_DIR>/android-project/app/src/main/java/org"
-            "${CMAKE_CURRENT_LIST_DIR}/../../android-project/app/build/generated/sdl3-java/org"
-        COMMENT "Exporting SDL3 Java bindings to android-project"
-        VERBATIM)
+    # Anchor the destination at the git work-tree root (not a relative ../..)
+    # so the path stays correct no matter where this package config is moved.
+    # Same idiom as cmake/toolchains/emscripten.cmake.
+    find_package(Git QUIET)
+    if(Git_FOUND)
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
+            WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
+            OUTPUT_VARIABLE sdl3_repo_root
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET)
+    endif()
+    if(NOT sdl3_repo_root)
+        # Fallback for a source tree without git metadata (e.g. an archive).
+        cmake_path(SET sdl3_repo_root NORMALIZE
+                   "${CMAKE_CURRENT_LIST_DIR}/../..")
+    endif()
+
+    set(sdl3_java_src
+        "$<TARGET_PROPERTY:SDL3-shared,SOURCE_DIR>/android-project/app/src/main/java/org"
+    )
+    set(sdl3_java_dst
+        "${sdl3_repo_root}/android-project/app/build/generated/sdl3-java/org")
+
+    # file(COPY) is idempotent: re-copies only when contents differ, so a
+    # re-configure after an SDL version bump refreshes the bindings.
+    file(
+        COPY "${sdl3_java_src}/"
+        DESTINATION "${sdl3_java_dst}"
+        FILES_MATCHING
+        PATTERN "*.java")
+    message(
+        STATUS "Exported SDL3 Java bindings -> ${sdl3_java_dst} "
+               "(sdl3 ${sdl3_VERSION})")
 endif()
