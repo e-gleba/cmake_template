@@ -71,14 +71,15 @@ namespace {
             setp(area.data(), area.data() + area.size());
         }
 
+        // NOLINTNEXTLINE(bugprone-exception-escape) - gsl::at cannot throw: indices are provably in range
         void flush_buffer() noexcept {
             const auto raw_length = static_cast<std::size_t>(pptr() - pbase());
             const auto length = (raw_length > 0 &&
-                                 buffer_.at(raw_length - 1) == '\n')
+                                 gsl::at(buffer_, raw_length - 1) == '\n')
                                 ? raw_length - 1
                                 : raw_length;
             if (length > 0) {
-                buffer_.at(length) = '\0';
+                gsl::at(buffer_, length) = '\0';
                 __android_log_write(ANDROID_LOG_INFO, tag_, buffer_.data());
             }
             reset_put_area();
@@ -279,7 +280,7 @@ namespace {
 
 extern "C" {
 
-// NOLINTNEXTLINE(readability-identifier-naming) - JNI export: name is fixed by the Java native declaration
+// NOLINTBEGIN(readability-identifier-naming) - JNI export names are fixed by the Java native declarations
 JNIEXPORT jobjectArray JNICALL
 Java_com_egleba_app_NativeDoctestTests_getTestNames(JNIEnv *env,
                                                     jclass /*unused*/) {
@@ -288,7 +289,6 @@ Java_com_egleba_app_NativeDoctestTests_getTestNames(JNIEnv *env,
     });
 }
 
-// NOLINTNEXTLINE(readability-identifier-naming) - JNI export: name is fixed by the Java native declaration
 JNIEXPORT jboolean JNICALL
 Java_com_egleba_app_NativeDoctestTests_runTest(JNIEnv *env, jclass /*unused*/,
                                                jstring jname) {
@@ -297,5 +297,6 @@ Java_com_egleba_app_NativeDoctestTests_runTest(JNIEnv *env, jclass /*unused*/,
         return run_single_doctest(test_name.c_str()) ? JNI_TRUE : JNI_FALSE;
     });
 }
+// NOLINTEND(readability-identifier-naming)
 
 } // extern "C"

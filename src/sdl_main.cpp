@@ -1,3 +1,6 @@
+// SDL_main.h reads this macro at include time to select the callback entry
+// model; it cannot be a constexpr.
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -24,6 +27,7 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
                           [[maybe_unused]] char* argv[])
 {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) - SDL_Log* is the C varargs SDL logging API
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "SDL_Init failed: %s",
                      SDL_GetError());
@@ -32,8 +36,9 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
 
     // Ownership crosses the C callback boundary as void*; gsl::owner marks
     // the raw pointer as owning so cppcoreguidelines-owning-memory accepts it.
-    auto* state = new (std::nothrow) app_state{};
-    if (!state) {
+    auto* state = gsl::owner<app_state*>{ new (std::nothrow) app_state{} };
+    if (state == nullptr) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) - SDL_Log* is the C varargs SDL logging API
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "Failed to allocate app_state");
         return SDL_APP_FAILURE;
@@ -64,12 +69,14 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
 
     int button_id{ -1 };
     if (!SDL_ShowMessageBox(&box, &button_id)) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) - SDL_Log* is the C varargs SDL logging API
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "SDL_ShowMessageBox failed: %s",
                      SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) - SDL_Log* is the C varargs SDL logging API
     SDL_Log("button_id == %d", button_id);
 
     // Signal that we're done after the first iterate.
