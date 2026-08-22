@@ -221,6 +221,22 @@ android {
     }
 }
 
+// --- SDL3 export task ordering ---------------------------------------------
+// build/generated/sdl3 (Java bindings, base AndroidManifest.xml, base
+// proguard rules) is written by the CMake configure step in
+// cmake/cpm/sdl3-config.cmake, which AGP runs as the
+// configureCMake<Config>[<abi>] tasks. Nothing orders those before the tasks
+// that consume the export, so a clean checkout fails with
+// "Input file does not exist" (process*MainManifest) or
+// "package org.libsdl.app does not exist" (compile*JavaWithJavac). Declare
+// the producer explicitly. The export is identical for every config/abi and
+// the copy is idempotent, so depending on all configure tasks is correct —
+// the redundant configures are cache hits.
+final def sdl3Export = tasks.matching { it.name ==~ /configureCMake\w+\[.+\]/ }
+tasks.matching {
+    it.name ==~ /(process\w+Manifest|compile\w+JavaWithJavac|minify\w+With(R8|Proguard))/
+}.configureEach { dependsOn sdl3Export }
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
 

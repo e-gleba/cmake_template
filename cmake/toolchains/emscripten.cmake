@@ -53,20 +53,16 @@ elseif(EMSCRIPTEN_SDK_ROOT)
 else()
     # Anchor the default at the git work-tree root (not a relative ../..) so
     # the path stays correct no matter where this toolchain file is moved.
-    find_package(Git QUIET)
-    if(Git_FOUND)
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
-            WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
-            OUTPUT_VARIABLE emsdk_git_root
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET)
-    endif()
-    if(NOT emsdk_git_root)
-        # Fallback for a source tree without git metadata (e.g. an archive).
-        cmake_path(SET emsdk_git_root NORMALIZE
-                   "${CMAKE_CURRENT_LIST_DIR}/../..")
-    endif()
+    # CPM clones every dependency with git, so git is a hard requirement of
+    # this build - fail loudly instead of falling back to a guessed path.
+    find_package(Git REQUIRED)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
+        WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
+        OUTPUT_VARIABLE emsdk_git_root
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        COMMAND_ECHO STDOUT
+        COMMAND_ERROR_IS_FATAL ANY)
     cmake_path(SET emsdk_root NORMALIZE "${emsdk_git_root}/.emsdk")
 endif()
 
