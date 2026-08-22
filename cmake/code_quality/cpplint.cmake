@@ -1,7 +1,7 @@
 # --- cpplint: Google C++ style checker ----------------------------------------
 # Two integration modes:
 #   1. Co-compilation  - CMAKE_<LANG>_CPPLINT (Makefiles/Ninja only)
-#   2. Standalone      - '${PROJECT_NAME}-cpplint' target (any generator)
+#   2. Standalone      - '${PROJECT_NAME}_cpplint' target (any generator)
 
 include_guard(GLOBAL)
 
@@ -43,7 +43,7 @@ endforeach()
 
 if(cpplint_scan_dirs)
     add_custom_target(
-        ${PROJECT_NAME}-cpplint
+        ${PROJECT_NAME}_cpplint
         # COMMAND_EXPAND_LISTS: the documented way to expand a list
         # inside COMMAND - robust against empty lists and any future
         # genex-produced entries.

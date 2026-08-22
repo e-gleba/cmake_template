@@ -110,7 +110,7 @@ endif()
 
 # --- format target (modifies files in-place) ----------------------------------
 add_custom_target(
-    ${PROJECT_NAME}-format
+    ${PROJECT_NAME}_format
     COMMAND
         "${CMAKE_COMMAND}" -D "MODE=format" -D
         "CLANG_FORMAT=${clang_format_exe}" -D "FILE_LIST=${format_file_list}" -P
@@ -124,7 +124,7 @@ add_custom_target(
 # --- check target (CI gate - fails on diff) -----------------------------------
 # --dry-run + --Werror: clang-format 10+.
 add_custom_target(
-    ${PROJECT_NAME}-format-check
+    ${PROJECT_NAME}_format_check
     COMMAND
         "${CMAKE_COMMAND}" -D "MODE=check" -D "CLANG_FORMAT=${clang_format_exe}"
         -D "FILE_LIST=${format_file_list}" -P "${format_runner}"

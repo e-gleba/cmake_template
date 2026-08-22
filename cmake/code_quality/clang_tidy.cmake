@@ -74,7 +74,7 @@ find_program(
 
 if(run_clang_tidy_exe)
     add_custom_target(
-        ${PROJECT_NAME}-clang-tidy
+        ${PROJECT_NAME}_clang_tidy
         COMMAND
             "${run_clang_tidy_exe}" -clang-tidy-binary "${clang_tidy_exe}"
             -p "${CMAKE_BINARY_DIR}"

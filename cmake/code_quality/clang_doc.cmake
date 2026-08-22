@@ -50,7 +50,7 @@ list(
     clang_doc_filter_regex)
 
 add_custom_target(
-    ${PROJECT_NAME}-clang-doc
+    ${PROJECT_NAME}_clang_doc
     COMMAND
         "${clang_doc_exe}"
         # --executor=all-TUs: documented invocation mode for
