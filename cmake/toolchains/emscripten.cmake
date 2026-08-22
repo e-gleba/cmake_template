@@ -30,8 +30,14 @@ else()
         WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
         OUTPUT_VARIABLE emsdk_git_root
         OUTPUT_STRIP_TRAILING_WHITESPACE
-        COMMAND_ECHO STDOUT
-        COMMAND_ERROR_IS_FATAL ANY)
+        RESULT_VARIABLE emsdk_git_rc
+        ERROR_VARIABLE emsdk_git_err)
+    if(NOT emsdk_git_rc EQUAL 0 OR NOT emsdk_git_root)
+        message(
+            FATAL_ERROR
+                "git rev-parse --show-toplevel failed (rc=${emsdk_git_rc}): "
+                "${emsdk_git_err}. Cannot locate the repo root for .emsdk.")
+    endif()
     cmake_path(SET emsdk_git_root NORMALIZE "${emsdk_git_root}")
 
     if(EXISTS "${emsdk_git_root}/.emsdk/upstream/emscripten")
