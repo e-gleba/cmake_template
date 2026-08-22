@@ -24,7 +24,7 @@
 # instead.
 
 set(EMSCRIPTEN_SDK_VERSION
-    "6.0.7"
+    "6.0.8"
     CACHE STRING "emsdk release to bootstrap when none is installed")
 set(EMSCRIPTEN_SDK_ROOT
     ""
@@ -35,7 +35,7 @@ set(EMSCRIPTEN_SDK_TARBALL_SHA256
 mark_as_advanced(EMSCRIPTEN_SDK_TARBALL_SHA256)
 
 # Path to the upstream toolchain file, relative to the SDK root. cmake_path()
-# (3.20) keeps every path operation lexical and platform-correct.
+# keeps every path operation lexical and platform-correct.
 cmake_path(
     SET _emsdk_toolchain_rel
     NORMALIZE
@@ -72,7 +72,7 @@ cmake_path(SET _emsdk_toolchain NORMALIZE
 
 # --- Bootstrap if the toolchain file is missing ---------------------------
 if(NOT EXISTS "${_emsdk_toolchain}")
-    # FindPython3 (3.12) locates the interpreter via the standard module:
+    # FindPython3 locates the interpreter via the standard module:
     # honours venvs, the Windows registry, and python3/python fallback. Only
     # the Interpreter component is needed - emsdk is a pure-python tool.
     # REQUIRED makes the module fail the configure itself when absent.
@@ -114,8 +114,8 @@ if(NOT EXISTS "${_emsdk_toolchain}")
         file(REMOVE_RECURSE "${_emsdk_staging}")
     endif()
 
-    # One-time, ~2 GB. COMMAND_ECHO (3.15) prints the exact command line, and
-    # ECHO_OUTPUT_VARIABLE/ECHO_ERROR_VARIABLE (3.18) stream its stdout/stderr
+    # One-time, ~2 GB. COMMAND_ECHO prints the exact command line, and
+    # ECHO_OUTPUT_VARIABLE/ECHO_ERROR_VARIABLE stream its stdout/stderr
     # through to the configure log - CI shows what ran and its live progress
     # instead of a silent hang.
     message(STATUS "Installing emscripten ${EMSCRIPTEN_SDK_VERSION}")
