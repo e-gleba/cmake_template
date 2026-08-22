@@ -186,12 +186,22 @@ set(DOXYGEN_WARN_NO_PARAMDOC YES)
 set(DOXYGEN_WARN_AS_ERROR NO)
 
 # --- modern theme: Doxygen Awesome --------------------------------------------
-# Fetched via cmake/cpm/doxygen_awesome-config.cmake - the find_package
-# call runs in cmake/cpm.cmake with every other dependency, so this
-# file just consumes the result.
+# Std CMake FetchContent, self-contained in this module - no CPM, no
+# include-order dependency on cmake/cpm.cmake.
+# The theme repo has no CMakeLists.txt: MakeAvailable only populates it
+# and never calls add_subdirectory (documented behavior) - exactly what
+# a download-only CSS dependency needs.
+include(FetchContent)
+FetchContent_Declare(
+    doxygen-awesome
+    GIT_REPOSITORY https://github.com/jothepro/doxygen-awesome-css.git
+    GIT_TAG v2.4.2
+    GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(doxygen-awesome)
+
 set(DOXYGEN_HTML_EXTRA_STYLESHEET
-    "${doxygen_awesome_SOURCE_DIR}/doxygen-awesome.css"
-    "${doxygen_awesome_SOURCE_DIR}/doxygen-awesome-sidebar-only.css")
+    "${doxygen-awesome_SOURCE_DIR}/doxygen-awesome.css"
+    "${doxygen-awesome_SOURCE_DIR}/doxygen-awesome-sidebar-only.css")
 set(DOXYGEN_HTML_COLORSTYLE LIGHT)
 
 # --- target -------------------------------------------------------------------
