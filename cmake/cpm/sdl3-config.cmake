@@ -195,13 +195,22 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     # AGP, so an SDL bump never leaves a missing permission or JNI keep rule.
     # The app still owns its Activity/manifest entries and any extra keeps —
     # these are SDL's defaults, replaceable by editing the app's own files.
-    set(sdl3_base_dir "${SDL3_SOURCE_DIR}/android-project/app/src/main")
-    if(EXISTS "${sdl3_base_dir}/AndroidManifest.xml")
-        file(COPY "${sdl3_base_dir}/AndroidManifest.xml"
-             DESTINATION "${sdl3_android_gen}")
-    endif()
-    if(EXISTS "${sdl3_base_dir}/../proguard-rules.pro")
-        file(COPY "${sdl3_base_dir}/../proguard-rules.pro"
-             DESTINATION "${sdl3_android_gen}")
-    endif()
+    # Both are REQUIRED inputs to the Gradle build (manifest.srcFile and
+    # proguardFiles point at them), so a missing copy must fail loudly here
+    # rather than as AGP's "Input file does not exist" downstream.
+    set(sdl3_manifest_src
+        "${SDL3_SOURCE_DIR}/android-project/app/src/main/AndroidManifest.xml")
+    set(sdl3_proguard_src
+        "${SDL3_SOURCE_DIR}/android-project/app/proguard-rules.pro")
+    foreach(_sdl3_base IN ITEMS "${sdl3_manifest_src}" "${sdl3_proguard_src}")
+        if(NOT EXISTS "${_sdl3_base}")
+            message(
+                FATAL_ERROR
+                    "Expected SDL3 base file missing: '${_sdl3_base}' "
+                    "(SDL3_SOURCE_DIR='${SDL3_SOURCE_DIR}').")
+        endif()
+    endforeach()
+    file(COPY "${sdl3_manifest_src}" "${sdl3_proguard_src}"
+         DESTINATION "${sdl3_android_gen}")
+    unset(_sdl3_base)
 endif()
