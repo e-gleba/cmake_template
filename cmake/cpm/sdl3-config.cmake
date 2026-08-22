@@ -137,7 +137,7 @@ endif()
 # coupling to the native build — a build-time target raced AGP's
 # compile*JavaWithJavac and broke CI (package org.libsdl.app does not exist).
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    # CPM needs git to clone SDL, so git is a hard requirement of this build.
+    # CPM clones SDL with git, so git is a hard requirement of this build.
     # Anchor the destination at the git work-tree root (not a relative ../..)
     # so the path stays correct no matter where this package config is moved.
     find_package(Git REQUIRED)
@@ -146,33 +146,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
         WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
         OUTPUT_VARIABLE sdl3_repo_root
         OUTPUT_STRIP_TRAILING_WHITESPACE
-        RESULT_VARIABLE sdl3_git_rc
-        ERROR_VARIABLE sdl3_git_err)
-    if(NOT sdl3_git_rc EQUAL 0 OR NOT sdl3_repo_root)
-        message(
-            FATAL_ERROR
-                "git rev-parse --show-toplevel failed (rc=${sdl3_git_rc}): "
-                "${sdl3_git_err}. Cannot locate the repo root to export the "
-                "SDL3 Java bindings.")
-    endif()
+        COMMAND_ECHO STDOUT
+        COMMAND_ERROR_IS_FATAL ANY)
     cmake_path(SET sdl3_repo_root NORMALIZE "${sdl3_repo_root}")
 
-    # CPM exposes the fetched tree as <name>_SOURCE_DIR (lowercased). Accept
-    # the uppercased variant too, then hard-fail if neither names a real dir —
-    # file(COPY) silently no-ops on a missing source, which is exactly the
-    # "package org.libsdl.app does not exist" CI failure we must not mask.
-    set(sdl3_src_dir "${sdl3_SOURCE_DIR}")
-    if(NOT sdl3_src_dir)
-        set(sdl3_src_dir "${SDL3_SOURCE_DIR}")
-    endif()
+    # CPM exposes the fetched tree as <NAME>_SOURCE_DIR; NAME is SDL3.
     set(sdl3_java_src
-        "${sdl3_src_dir}/android-project/app/src/main/java/org")
+        "${SDL3_SOURCE_DIR}/android-project/app/src/main/java/org")
     if(NOT IS_DIRECTORY "${sdl3_java_src}")
         message(
             FATAL_ERROR
-                "SDL3 Java sources not found at '${sdl3_java_src}'. "
-                "sdl3_SOURCE_DIR='${sdl3_SOURCE_DIR}' "
-                "SDL3_SOURCE_DIR='${SDL3_SOURCE_DIR}'. "
+                "SDL3 Java sources not found at '${sdl3_java_src}' "
+                "(SDL3_SOURCE_DIR='${SDL3_SOURCE_DIR}'). "
                 "CPM may not have fetched SDL3 before this block ran.")
     endif()
 
@@ -210,7 +195,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     # AGP, so an SDL bump never leaves a missing permission or JNI keep rule.
     # The app still owns its Activity/manifest entries and any extra keeps —
     # these are SDL's defaults, replaceable by editing the app's own files.
-    set(sdl3_base_dir "${sdl3_src_dir}/android-project/app/src/main")
+    set(sdl3_base_dir "${SDL3_SOURCE_DIR}/android-project/app/src/main")
     if(EXISTS "${sdl3_base_dir}/AndroidManifest.xml")
         file(COPY "${sdl3_base_dir}/AndroidManifest.xml"
              DESTINATION "${sdl3_android_gen}")
