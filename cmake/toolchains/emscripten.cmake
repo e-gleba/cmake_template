@@ -16,7 +16,8 @@
 #   EMSCRIPTEN_SDK_ROOT           custom SDK location
 #   EMSCRIPTEN_SDK_TARBALL_SHA256 optional integrity pin for the tarball
 #
-# Requires python3 on PATH (emsdk is a python tool).
+# Requires python3 on PATH (emsdk is a python tool) and git (CPM clones the
+# project's dependencies with it, and we anchor the SDK at the work-tree root).
 #
 # NOTE: this file must NOT wrap its body in block()/endblock(). A toolchain
 # file's whole job is to set CMAKE_C_COMPILER / CMAKE_SYSTEM_NAME / etc. in
@@ -53,19 +54,20 @@ elseif(EMSCRIPTEN_SDK_ROOT)
 else()
     # Anchor the default at the git work-tree root (not a relative ../..) so
     # the path stays correct no matter where this toolchain file is moved.
-    find_package(Git QUIET)
-    if(Git_FOUND)
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
-            WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
-            OUTPUT_VARIABLE emsdk_git_root
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET)
-    endif()
-    if(NOT emsdk_git_root)
-        # Fallback for a source tree without git metadata (e.g. an archive).
-        cmake_path(SET emsdk_git_root NORMALIZE
-                   "${CMAKE_CURRENT_LIST_DIR}/../..")
+    # git is a hard requirement: CPM clones the project's dependencies with it.
+    find_package(Git REQUIRED)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
+        WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
+        OUTPUT_VARIABLE emsdk_git_root
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE emsdk_git_rc
+        ERROR_VARIABLE emsdk_git_err)
+    if(NOT emsdk_git_rc EQUAL 0 OR NOT emsdk_git_root)
+        message(
+            FATAL_ERROR
+                "git rev-parse --show-toplevel failed (rc=${emsdk_git_rc}): "
+                "${emsdk_git_err}. Cannot locate the repo root for .emsdk.")
     endif()
     cmake_path(SET emsdk_root NORMALIZE "${emsdk_git_root}/.emsdk")
 endif()
