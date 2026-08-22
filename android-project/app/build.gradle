@@ -1,3 +1,5 @@
+import java.util.regex.Pattern
+
 final boolean isLibrary = project.hasProperty('BUILD_AS_LIBRARY')
 final boolean excludeNativeLibs = project.hasProperty('EXCLUDE_NATIVE_LIBS')
 final boolean useOrchestrator = project.hasProperty('USE_ORCHESTRATOR') && project.property('USE_ORCHESTRATOR') == 'true'
