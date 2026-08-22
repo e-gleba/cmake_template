@@ -5,6 +5,8 @@
 # Optional dependency: Graphviz (dot) for class / call / collaboration /
 # directory graphs.
 
+include_guard(GLOBAL)
+
 find_package(Doxygen OPTIONAL_COMPONENTS dot)
 
 if(NOT DOXYGEN_FOUND)

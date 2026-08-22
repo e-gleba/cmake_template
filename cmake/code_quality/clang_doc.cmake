@@ -2,6 +2,8 @@
 # Requires compile_commands.json - every clang LibTooling-based tool does.
 # clang-doc is still "early development" per LLVM docs; expect rough edges.
 
+include_guard(GLOBAL)
+
 find_program(
     clang_doc_exe
     NAMES clang-doc

@@ -8,6 +8,10 @@
 # compiler flags, not a hardcoded -std=c++20.
 # Settings live in .clang-tidy (YAML), not on the command line.
 
+# Every module here creates named targets or cache entries: a double
+# include would error on duplicates.  Guard once, globally.
+include_guard(GLOBAL)
+
 find_program(
     clang_tidy_exe
     NAMES clang-tidy
@@ -43,7 +47,9 @@ endforeach()
 # Generated sources live in the build dir.  Without a
 # .clang-tidy there, they get no settings (or wrong defaults)
 # when the build dir is outside the source tree.
-# configure_file works correctly even under FetchContent.
+# configure_file (not file(COPY_FILE)) on purpose: COPYONLY registers
+# .clang-tidy as a configure dependency, so editing the config re-runs
+# CMake and refreshes the copy automatically.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy")
     configure_file(.clang-tidy .clang-tidy COPYONLY)
 endif()

@@ -3,6 +3,8 @@
 #   1. Co-compilation  - CMAKE_<LANG>_CPPLINT (Makefiles/Ninja only)
 #   2. Standalone      - '${PROJECT_NAME}-cpplint' target (any generator)
 
+include_guard(GLOBAL)
+
 find_program(
     cpplint_exe
     NAMES cpplint
@@ -42,7 +44,11 @@ endforeach()
 if(cpplint_scan_dirs)
     add_custom_target(
         ${PROJECT_NAME}-cpplint
-        COMMAND "${cpplint_exe}" --recursive --quiet ${cpplint_scan_dirs}
+        # COMMAND_EXPAND_LISTS: the documented way to expand a list
+        # inside COMMAND - robust against empty lists and any future
+        # genex-produced entries.
+        COMMAND "${cpplint_exe}" --recursive --quiet "${cpplint_scan_dirs}"
+        COMMAND_EXPAND_LISTS
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
         VERBATIM
         COMMENT "running cpplint on ${PROJECT_NAME} sources"

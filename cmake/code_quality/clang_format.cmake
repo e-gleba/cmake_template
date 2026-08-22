@@ -2,6 +2,8 @@
 # Host-only text reformatter. No sysroot interaction, no
 # compilation database - works identically when cross-compiling.
 
+include_guard(GLOBAL)
+
 find_program(
     clang_format_exe
     NAMES clang-format
@@ -24,13 +26,12 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/.clang-format")
 endif()
 
 # --- collect sources ----------------------------------------------------------
+# Bare dir names, prefixed once - one place to edit.
 # GLOB_RECURSE is acceptable for developer tooling targets -
 # missing a new file until reconfigure is harmless for formatting.
 # CONFIGURE_DEPENDS re-globs on every build (Ninja/Makefiles).
-set(format_scan_dirs
-    "${PROJECT_SOURCE_DIR}/src"
-    "${PROJECT_SOURCE_DIR}/include"
-    "${PROJECT_SOURCE_DIR}/tests")
+set(format_scan_dirs src include tests)
+list(TRANSFORM format_scan_dirs PREPEND "${PROJECT_SOURCE_DIR}/")
 
 set(format_sources "")
 foreach(dir IN LISTS format_scan_dirs)
