@@ -202,15 +202,16 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
         "${SDL3_SOURCE_DIR}/android-project/app/src/main/AndroidManifest.xml")
     set(sdl3_proguard_src
         "${SDL3_SOURCE_DIR}/android-project/app/proguard-rules.pro")
-    foreach(_sdl3_base IN ITEMS "${sdl3_manifest_src}" "${sdl3_proguard_src}")
-        if(NOT EXISTS "${_sdl3_base}")
+    foreach(sdl3_base_file IN ITEMS "${sdl3_manifest_src}"
+                                    "${sdl3_proguard_src}")
+        if(NOT EXISTS "${sdl3_base_file}")
             message(
                 FATAL_ERROR
-                    "Expected SDL3 base file missing: '${_sdl3_base}' "
+                    "Expected SDL3 base file missing: '${sdl3_base_file}' "
                     "(SDL3_SOURCE_DIR='${SDL3_SOURCE_DIR}').")
         endif()
     endforeach()
     file(COPY "${sdl3_manifest_src}" "${sdl3_proguard_src}"
          DESTINATION "${sdl3_android_gen}")
-    unset(_sdl3_base)
+    unset(sdl3_base_file)
 endif()
