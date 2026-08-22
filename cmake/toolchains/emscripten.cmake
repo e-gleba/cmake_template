@@ -1,15 +1,15 @@
 # cmake/toolchains/emscripten.cmake
 #
-# Zero-setup Emscripten toolchain: locates a usable emsdk — bootstrapping a
-# pinned one into the repo-local `.emsdk/` on first configure — then defers
+# Zero-setup Emscripten toolchain: locates a usable emsdk - bootstrapping a
+# pinned one into the repo-local `.emsdk/` on first configure - then defers
 # to the upstream toolchain file shipped inside the SDK. No system-wide
 # install and no `$HOME` pollution (`emsdk activate --embedded`); delete
 # `.emsdk/` to reset.
 #
 # Resolution order:
-#   1. `EMSDK` environment variable (existing install, e.g. CI) — used as-is
+#   1. `EMSDK` environment variable (existing install, e.g. CI) - used as-is
 #   2. `EMSCRIPTEN_SDK_ROOT` cache entry (custom SDK location)
-#   3. `<git-root>/.emsdk` — downloaded and activated here on first use
+#   3. `<git-root>/.emsdk` - downloaded and activated here on first use
 #
 # Knobs (pass with `-D`):
 #   EMSCRIPTEN_SDK_VERSION        pinned emsdk release to bootstrap
@@ -23,11 +23,11 @@
 # the scope CMake reads them from; the upstream Emscripten.cmake sets these
 # as normal variables, and a block(SCOPE_FOR VARIABLES) would swallow them,
 # silently falling back to the host compiler. Locals use the `emsdk_`
-# snake_case prefix instead — same convention as llvm_mingw.cmake.
+# snake_case prefix instead - same convention as llvm_mingw.cmake.
 
 include_guard(GLOBAL)
 
-# ── tunables ────────────────────────────────────────────────────────────────
+# --- tunables --------------------------------------------------------------
 set(EMSCRIPTEN_SDK_VERSION
     "6.0.8"
     CACHE STRING "emsdk release to bootstrap when none is installed")
@@ -40,11 +40,11 @@ set(EMSCRIPTEN_SDK_TARBALL_SHA256
 mark_as_advanced(EMSCRIPTEN_SDK_TARBALL_SHA256)
 
 # Path to the upstream toolchain file, relative to the SDK root.
-# Forward slashes are CMake-native — a literal needs no normalization.
+# Forward slashes are CMake-native - a literal needs no normalization.
 set(emsdk_toolchain_rel
     "upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
 
-# ── resolve the SDK root ────────────────────────────────────────────────────
+# --- resolve the SDK root --------------------------------------------------
 # Priority: EMSDK env (existing install) > explicit cache entry > repo-local.
 if(DEFINED ENV{EMSDK})
     cmake_path(SET emsdk_root NORMALIZE "$ENV{EMSDK}")
@@ -72,11 +72,11 @@ endif()
 
 cmake_path(SET emsdk_toolchain NORMALIZE "${emsdk_root}/${emsdk_toolchain_rel}")
 
-# ── bootstrap if the toolchain file is missing ──────────────────────────────
+# --- bootstrap if the toolchain file is missing ----------------------------
 if(NOT EXISTS "${emsdk_toolchain}")
     # FindPython3 locates the interpreter via the standard module:
     # honours venvs, the Windows registry, and python3/python fallback. Only
-    # the Interpreter component is needed — emsdk is a pure-python tool.
+    # the Interpreter component is needed - emsdk is a pure-python tool.
     # REQUIRED makes the module fail the configure itself when absent.
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
@@ -118,7 +118,7 @@ if(NOT EXISTS "${emsdk_toolchain}")
 
     # One-time, ~2 GB. COMMAND_ECHO prints the exact command line, and
     # ECHO_OUTPUT_VARIABLE/ECHO_ERROR_VARIABLE stream its stdout/stderr
-    # through to the configure log — CI shows what ran and its live progress
+    # through to the configure log - CI shows what ran and its live progress
     # instead of a silent hang.
     message(STATUS "Installing emscripten ${EMSCRIPTEN_SDK_VERSION}")
     execute_process(
@@ -143,22 +143,22 @@ endif()
 if(NOT EXISTS "${emsdk_toolchain}")
     message(
         FATAL_ERROR
-            "emsdk at '${emsdk_root}' is incomplete — delete it and re-configure"
+            "emsdk at '${emsdk_root}' is incomplete - delete it and re-configure"
     )
 endif()
 
-# ── hand off to the upstream toolchain ──────────────────────────────────────
+# --- hand off to the upstream toolchain ------------------------------------
 # Configure-time env for compiler detection; at build time emcc locates the
 # embedded config on its own.
 set(ENV{EMSDK} "${emsdk_root}")
 set(ENV{EM_CONFIG} "${emsdk_root}/.emscripten")
 
 # The upstream toolchain sets CMAKE_C_COMPILER/CMAKE_CXX_COMPILER/
-# CMAKE_SYSTEM_NAME/etc. as normal variables in THIS scope — which is exactly
+# CMAKE_SYSTEM_NAME/etc. as normal variables in THIS scope - which is exactly
 # the scope CMake reads toolchain settings from. Do not scope them away.
 include("${emsdk_toolchain}")
 
-# ── test emulator ───────────────────────────────────────────────────────────
+# --- test emulator ---------------------------------------------------------
 # ctest needs a JS runtime to execute the test suite. The upstream toolchain
 # only looks for a system node; fall back to the one bundled with the emsdk.
 # find_program() searches the emsdk's node/<ver>/bin directories, then PATH.
@@ -178,7 +178,7 @@ if(NOT CMAKE_CROSSCOMPILING_EMULATOR)
     endif()
 endif()
 
-# ── summary ─────────────────────────────────────────────────────────────────
+# --- summary ---------------------------------------------------------------
 include(CMakePrintHelpers)
 cmake_print_variables(emsdk_root emsdk_toolchain
                       CMAKE_CROSSCOMPILING_EMULATOR)
