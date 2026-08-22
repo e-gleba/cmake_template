@@ -64,12 +64,18 @@ jobs:
             - name: checkout
               uses: actions/checkout@v7
 
+            # Presets enforce cmakeMinimumRequired 4.4 — runner images lag
+            # behind Kitware. get-cmake also puts ninja on PATH (cached),
+            # so ninja-build is gone from the apt list below.
+            - name: setup cmake + ninja
+              uses: lukka/get-cmake@v4.4.2
+
             - name: install linux system deps
               if: runner.os == 'Linux'
               run: |
                   sudo apt-get update -qq
                   sudo apt-get install -y --no-install-recommends \
-                    ninja-build clang \
+                    clang \
                     doxygen graphviz \
                     libwayland-dev libxkbcommon-dev \
                     libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev \
@@ -158,10 +164,10 @@ jobs:
             - name: checkout
               uses: actions/checkout@v7
 
-            - name: install build tools
-              run: |
-                  sudo apt-get update -qq
-                  sudo apt-get install -y --no-install-recommends ninja-build
+            # CMake 4.4 + ninja from one cached step — replaces the old
+            # apt ninja-build install.
+            - name: setup cmake + ninja
+              uses: lukka/get-cmake@v4.4.2
 
             - name: cache llvm-mingw toolchain
               uses: actions/cache@v6
@@ -195,10 +201,10 @@ jobs:
             - name: checkout
               uses: actions/checkout@v7
 
-            - name: install build tools
-              run: |
-                  sudo apt-get update -qq
-                  sudo apt-get install -y --no-install-recommends ninja-build
+            # CMake 4.4 + ninja from one cached step — replaces the old
+            # apt ninja-build install.
+            - name: setup cmake + ninja
+              uses: lukka/get-cmake@v4.4.2
 
             # cmake/toolchains/emscripten.cmake bootstraps the pinned emsdk
             # into .emsdk/ on first configure — cache it between runs. The key
@@ -256,6 +262,12 @@ jobs:
             - name: checkout
               uses: actions/checkout@v7
 
+            # AGP locates CMake on PATH when the SDK ships no matching
+            # package — the SDK's newest cmake (4.1.0) is below the
+            # project's 4.4 floor, so provide it here.
+            - name: setup cmake
+              uses: lukka/get-cmake@v4.4.2
+
             - name: setup jdk 17
               uses: actions/setup-java@v5
               with:
@@ -305,6 +317,11 @@ jobs:
         steps:
             - name: checkout
               uses: actions/checkout@v7
+
+            # Same PATH fallback as build-apk: AGP needs CMake >= 4.4,
+            # the SDK's newest package is 4.1.0.
+            - name: setup cmake
+              uses: lukka/get-cmake@v4.4.2
 
             - name: setup jdk 17
               uses: actions/setup-java@v5
