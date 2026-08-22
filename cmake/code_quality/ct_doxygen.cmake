@@ -186,14 +186,12 @@ set(DOXYGEN_WARN_NO_PARAMDOC YES)
 set(DOXYGEN_WARN_AS_ERROR NO)
 
 # --- modern theme: Doxygen Awesome --------------------------------------------
-# In-tree package config: cmake/cpm/doxygen-awesome-config.cmake, found
-# through the CMAKE_PREFIX_PATH that cmake/cpm.cmake already sets up.
-# Sets doxygen-awesome_SOURCE_DIR.
-find_package(doxygen-awesome CONFIG REQUIRED)
-
+# Fetched via cmake/cpm/doxygen_awesome-config.cmake - the find_package
+# call runs in cmake/cpm.cmake with every other dependency, so this
+# file just consumes the result.
 set(DOXYGEN_HTML_EXTRA_STYLESHEET
-    "${doxygen-awesome_SOURCE_DIR}/doxygen-awesome.css"
-    "${doxygen-awesome_SOURCE_DIR}/doxygen-awesome-sidebar-only.css")
+    "${doxygen_awesome_SOURCE_DIR}/doxygen-awesome.css"
+    "${doxygen_awesome_SOURCE_DIR}/doxygen-awesome-sidebar-only.css")
 set(DOXYGEN_HTML_COLORSTYLE LIGHT)
 
 # --- target -------------------------------------------------------------------
