@@ -8,6 +8,12 @@ if (isLibrary) {
     apply plugin: libs.plugins.android.application.get().pluginId
 }
 
+// SDL3's CPM export (cmake/cpm/sdl3-config.cmake) drops the fetched tree's
+// Java bindings, base AndroidManifest.xml, and base proguard-rules.pro here at
+// CMake configure time. Bumping the SDL version there refreshes all three
+// atomically — nothing SDL-specific is vendored in this module.
+final File sdl3Gen = file('build/generated/sdl3')
+
 android {
     compileSdk = 37
     ndkVersion = '30.0.14904198 rc1'
@@ -62,7 +68,12 @@ android {
         release {
             minifyEnabled = true
             shrinkResources = !isLibrary
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // SDL's base proguard rules first, then the app's own (which keep
+            // the load-bearing onNativePen and any app-specific rules). AGP
+            // appends them in order, so an SDL bump refreshes the base set.
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                    file("${sdl3Gen}/proguard-rules.pro"),
+                    'proguard-rules.pro'
             signingConfig = signingConfigs.debug
 
             ndk {
@@ -87,12 +98,11 @@ android {
     sourceSets {
         main {
             assets.srcDirs = ['../../assets']
-            // [info] org.libsdl.app.* is exported from the CPM-fetched SDL3 tree
-            // at CMake configure time (cmake/cpm/sdl3-config.cmake) — bumping
-            // the SDL version there updates the C++ and Java sides atomically.
-            // Configure-time (not a build target) so javac sees the sources
-            // with no task-order coupling to the native build.
-            java.srcDirs += ['build/generated/sdl3-java']
+            // org.libsdl.app.* exported from the CPM-fetched SDL3 tree.
+            java.srcDirs += [file("${sdl3Gen}/java")]
+            // SDL's base manifest is merged under the app's own (the app's
+            // manifest wins on conflict and still declares .AppActivity).
+            manifest.srcFile file("${sdl3Gen}/AndroidManifest.xml")
             if (!excludeNativeLibs) {
                 jniLibs.srcDirs = ['libs']
             }
@@ -141,7 +151,7 @@ android {
             // [info] return null/zero instead of throwing "Method not mocked" for android.jar APIs
             returnDefaultValues = true
 
-            // [doc] https://developer.android.com/reference/tools/gradle-api/8.1/com/android/build/api/dsl/UnitTestOptions#all(kotlin.Function1)
+            // [doc] https://developer.android.com/reference/tools/gradle-api/8.4/com/android/build/api/dsl/UnitTestOptions#all(kotlin.Function1)
             // [info] configures underlying Gradle Test tasks for all variants
             all {
                 testLogging {
@@ -162,7 +172,7 @@ android {
                     showExceptions = true
 
                     // [doc] https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.logging.TestLogging.html#org.gradle.api.tasks.testing.logging.TestLogging:showStackTraces
-                    // [info] print full stack traces for failures
+                    // [info] print full stack traces for failed tests
                     showStackTraces = true
 
                     // [doc] https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.logging.TestLogging.html#org.gradle.api.tasks.testing.logging.TestLogging:exceptionFormat
@@ -188,7 +198,7 @@ android {
         managedDevices {
             localDevices {
                 // [doc] https://developer.android.com/reference/tools/gradle-api/8.4/com/android/build/api/dsl/ManagedVirtualDevice
-                // [info] defines a virtual device managed entirely by Gradle (creation, boot, shutdown)
+                // [info] defines a virtual device managed entirely by Gradle (creation, boot, shutdown, delete)
                 pixel_6_aosp_atd_30 {
                     // [doc] https://developer.android.com/reference/tools/gradle-api/8.4/com/android/build/api/dsl/ManagedVirtualDevice#device()
                     // [info] hardware profile to emulate (Pixel 6)
