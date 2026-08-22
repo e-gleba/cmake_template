@@ -83,8 +83,8 @@ if(run_clang_tidy_exe)
         COMMENT "running clang-tidy (parallel) on ${PROJECT_NAME}"
         USES_TERMINAL)
 else()
-    message(NOTICE
-            "run-clang-tidy not found - '${PROJECT_NAME}-clang-tidy'"
-            " target unavailable" [[
+    # Bracket args are verbatim (no ${} expansion) - keep the message
+    # self-contained instead of mixing quoted and bracket parts.
+    message(NOTICE [[run-clang-tidy not found - standalone target disabled
 co-compilation via CMAKE_<LANG>_CLANG_TIDY still active]])
 endif()

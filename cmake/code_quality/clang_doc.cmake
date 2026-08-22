@@ -10,9 +10,7 @@ find_program(
     DOC "clang-doc: generates C/C++ documentation from AST" OPTIONAL)
 
 if(NOT clang_doc_exe)
-    message(NOTICE
-            "clang-doc not found - '${PROJECT_NAME}-clang-doc' target disabled"
-            [[
+    message(NOTICE [[clang-doc not found - clang-doc target disabled
   fedora:  sudo dnf install clang-tools-extra
   ubuntu:  sudo apt install clang-tools-extra
   alt:     sudo apt-get install clang-tools
