@@ -186,16 +186,22 @@ set(DOXYGEN_WARN_NO_PARAMDOC YES)
 set(DOXYGEN_WARN_AS_ERROR NO)
 
 # --- modern theme: Doxygen Awesome --------------------------------------------
-# Routed through CPM so the theme lands in CPM_SOURCE_CACHE like every
-# other fetched dependency (CPMAddPackage comes from cmake/cpm.cmake,
-# included by the root file before this module). DOWNLOAD_ONLY: the
-# theme is plain CSS, there is no CMakeLists.txt to configure.
-CPMAddPackage(
-    NAME doxygen-awesome
-    GITHUB_REPOSITORY jothepro/doxygen-awesome-css
-    VERSION 2.3.4
-    GIT_SHALLOW TRUE
-    DOWNLOAD_ONLY YES)
+# Std CMake FetchContent - no CPM, so this module has no include-order
+# dependency on cmake/cpm.cmake.
+# The theme repo has no CMakeLists.txt: MakeAvailable only populates it
+# and never calls add_subdirectory (documented behavior) - exactly what
+# a download-only CSS dependency needs.
+# GIT_TAG pins the v2.3.4 commit hash: the FetchContent docs advise a
+# hash over a tag name for servers you do not control, and a hash
+# checkout skips the remote re-check on every reconfigure.
+# (GIT_SHALLOW is not allowed with a hash; the repo is small.)
+include(FetchContent)
+FetchContent_Declare(
+    doxygen-awesome
+    GIT_REPOSITORY https://github.com/jothepro/doxygen-awesome-css.git
+    # v2.3.4
+    GIT_TAG 568f56cde6ac78b6dfcc14acd380b2e745c301ea)
+FetchContent_MakeAvailable(doxygen-awesome)
 
 set(DOXYGEN_HTML_EXTRA_STYLESHEET
     "${doxygen-awesome_SOURCE_DIR}/doxygen-awesome.css"
