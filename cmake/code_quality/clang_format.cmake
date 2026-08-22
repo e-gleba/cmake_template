@@ -1,6 +1,6 @@
-# ─── clang-format ──────────────────────────────────────────────────
+# --- clang-format ------------------------------------------------------------
 # Host-only text reformatter. No sysroot interaction, no
-# compilation database — works identically when cross-compiling.
+# compilation database - works identically when cross-compiling.
 
 find_program(
     clang_format_exe
@@ -10,7 +10,7 @@ find_program(
 if(NOT clang_format_exe)
     message(
         NOTICE
-        "clang-format not found -- format targets disabled\n"
+        "clang-format not found - format targets disabled\n"
         "  fedora:  sudo dnf install clang-tools-extra\n"
         "  ubuntu:  sudo apt install clang-format\n"
         "  macos:   brew install llvm\n"
@@ -18,18 +18,20 @@ if(NOT clang_format_exe)
     return()
 endif()
 
-# ── Verify .clang-format exists ────────────────────────────────
+# --- verify .clang-format exists ---------------------------------------------
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/.clang-format")
-    message(NOTICE "no .clang-format at project root -- "
+    message(NOTICE "no .clang-format at project root - "
             "clang-format will use LLVM defaults")
 endif()
 
-# ── Collect sources ────────────────────────────────────────────
-# GLOB_RECURSE is acceptable for developer tooling targets —
+# --- collect sources ----------------------------------------------------------
+# GLOB_RECURSE is acceptable for developer tooling targets -
 # missing a new file until reconfigure is harmless for formatting.
 # CONFIGURE_DEPENDS re-globs on every build (Ninja/Makefiles).
-set(format_scan_dirs "${PROJECT_SOURCE_DIR}/src"
-                     "${PROJECT_SOURCE_DIR}/include")
+set(format_scan_dirs
+    "${PROJECT_SOURCE_DIR}/src"
+    "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/tests")
 
 set(format_sources "")
 foreach(dir IN LISTS format_scan_dirs)
@@ -51,15 +53,15 @@ endforeach()
 
 if(NOT format_sources)
     message(NOTICE "clang-format: no sources found under "
-            "${format_scan_dirs} -- adjust format_scan_dirs")
+            "${format_scan_dirs} - adjust format_scan_dirs")
     return()
 endif()
 
 list(LENGTH format_sources format_count)
 
-# ── Write file list for ARG_MAX safety ─────────────────────────
+# --- write file list for ARG_MAX safety ---------------------------------------
 # Windows cmd.exe limit is ~32 768 chars.  At ~80 chars/path
-# that's ~400 files before truncation — silently.
+# that's ~400 files before truncation - silently.
 # Writing a newline-separated file list and feeding it through
 # a cmake -P runner avoids the issue on every platform.
 set(format_file_list "${CMAKE_CURRENT_BINARY_DIR}/clang-format-files.txt")
@@ -83,7 +85,7 @@ else()
     set(args -i)
 endif()
 
-# Batch into chunks ≤ 30 000 chars to stay under ARG_MAX.
+# Batch into chunks of 30 000 chars to stay under ARG_MAX.
 set(batch "")
 set(batch_len 0)
 foreach(src IN LISTS sources)
@@ -106,7 +108,7 @@ if(batch)
 endif()
 ]=])
 
-# ── Format target (modifies files in-place) ────────────────────
+# --- format target (modifies files in-place) ----------------------------------
 add_custom_target(
     ${PROJECT_NAME}-format
     COMMAND
@@ -119,8 +121,8 @@ add_custom_target(
     USES_TERMINAL
     SOURCES ${format_sources})
 
-# ── Check target (CI gate — fails on diff) ─────────────────────
-# --dry-run + --Werror: clang-format ≥ 10.
+# --- check target (CI gate - fails on diff) -----------------------------------
+# --dry-run + --Werror: clang-format 10+.
 add_custom_target(
     ${PROJECT_NAME}-format-check
     COMMAND

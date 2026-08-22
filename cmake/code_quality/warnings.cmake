@@ -1,5 +1,6 @@
-# warnings: INTERFACE target carrying the project's warning flags.
-# Link it PRIVATE into every first-party target — never PUBLIC: consumers
+# --- warnings ----------------------------------------------------------------
+# INTERFACE target carrying the project's warning flags.
+# Link it PRIVATE into every first-party target - never PUBLIC: consumers
 # of an installed package must not inherit our warnings.
 add_library(warnings INTERFACE)
 

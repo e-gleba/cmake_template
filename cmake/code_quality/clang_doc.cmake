@@ -1,5 +1,5 @@
-# ─── clang-doc: AST-based documentation from source ───────────────
-# Requires compile_commands.json — every clang LibTooling-based tool does.
+# --- clang-doc: AST-based documentation from source ---------------------------
+# Requires compile_commands.json - every clang LibTooling-based tool does.
 # clang-doc is still "early development" per LLVM docs; expect rough edges.
 
 find_program(
@@ -10,7 +10,7 @@ find_program(
 if(NOT clang_doc_exe)
     message(
         NOTICE
-        "clang-doc not found -- '${PROJECT_NAME}-clang-doc' target disabled\n"
+        "clang-doc not found - '${PROJECT_NAME}-clang-doc' target disabled\n"
         "  fedora:  sudo dnf install clang-tools-extra\n"
         "  ubuntu:  sudo apt install clang-tools-extra\n"
         "  macos:   brew install llvm\n"
@@ -44,7 +44,7 @@ add_custom_target(
         --executor=all-TUs -p "${CMAKE_BINARY_DIR}" --format=html
         "--output=${clang_doc_output_dir}" "--project-name=${PROJECT_NAME}"
         "--source-root=${PROJECT_SOURCE_DIR}"
-        # Filter to project sources only — avoids documenting
+        # Filter to project sources only - avoids documenting
         # system headers and fetched dependencies.
         "--filter=${clang_doc_filter_regex}" --doxygen --ignore-map-errors
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
