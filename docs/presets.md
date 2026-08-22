@@ -2,7 +2,7 @@
 
 **The definitive guide to this template's build system. One of the most comprehensive preset collections in open-source C++ templates.**
 
-CMake 3.21+ **Presets** are the primary interface. They eliminate "works on my machine" by encoding compilers, toolchains, generators, cache variables, and workflows in `CMakePresets.json`.
+CMake **Presets** (schema v12, CMake ≥ 4.4) are the primary interface. They eliminate "works on my machine" by encoding compilers, toolchains, generators, cache variables, and workflows in `CMakePresets.json`.
 
 This document merges and expands the previous `presets.md` and `platforms.md` into a single professional reference. It explains **how presets make cross-compilation transparent**, documents every current configuration, and outlines the roadmap for Apple platforms.
 
@@ -89,7 +89,7 @@ Resolution order:
 2. `-DEMSCRIPTEN_SDK_ROOT=/path` — custom SDK location
 3. `<repo>/.emsdk` — bootstrapped here on first use
 
-Knobs: `-DEMSCRIPTEN_SDK_VERSION=x.y.z` to change the pinned release (default `6.0.7`), `-DEMSCRIPTEN_SDK_TARBALL_SHA256=...` for an optional integrity pin. The only host requirement is `python3` on `PATH` (emsdk is a python tool).
+Knobs: `-DEMSCRIPTEN_SDK_VERSION=x.y.z` to change the pinned release (default `6.0.8`), `-DEMSCRIPTEN_SDK_TARBALL_SHA256=...` for an optional integrity pin. The only host requirement is `python3` on `PATH` (emsdk is a python tool).
 
 | Preset | Output | Notes |
 |--------|--------|-------|

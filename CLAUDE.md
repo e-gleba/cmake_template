@@ -6,7 +6,7 @@ This file helps AI assistants (Claude, Cursor, Copilot) understand the project c
 
 - **Type**: Production-ready C++ project template / skeleton
 - **Standard**: C++23/26
-- **CMake**: 3.31+
+- **CMake**: 4.4+
 - **Generator**: Ninja Multi-Config (except MSVC preset)
 - **Package Manager**: CPM.cmake (CMake-based, no external package manager like Conan/vcpkg yet)
 - **Test Framework**: doctest + CTest presets

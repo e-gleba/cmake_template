@@ -12,7 +12,7 @@ Most CMake starters stop at "it builds on my machine". This template goes furthe
 ## Prerequisites
 
 ```
-cmake 3.31+
+cmake 4.4+
 ninja 1.11+
 C++23-capable compiler (clang 16+, gcc 13+, msvc 19.35+)
 ```
@@ -47,7 +47,7 @@ choco install cmake llvm ninja doxygen visualstudio2022buildtools
 .
 ├── CMakeLists.txt
 ├── CMakePresets.json
-├── cmake/                  # find_package modules (warnings, cpm, code quality)
+├── cmake/                  # project modules loaded via include() (warnings, cpm, code quality)
 ├── src/                    # application sources
 ├── tests/                  # doctest + CTest
 ├── tools/                  # helper scripts
