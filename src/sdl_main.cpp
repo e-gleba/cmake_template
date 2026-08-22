@@ -115,6 +115,7 @@ void SDL_AppQuit(void* appstate, [[maybe_unused]] SDL_AppResult result)
     // Ownership arrives as void* from SDL; re-mark it as owner before delete.
     // NOLINTNEXTLINE(readability-redundant-casting) - gsl::owner annotation, not a redundant cast
     auto* state = static_cast<gsl::owner<app_state*>>(appstate);
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory) - ownership reclaimed from C void* callback; gsl::owner-marked above
     delete state;
     // SDL_Quit() is called automatically by SDL after this returns
 }
