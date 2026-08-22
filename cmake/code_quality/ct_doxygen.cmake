@@ -193,15 +193,15 @@ set(DOXYGEN_WARN_AS_ERROR NO)
 # a download-only CSS dependency needs.
 include(FetchContent)
 FetchContent_Declare(
-    doxygen-awesome
+    doxygen_awesome
     GIT_REPOSITORY https://github.com/jothepro/doxygen-awesome-css.git
     GIT_TAG v2.4.2
     GIT_SHALLOW TRUE)
-FetchContent_MakeAvailable(doxygen-awesome)
+FetchContent_MakeAvailable(doxygen_awesome)
 
 set(DOXYGEN_HTML_EXTRA_STYLESHEET
-    "${doxygen-awesome_SOURCE_DIR}/doxygen-awesome.css"
-    "${doxygen-awesome_SOURCE_DIR}/doxygen-awesome-sidebar-only.css")
+    "${doxygen_awesome_SOURCE_DIR}/doxygen-awesome.css"
+    "${doxygen_awesome_SOURCE_DIR}/doxygen-awesome-sidebar-only.css")
 set(DOXYGEN_HTML_COLORSTYLE LIGHT)
 
 # --- target -------------------------------------------------------------------
