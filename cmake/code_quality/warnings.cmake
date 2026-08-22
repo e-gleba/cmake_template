@@ -1,6 +1,11 @@
-# warnings: INTERFACE target carrying the project's warning flags.
-# Link it PRIVATE into every first-party target — never PUBLIC: consumers
+# --- warnings ----------------------------------------------------------------
+# INTERFACE target carrying the project's warning flags.
+# Link it PRIVATE into every first-party target - never PUBLIC: consumers
 # of an installed package must not inherit our warnings.
+
+# Double inclusion would error on the duplicate add_library - guard it.
+include_guard(GLOBAL)
+
 add_library(warnings INTERFACE)
 
 target_compile_options(
