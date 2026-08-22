@@ -34,9 +34,10 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
         return SDL_APP_FAILURE;
     }
 
-    // Ownership crosses the C callback boundary as void*; declare the pointer
-    // as gsl::owner so cppcoreguidelines-owning-memory accepts both ends.
-    const gsl::owner<app_state*> state = new (std::nothrow) app_state{};
+    // Ownership crosses the C callback boundary as void*; gsl::owner marks
+    // both ends so cppcoreguidelines-owning-memory accepts the transfer.
+    // NOLINTNEXTLINE(readability-redundant-casting) - gsl::owner annotation, not a redundant cast
+    auto* state = gsl::owner<app_state*>{ new (std::nothrow) app_state{} };
     if (state == nullptr) {
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) - SDL_Log* is the C varargs SDL logging API
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -112,7 +113,8 @@ SDL_AppResult SDL_AppEvent(void* /*appstate*/, SDL_Event* event)
 void SDL_AppQuit(void* appstate, [[maybe_unused]] SDL_AppResult result)
 {
     // Ownership arrives as void* from SDL; re-mark it as owner before delete.
-    const gsl::owner<app_state*> state = static_cast<app_state*>(appstate);
+    // NOLINTNEXTLINE(readability-redundant-casting) - gsl::owner annotation, not a redundant cast
+    auto* state = static_cast<gsl::owner<app_state*>>(appstate);
     delete state;
     // SDL_Quit() is called automatically by SDL after this returns
 }
