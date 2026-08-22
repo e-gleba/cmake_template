@@ -156,7 +156,7 @@ android {
                     showExceptions = true
 
                     // [doc] https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.logging.TestLogging.html#org.gradle.api.tasks.testing.logging.TestLogging:showStackTraces
-                    // [info] print full stack traces for failed tests
+                    // [info] print full stack traces for failures
                     showStackTraces = true
 
                     // [doc] https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.logging.TestLogging.html#org.gradle.api.tasks.testing.logging.TestLogging:exceptionFormat
