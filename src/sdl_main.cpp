@@ -30,6 +30,8 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
         return SDL_APP_FAILURE;
     }
 
+    // Ownership crosses the C callback boundary as void*; gsl::owner marks
+    // the raw pointer as owning so cppcoreguidelines-owning-memory accepts it.
     auto* state = new (std::nothrow) app_state{};
     if (!state) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -102,6 +104,6 @@ SDL_AppResult SDL_AppEvent(void* /*appstate*/, SDL_Event* event)
 // NOLINTNEXTLINE(readability-identifier-naming) - SDL_main callback: name fixed by SDL_main.h
 void SDL_AppQuit(void* appstate, [[maybe_unused]] SDL_AppResult result)
 {
-    delete static_cast<app_state*>(appstate);
+    delete static_cast<gsl::owner<app_state*>>(appstate);
     // SDL_Quit() is called automatically by SDL after this returns
 }
