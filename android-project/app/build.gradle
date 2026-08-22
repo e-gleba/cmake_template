@@ -224,18 +224,30 @@ android {
 // --- SDL3 export task ordering ---------------------------------------------
 // build/generated/sdl3 (Java bindings, base AndroidManifest.xml, base
 // proguard rules) is written by the CMake configure step in
-// cmake/cpm/sdl3-config.cmake, which AGP runs as the
-// configureCMake<Config>[<abi>] tasks. Nothing orders those before the tasks
-// that consume the export, so a clean checkout fails with
-// "Input file does not exist" (process*MainManifest) or
-// "package org.libsdl.app does not exist" (compile*JavaWithJavac). Declare
-// the producer explicitly. The export is identical for every config/abi and
-// the copy is idempotent, so depending on all configure tasks is correct —
-// the redundant configures are cache hits.
-final def sdl3Export = tasks.matching { it.name ==~ /configureCMake\w+\[.+\]/ }
-tasks.matching {
-    it.name ==~ /(process\w+Manifest|compile\w+JavaWithJavac|minify\w+With(R8|Proguard))/
-}.configureEach { dependsOn sdl3Export }
+// cmake/cpm/sdl3-config.cmake, which AGP runs as configureCMake<Config>[<abi>]
+// tasks. AGP does not order those before the tasks that consume the export,
+// so a clean checkout fails with "Input file does not exist"
+// (process*MainManifest) or "package org.libsdl.app does not exist"
+// (compile*JavaWithJavac).
+//
+// Wire consumer -> producer explicitly. preBuild cannot be the anchor:
+// configureCMake* already depends on pre*Build, so that would be a cycle.
+// The export is identical for every config/abi and the copy is idempotent,
+// so depending on every configure task is correct — the rest are cache hits.
+//
+// Name matching is deliberate: AGP's public API exposes no typed handles for
+// these tasks, and the variant -> CMake config mapping (release ->
+// RelWithDebInfo) is AGP-internal — deriving task names from variants would
+// be more fragile, not less. `==~` is a full-string match, so the patterns
+// are self-anchoring.
+final Pattern cmakeConfigureTask = ~/configureCMake\w+\[.+\]/
+final Pattern sdl3ExportConsumerTask =
+        ~/(process\w+Manifest|compile\w+JavaWithJavac|minify\w+With(R8|Proguard))/
+
+final TaskCollection<Task> sdl3Export =
+        tasks.matching { it.name ==~ cmakeConfigureTask }
+tasks.matching { it.name ==~ sdl3ExportConsumerTask }
+        .configureEach { dependsOn sdl3Export }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
