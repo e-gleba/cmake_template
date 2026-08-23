@@ -1,7 +1,7 @@
 # cmake_template
 
 <p align="center">
-  <img src=".github/logo.png" alt="cmake_template logo" width="200"/>
+  <img src="cmake/cpack/logo.png" alt="cmake_template logo" width="200"/>
 </p>
 
 <p align="center">
@@ -49,7 +49,7 @@ cmake --workflow --preset=llvm-mingw-aarch64-full
 ## Why this template?
 
 | You need | Most templates | This template |
-|---|---|---|
+| --- | --- | --- |
 | **Android NDK** | ❌ Not even mentioned | ✅ 4 presets (arm64, arm32, x64, x86), API 24, `c++_shared`, Prefab |
 | **Android instrumentation tests** | ❌ | ✅ `AndroidJUnitRunner`, Gradle Managed Devices (Pixel 6 ATD), doctest JNI bridge, [#23 native GTest strategy](https://github.com/e-gleba/cmake_template/issues/23) |
 | **Linux → Windows cross-compile** | ❌ | ✅ llvm-mingw toolchain: x86_64, i686, aarch64 |
@@ -130,7 +130,7 @@ cmake --workflow --preset=emscripten-full
 ## Platform Matrix
 
 | Platform | Preset | Generator | Test runner | Package |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **Linux (native)** | `gcc`, `clang` | Ninja Multi-Config | `ctest` | `.tar.gz` |
 | **Windows (native)** | `msvc` | Visual Studio 17 2022 | `ctest` | `.zip` |
 | **Windows (cross)** | `llvm-mingw-x86_64`, `llvm-mingw-i686`, `llvm-mingw-aarch64` | Ninja Multi-Config | — (cross-compiled) | `.tar.xz` |
@@ -147,7 +147,7 @@ cmake --workflow --preset=emscripten-full
 ## Comparison: Competitive Landscape
 
 | Feature | **cmake_template** | [cpp-best-practices](https://github.com/cpp-best-practices/cmake_template) | [modern-cpp-template](https://github.com/filipdutescu/modern-cpp-template) | [cmake-init](https://github.com/cginternals/cmake-init) |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **C++ Standard** | **23 / 26** | 17 / 20 | 17 | 11+ |
 | **CMake Presets** | ✅ 10+ with workflows | ❌ | ❌ | ❌ |
 | **Android NDK** | ✅ 4 ABI | ❌ | ❌ | ❌ |
@@ -170,7 +170,7 @@ cmake --workflow --preset=emscripten-full
 ## Documentation
 
 | Document | What it covers |
-|---|---|
+| --- | --- |
 | [Presets & Platforms](docs/presets.md) | All CMake presets, platform support, cross-compilation details |
 | [Architecture](docs/architecture.md) | CMake design decisions, directory structure, `PROJECT_IS_TOP_LEVEL` pattern |
 | [Docker Guide](docs/docker.md) | Docker images, GHCR publish, one-click release |
@@ -185,6 +185,7 @@ cmake --workflow --preset=emscripten-full
 I help teams reduce C++ build friction and ship cross-platform products faster.
 
 **Services:**
+
 - CMake architecture audits and modernisation
 - Android NDK toolchain setup and Gradle integration
 - CI/CD pipeline design for C++ (GitHub Actions, GitLab CI, Docker)
@@ -193,6 +194,7 @@ I help teams reduce C++ build friction and ship cross-platform products faster.
 - Team onboarding workshops
 
 **Why work with me:**
+
 - This template is the public portfolio — it demonstrates real engineering depth in CMake, NDK, cross-compilation, and CI
 - I focus exclusively on **build engineering** — not general software consulting
 - Every engagement starts with a concrete deliverable, not a roadmap document
@@ -200,7 +202,7 @@ I help teams reduce C++ build friction and ship cross-platform products faster.
 <p align="center">
 
 | | |
-|---|---|
+| --- | --- |
 | 🌐 **Website** | [e-gleba.github.io](https://e-gleba.github.io) |
 | 📧 **Email** | [i@egleba.ru](mailto:i@egleba.ru) — fastest response |
 | 💬 **Discussions** | [GitHub Discussions](https://github.com/e-gleba/cmake_template/discussions) |

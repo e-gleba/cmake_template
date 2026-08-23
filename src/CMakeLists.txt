@@ -1,12 +1,9 @@
-include(GNUInstallDirs)
-
 add_executable(cli_app main.cpp)
 target_compile_features(cli_app PRIVATE cxx_std_23)
 target_link_libraries(cli_app PRIVATE warnings)
 
 install(TARGETS cli_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-                                COMPONENT runtime
-)
+                                COMPONENT runtime)
 
 # ── WebAssembly deploy: SDL3 + OpenGL/GLES3 + Dear ImGui demo ────────
 if(EMSCRIPTEN)
@@ -24,9 +21,8 @@ else()
 endif()
 
 target_compile_features(sdl_app PRIVATE cxx_std_23)
-target_link_libraries(
-    sdl_app PRIVATE SDL3::SDL3-shared Microsoft.GSL::GSL warnings
-)
+target_link_libraries(sdl_app PRIVATE SDL3::SDL3-shared Microsoft.GSL::GSL
+                                      warnings)
 
 if(TARGET Tracy::TracyClient)
     if(CMAKE_SYSTEM_NAME STREQUAL "Android")
@@ -37,9 +33,11 @@ if(TARGET Tracy::TracyClient)
 
     target_compile_features(tracy_sandbox PRIVATE cxx_std_23)
     target_link_libraries(
-        tracy_sandbox PRIVATE SDL3::SDL3-shared Tracy::TracyClient
-                              Microsoft.GSL::GSL warnings
-    )
+        tracy_sandbox
+        PRIVATE SDL3::SDL3-shared
+                Tracy::TracyClient
+                Microsoft.GSL::GSL
+                warnings)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Android|Emscripten")
@@ -55,12 +53,11 @@ set_target_properties(
     sdl_app
     PROPERTIES
         INSTALL_RPATH
-            "$<IF:$<PLATFORM_ID:Darwin,iOS>,@executable_path,$ORIGIN>/../${CMAKE_INSTALL_LIBDIR}"
+        "$<IF:$<PLATFORM_ID:Darwin,iOS>,@executable_path,$ORIGIN>/../${CMAKE_INSTALL_LIBDIR}"
         BUILD_RPATH_USE_ORIGIN ON)
 
 install(TARGETS sdl_app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-                                COMPONENT runtime
-)
+                                COMPONENT runtime)
 
 # ── Windows: stage runtime DLLs next to the .exe for build-tree runs ─
 # $<TARGET_RUNTIME_DLLS> expands to nothing on other platforms, but
@@ -69,8 +66,9 @@ if(WIN32)
     add_custom_command(
         TARGET sdl_app
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:sdl_app>
-                $<TARGET_RUNTIME_DLLS:sdl_app>
+        COMMAND
+            ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:sdl_app>
+            $<TARGET_RUNTIME_DLLS:sdl_app>
         COMMAND_EXPAND_LISTS)
 endif()
 

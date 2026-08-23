@@ -18,20 +18,21 @@ list(
     APPEND
     CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_LIST_DIR}/cmake"
-    "${CMAKE_CURRENT_LIST_DIR}/cmake/description"
+    "${CMAKE_CURRENT_LIST_DIR}/cmake/cpack"
     "${CMAKE_CURRENT_LIST_DIR}/cmake/code_quality")
 
-include(cpm) # dependency bootstrap: CPM + package configs
-include(warnings) # warnings interface target
+include(ct_cpm) # dependency bootstrap: CPM + package configs
+include(ct_warnings) # warnings interface target
 
 if(PROJECT_IS_TOP_LEVEL)
-    include(clang_format)
-    include(clang_tidy)
-    include(clang_doc)
-    include(cpplint)
+    include(ct_clang_format)
+    include(ct_clang_tidy)
+    include(ct_clang_doc)
+    include(ct_cpplint)
     include(ct_doxygen)
 endif()
 
+include(GNUInstallDirs)
 add_subdirectory(src)
 
 # Testing and packaging only run when this project owns the build. A parent
@@ -46,8 +47,7 @@ if(PROJECT_IS_TOP_LEVEL)
         add_subdirectory(tests)
     endif()
 
-    include(GNUInstallDirs)
-    include(package_description)
+    include(ct_cpack)
 
     # Append processor to system name so packages for different
     # architectures don't collide ("Windows-x86_64" vs "Windows-aarch64").

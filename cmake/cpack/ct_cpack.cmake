@@ -24,7 +24,7 @@ set(PROJECT_LICENSE "MIT") # SPDX identifier
 set(PROJECT_GROUP "System")
 
 # ─── Resource files ────────────────────────────────────────────────
-set(PROJECT_ICON_FILE "${CMAKE_CURRENT_LIST_DIR}/icon.png")
+set(PROJECT_ICON_FILE "${CMAKE_CURRENT_LIST_DIR}/logo.png")
 set(PROJECT_LICENSE_FILE "${PROJECT_SOURCE_DIR}/license.md")
 set(PROJECT_README_FILE "${PROJECT_SOURCE_DIR}/readme.md")
 
@@ -52,9 +52,10 @@ set(CPACK_PACKAGE_DESCRIPTION_FILE
     "${PROJECT_BINARY_DIR}/package_description.txt")
 file(
     CONFIGURE
-    OUTPUT "${CPACK_PACKAGE_DESCRIPTION_FILE}"
+    OUTPUT
+    "${CPACK_PACKAGE_DESCRIPTION_FILE}"
     CONTENT
-        "${PROJECT_DESCRIPTION}
+    "${PROJECT_DESCRIPTION}
 
 Version:  ${PROJECT_VERSION}
 Homepage: ${PROJECT_HOMEPAGE_URL}
