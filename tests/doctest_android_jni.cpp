@@ -5,8 +5,10 @@
 #include <cstddef>
 #include <exception>
 #include <iostream>
+#include <optional>
 #include <ranges>
 #include <span>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -232,12 +234,36 @@ namespace {
 
 // ─── Test runner ──────────────────────────────────────────────────────────────
 
-    [[nodiscard]] bool run_single_doctest(const char *test_case_name) {
+    // Runs a single doctest case with its console report captured.
+    //
+    // no-exitcode must stay OFF: with it, Context::run() returns 0 even when
+    // cases fail (doctest context.cpp: `if (p->numTestCasesFailed &&
+    // !p->no_exitcode) return EXIT_FAILURE;`), so every JNI call would report
+    // success and failing cases would never reach the JUnit results.
+    //
+    // Returns the captured report on failure, nullopt on pass. The report is
+    // also mirrored to logcat through the process-wide redirect, so device
+    // logs keep the full output either way.
+    [[nodiscard]] std::optional<std::string>
+    run_single_doctest(const char *test_case_name) {
+        std::ostringstream report;
+
         doctest::Context context {};
         context.setOption("test-case", test_case_name);
         context.setOption("duration", true);
-        context.setOption("no-exitcode", true);
-        return context.run() == 0;
+        context.setCout(&report);
+
+        const int exit_code = context.run();
+
+        const std::string output = report.str();
+        if (!output.empty()) {
+            std::cout << output;
+        }
+
+        if (exit_code == 0) {
+            return std::nullopt;
+        }
+        return output;
     }
 
     template<std::ranges::sized_range Range>
@@ -289,12 +315,20 @@ Java_com_egleba_app_NativeDoctestTests_getTestNames(JNIEnv *env,
     });
 }
 
-JNIEXPORT jboolean JNICALL
+// Returns null when the case passes, or the captured doctest report when it
+// fails — the Java runner turns a non-null report into an AssertionError, so
+// the native assertion details land in the JUnit failure message and XML.
+JNIEXPORT jstring JNICALL
 Java_com_egleba_app_NativeDoctestTests_runTest(JNIEnv *env, jclass /*unused*/,
                                                jstring jname) {
-    return guard_jni(env, "runTest", [env, jname]() -> jboolean {
+    return guard_jni(env, "runTest", [env, jname]() -> jstring {
         const jni_utf_string test_name{env, jname};
-        return run_single_doctest(test_name.c_str()) ? JNI_TRUE : JNI_FALSE;
+        const std::optional<std::string> failure =
+                run_single_doctest(test_name.c_str());
+        if (!failure.has_value()) {
+            return nullptr;
+        }
+        return env->NewStringUTF(failure->c_str());
     });
 }
 // NOLINTEND(readability-identifier-naming)
