@@ -67,6 +67,11 @@ cpmaddpackage(
     # SDL is a third-party dependency built in-tree via CPM: never let its
     # own warnings become errors in our build, and don't surface them.
     "SDL_WERROR OFF"
+    # SDL's precompiled header (target_precompile_headers) breaks incremental
+    # Android Studio builds: the .pch is generated once per build tree and
+    # goes stale/missing on partial rebuilds, failing with "unable to read
+    # PCH file". Compile without it — negligible cost for a dependency.
+    "SDL_PCH OFF"
     # ---- library type ----
     "SDL_STATIC ${sdl_static}"
     "SDL_SHARED ${sdl_shared}"
