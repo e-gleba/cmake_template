@@ -7,13 +7,13 @@
 include_guard(GLOBAL)
 
 # --- platform-conditional subsystems: defaults, then overrides ------------
-set(sdl_sensor OFF)    # mobile-only subsystem
-set(sdl_wayland OFF)   # Linux desktop integration:
-set(sdl_dbus OFF)      #   Wayland, D-Bus, IBus, libdecor
+set(sdl_sensor OFF) # mobile-only subsystem
+set(sdl_wayland OFF) # Linux desktop integration:
+set(sdl_dbus OFF) #   Wayland, D-Bus, IBus, libdecor
 set(sdl_ibus OFF)
 set(sdl_libdecor OFF)
-set(sdl_opengles ON)   # Apple uses desktop GL, not ES
-set(sdl_shared ON)     # Emscripten has no dynamic linking: static-only
+set(sdl_opengles ON) # Apple uses desktop GL, not ES
+set(sdl_shared ON) # Emscripten has no dynamic linking: static-only
 set(sdl_static OFF)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
@@ -105,21 +105,24 @@ cpmaddpackage(
 # AGP's compile*JavaWithJavac. file(COPY/COPY_FILE) without RESULT fail
 # fatally on missing input: no manual existence checks needed.
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    set(sdl3_gen
-        "${CMAKE_SOURCE_DIR}/android-project/app/build/generated/sdl3")
+    set(sdl3_gen "${CMAKE_SOURCE_DIR}/android_project/app/build/generated/sdl3")
 
-    file(COPY "${SDL3_SOURCE_DIR}/android-project/app/src/main/java/org/"
-         DESTINATION "${sdl3_gen}/java/org"
-         FILES_MATCHING PATTERN "*.java")
+    file(
+        COPY "${SDL3_SOURCE_DIR}/android-project/app/src/main/java/org/"
+        DESTINATION "${sdl3_gen}/java/org"
+        FILES_MATCHING
+        PATTERN "*.java")
 
     # ONLY_IF_DIFFERENT keeps the timestamp when unchanged: no pointless
     # Gradle manifest merge on re-configure.
-    file(COPY_FILE
-         "${SDL3_SOURCE_DIR}/android-project/app/src/main/AndroidManifest.xml"
-         "${sdl3_gen}/AndroidManifest.xml"
-         ONLY_IF_DIFFERENT)
-    file(COPY_FILE
-         "${SDL3_SOURCE_DIR}/android-project/app/proguard-rules.pro"
-         "${sdl3_gen}/proguard-rules.pro"
-         ONLY_IF_DIFFERENT)
+    file(
+        COPY_FILE
+        "${SDL3_SOURCE_DIR}/android-project/app/src/main/AndroidManifest.xml"
+        "${sdl3_gen}/AndroidManifest.xml"
+        ONLY_IF_DIFFERENT)
+    file(
+        COPY_FILE
+        "${SDL3_SOURCE_DIR}/android-project/app/proguard-rules.pro"
+        "${sdl3_gen}/proguard-rules.pro"
+        ONLY_IF_DIFFERENT)
 endif()
