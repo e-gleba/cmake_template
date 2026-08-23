@@ -1,3 +1,7 @@
+if(NOT TARGET SDL3::SDL3-shared)
+    return()
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_library(03_unity_build SHARED)
 else()
