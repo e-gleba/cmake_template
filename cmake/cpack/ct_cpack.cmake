@@ -123,29 +123,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 endif()
 
-# ─── Package file naming: <os>-<compiler>-<arch> ───────────────────
+# ─── Package file naming: <os>_<compiler>_<arch> ───────────────────
 # CPACK_SYSTEM_NAME feeds CPack's default file name
 # (<name>-<version>-<system>). The compiler tag keeps native packages
-# from different toolchains apart (linux-gcc vs linux-clang produced
+# from different toolchains apart (Linux_GNU vs Linux_Clang produced
 # identical names before); the arch tag keeps cross builds apart
-# (windows-x86_64 vs windows-aarch64). All inputs are configure-time
-# constants — CPack reads these variables at include(CPack) time, so
-# generator expressions do not apply here.
-string(TOLOWER "${CMAKE_SYSTEM_NAME}" cpack_os)
-string(TOLOWER "${CMAKE_CXX_COMPILER_ID}" cpack_compiler)
-string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpack_arch)
-
-# Normalize spelling variants so one architecture yields one name on
-# every host (Windows AMD64, macOS arm64, Linux x86_64/aarch64).
-if(cpack_arch MATCHES "^(x86_64|amd64)$")
-    set(cpack_arch x86_64)
-elseif(cpack_arch MATCHES "^(aarch64|arm64)$")
-    set(cpack_arch aarch64)
-endif()
-
-# Spell the GNU toolchain the way the presets and CI matrix do.
-if(cpack_compiler STREQUAL "gnu")
-    set(cpack_compiler gcc)
-endif()
-
-set(CPACK_SYSTEM_NAME "${cpack_os}-${cpack_compiler}-${cpack_arch}")
+# (Windows_x86_64 vs Windows_arm64). CMake's own spellings are used
+# as-is — no case folding, no renaming (GNU stays GNU).
+set(CPACK_SYSTEM_NAME
+    "${CMAKE_SYSTEM_NAME}_${CMAKE_CXX_COMPILER_ID}_${CMAKE_SYSTEM_PROCESSOR}")

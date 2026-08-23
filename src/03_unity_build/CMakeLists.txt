@@ -2,7 +2,11 @@ if(NOT TARGET SDL3::SDL3-shared)
     return()
 endif()
 
-ct_add_executable(03_unity_build)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_library(03_unity_build SHARED)
+else()
+    add_executable(03_unity_build)
+endif()
 
 target_sources(03_unity_build PRIVATE greet.cpp main.cpp)
 

@@ -6,9 +6,11 @@ if(NOT TARGET Tracy::TracyClient)
     return()
 endif()
 
-ct_add_executable(04_tracy_profiler)
-
-target_sources(04_tracy_profiler PRIVATE main.cpp)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_library(04_tracy_profiler SHARED main.cpp)
+else()
+    add_executable(04_tracy_profiler main.cpp)
+endif()
 
 target_compile_features(04_tracy_profiler PRIVATE cxx_std_23)
 target_link_libraries(

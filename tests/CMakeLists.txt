@@ -2,7 +2,11 @@
 # The Android JNI bridge is pulled in by a generator expression, so it
 # compiles only for Android instead of being marked HEADER_FILE_ONLY
 # everywhere else.
-ct_add_executable(tests)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_library(tests SHARED)
+else()
+    add_executable(tests)
+endif()
 
 target_sources(
     tests PRIVATE main.cpp doctest_example.cpp
