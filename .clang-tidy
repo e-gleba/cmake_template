@@ -35,6 +35,8 @@ CheckOptions:
     value: lower_case
   - key: readability-identifier-naming.MemberCase
     value: lower_case
+  - key: readability-identifier-naming.MemberSuffix
+    value: _
   - key: readability-identifier-naming.ConstantCase
     value: lower_case
   - key: readability-identifier-naming.GlobalConstantCase
@@ -46,6 +48,6 @@ CheckOptions:
   - key: readability-identifier-naming.TypedefCase
     value: lower_case
   - key: readability-identifier-naming.TemplateParameterCase
-    value: lower_case
+    value: CamelCase
   - key: readability-identifier-naming.ConceptCase
     value: lower_case

@@ -47,7 +47,9 @@ namespace {
             }
             *pptr() = traits_type::to_char_type(ch);
             pbump(1);
-            if (ch == '\n') flush_buffer();
+            if (ch == '\n') {
+                flush_buffer();
+            }
             return ch;
         }
 
@@ -69,14 +71,15 @@ namespace {
             setp(area.data(), area.data() + area.size());
         }
 
+        // NOLINTNEXTLINE(bugprone-exception-escape) - at() cannot throw: indices are provably in range
         void flush_buffer() noexcept {
             const auto raw_length = static_cast<std::size_t>(pptr() - pbase());
             const auto length = (raw_length > 0 &&
-                                 buffer_[raw_length - 1] == '\n')
+                                 buffer_.at(raw_length - 1) == '\n')
                                 ? raw_length - 1
                                 : raw_length;
             if (length > 0) {
-                buffer_[length] = '\0';
+                buffer_.at(length) = '\0';
                 __android_log_write(ANDROID_LOG_INFO, tag_, buffer_.data());
             }
             reset_put_area();
@@ -157,7 +160,11 @@ namespace {
     public:
         jni_local_ref(JNIEnv *env, T ref) noexcept: env_{env}, ref_{ref} {}
 
-        ~jni_local_ref() { if (ref_ != nullptr) env_->DeleteLocalRef(ref_); }
+        ~jni_local_ref() {
+            if (ref_ != nullptr) {
+                env_->DeleteLocalRef(ref_);
+            }
+        }
 
         jni_local_ref(const jni_local_ref &) = delete;
 
@@ -168,7 +175,9 @@ namespace {
 
         jni_local_ref &operator=(jni_local_ref &&other) noexcept {
             if (this != &other) {
-                if (ref_ != nullptr) env_->DeleteLocalRef(ref_);
+                if (ref_ != nullptr) {
+                    env_->DeleteLocalRef(ref_);
+                }
                 env_ = other.env_;
                 ref_ = std::exchange(other.ref_, nullptr);
             }
@@ -194,8 +203,9 @@ namespace {
 
     void throw_java_runtime_exception(JNIEnv *env,
                                       std::string_view message) noexcept {
-        if (env->ExceptionCheck() == JNI_TRUE)
+        if (env->ExceptionCheck() == JNI_TRUE) {
             return; // never clobber pending exception
+        }
 
         if (jni_local_ref<jclass> cls{env, env->FindClass(
                 "java/lang/RuntimeException")}) {
@@ -215,7 +225,9 @@ namespace {
             throw_java_runtime_exception(
                     env, std::string{"unknown C++ exception in "} += context);
         }
-        if constexpr (!std::is_void_v<result_t>) return result_t{};
+        if constexpr (!std::is_void_v<result_t>) {
+            return result_t{};
+        }
     }
 
 // ─── Test runner ──────────────────────────────────────────────────────────────
@@ -236,8 +248,9 @@ namespace {
     to_java_string_array(JNIEnv *env, const Range &items) {
         jni_local_ref<jclass> string_class{env,
                                            env->FindClass("java/lang/String")};
-        if (!string_class)
+        if (!string_class) {
             throw std::runtime_error{"failed to resolve java/lang/String"};
+        }
 
         jni_local_ref<jobjectArray> array{
                 env,
@@ -245,14 +258,17 @@ namespace {
                         static_cast<jsize>(std::ranges::size(items)),
                         string_class.get(),
                         nullptr)};
-        if (!array) throw std::runtime_error{"NewObjectArray returned null"};
+        if (!array) {
+            throw std::runtime_error{"NewObjectArray returned null"};
+        }
 
         jsize index = 0;
         for (const auto &item: items) {
             jni_local_ref<jstring> element{env,
                                            env->NewStringUTF(item.c_str())};
-            if (!element)
+            if (!element) {
                 throw std::runtime_error{"NewStringUTF returned null"};
+            }
             env->SetObjectArrayElement(array.get(), index++, element.get());
         }
         return array.release();
@@ -264,20 +280,23 @@ namespace {
 
 extern "C" {
 
+// NOLINTBEGIN(readability-identifier-naming) - JNI export names are fixed by the Java native declarations
 JNIEXPORT jobjectArray JNICALL
-Java_com_egleba_app_NativeDoctestTests_getTestNames(JNIEnv *env, jclass) {
+Java_com_egleba_app_NativeDoctestTests_getTestNames(JNIEnv *env,
+                                                    jclass /*unused*/) {
     return guard_jni(env, "getTestNames", [env] {
         return to_java_string_array(env, egleba::doctest::get_all_tests());
     });
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_egleba_app_NativeDoctestTests_runTest(JNIEnv *env, jclass,
+Java_com_egleba_app_NativeDoctestTests_runTest(JNIEnv *env, jclass /*unused*/,
                                                jstring jname) {
     return guard_jni(env, "runTest", [env, jname]() -> jboolean {
         const jni_utf_string test_name{env, jname};
         return run_single_doctest(test_name.c_str()) ? JNI_TRUE : JNI_FALSE;
     });
 }
+// NOLINTEND(readability-identifier-naming)
 
 } // extern "C"

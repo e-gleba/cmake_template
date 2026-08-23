@@ -6,11 +6,11 @@
 
 #include <doctest/doctest.h>
 
-DOCTEST_TEST_CASE_TEMPLATE("arithmetic identity", t, int, float, double)
+DOCTEST_TEST_CASE_TEMPLATE("arithmetic identity", T, int, float, double)
 {
-    constexpr t zero = t{};
-    DOCTEST_CHECK_EQ(t{ 1 } + zero, t{ 1 });
-    DOCTEST_CHECK_EQ(t{ 42 } * t{ 1 }, t{ 42 });
+    constexpr T zero = T{};
+    DOCTEST_CHECK_EQ(T{ 1 } + zero, T{ 1 });
+    DOCTEST_CHECK_EQ(T{ 42 } * T{ 1 }, T{ 42 });
 }
 
 DOCTEST_TEST_SUITE("math playground")
@@ -83,8 +83,8 @@ DOCTEST_TEST_CASE("exception contracts" * doctest::timeout(0.1))
 }
 
 namespace {
-    template<typename t>
-    t clamp(t v, t lo, t hi) noexcept {
+    template<typename T>
+    T clamp(T v, T lo, T hi) noexcept {
         if (v < lo) {
             return lo;
         }
@@ -95,23 +95,23 @@ namespace {
     }
 }
 
-DOCTEST_TEST_CASE_TEMPLATE("clamp", t, int, float, double)
+DOCTEST_TEST_CASE_TEMPLATE("clamp", T, int, float, double)
 {
     DOCTEST_SUBCASE("within range")
     {
-        DOCTEST_CHECK_EQ(clamp(t{ 5 }, t{ 0 }, t{ 10 }), t{ 5 });
+        DOCTEST_CHECK_EQ(clamp(T{ 5 }, T{ 0 }, T{ 10 }), T{ 5 });
     }
     DOCTEST_SUBCASE("below minimum")
     {
-        DOCTEST_CHECK_EQ(clamp(t{ -3 }, t{ 0 }, t{ 10 }), t{ 0 });
+        DOCTEST_CHECK_EQ(clamp(T{ -3 }, T{ 0 }, T{ 10 }), T{ 0 });
     }
     DOCTEST_SUBCASE("above maximum")
     {
-        DOCTEST_CHECK_EQ(clamp(t{ 99 }, t{ 0 }, t{ 10 }), t{ 10 });
+        DOCTEST_CHECK_EQ(clamp(T{ 99 }, T{ 0 }, T{ 10 }), T{ 10 });
     }
     DOCTEST_SUBCASE("edge: lo==hi")
     {
-        DOCTEST_CHECK_EQ(clamp(t{ 5 }, t{ 0 }, t{ 0 }), t{ 0 });
+        DOCTEST_CHECK_EQ(clamp(T{ 5 }, T{ 0 }, T{ 0 }), T{ 0 });
     }
 }
 

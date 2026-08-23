@@ -22,20 +22,20 @@
 
 struct compiler_info final
 {
-    const char* name;
-    int         version;
+    const char* name_;
+    int         version_;
 };
 
 [[nodiscard]] consteval compiler_info detect_compiler() noexcept
 {
 #if defined(__clang__)
-    return { .name = "Clang", .version = __clang_major__ };
+    return { .name_ = "Clang", .version_ = __clang_major__ };
 #elif defined(__GNUC__)
-    return { .name = "GCC", .version = __GNUC__ };
+    return { .name_ = "GCC", .version_ = __GNUC__ };
 #elif defined(_MSC_VER)
-    return { .name = "MSVC", .version = _MSC_VER / 100 };
+    return { .name_ = "MSVC", .version_ = _MSC_VER / 100 };
 #else
-    return { .name = "Unknown", .version = 0 };
+    return { .name_ = "Unknown", .version_ = 0 };
 #endif
 }
 
@@ -56,7 +56,7 @@ int main()
 
     std::cout << "System Info\n"
               << "  OS:           " << os << '\n'
-              << "  Compiler:     " << compiler.name << ' ' << compiler.version
+              << "  Compiler:     " << compiler.name_ << ' ' << compiler.version_
               << '\n'
               << "  C++ Standard: " << cpp_std << '\n'
               << "\nHello, World!\n";

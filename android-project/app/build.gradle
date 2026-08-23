@@ -1,3 +1,5 @@
+import java.util.regex.Pattern
+
 final boolean isLibrary = project.hasProperty('BUILD_AS_LIBRARY')
 final boolean excludeNativeLibs = project.hasProperty('EXCLUDE_NATIVE_LIBS')
 final boolean useOrchestrator = project.hasProperty('USE_ORCHESTRATOR') && project.property('USE_ORCHESTRATOR') == 'true'
@@ -8,6 +10,12 @@ if (isLibrary) {
     apply plugin: libs.plugins.android.application.get().pluginId
 }
 
+// SDL3's CPM export (cmake/cpm/sdl3-config.cmake) drops the fetched tree's
+// Java bindings, base AndroidManifest.xml, and base proguard-rules.pro here at
+// CMake configure time. Bumping the SDL version there refreshes all three
+// atomically — nothing SDL-specific is vendored in this module.
+final File sdl3Gen = file('build/generated/sdl3')
+
 android {
     compileSdk = 37
     ndkVersion = '30.0.14904198 rc1'
@@ -15,8 +23,8 @@ android {
     buildToolsVersion = '37.0.0'
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     defaultConfig {
@@ -62,7 +70,12 @@ android {
         release {
             minifyEnabled = true
             shrinkResources = !isLibrary
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // SDL's base proguard rules first (exported from the CPM fetch),
+            // then the app's own for app-specific keeps. AGP appends them in
+            // order, so an SDL bump refreshes the base set.
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                    file("${sdl3Gen}/proguard-rules.pro"),
+                    'proguard-rules.pro'
             signingConfig = signingConfigs.debug
 
             ndk {
@@ -87,6 +100,11 @@ android {
     sourceSets {
         main {
             assets.srcDirs = ['../../assets']
+            // org.libsdl.app.* exported from the CPM-fetched SDL3 tree.
+            java.srcDirs += [file("${sdl3Gen}/java")]
+            // SDL's base manifest is merged under the app's own (the app's
+            // manifest wins on conflict and still declares .AppActivity).
+            manifest.srcFile file("${sdl3Gen}/AndroidManifest.xml")
             if (!excludeNativeLibs) {
                 jniLibs.srcDirs = ['libs']
             }
@@ -135,7 +153,7 @@ android {
             // [info] return null/zero instead of throwing "Method not mocked" for android.jar APIs
             returnDefaultValues = true
 
-            // [doc] https://developer.android.com/reference/tools/gradle-api/8.1/com/android/build/api/dsl/UnitTestOptions#all(kotlin.Function1)
+            // [doc] https://developer.android.com/reference/tools/gradle-api/8.4/com/android/build/api/dsl/UnitTestOptions#all(kotlin.Function1)
             // [info] configures underlying Gradle Test tasks for all variants
             all {
                 testLogging {
@@ -156,7 +174,7 @@ android {
                     showExceptions = true
 
                     // [doc] https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.logging.TestLogging.html#org.gradle.api.tasks.testing.logging.TestLogging:showStackTraces
-                    // [info] print full stack traces for failures
+                    // [info] print full stack traces for failed tests
                     showStackTraces = true
 
                     // [doc] https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.logging.TestLogging.html#org.gradle.api.tasks.testing.logging.TestLogging:exceptionFormat
@@ -182,7 +200,7 @@ android {
         managedDevices {
             localDevices {
                 // [doc] https://developer.android.com/reference/tools/gradle-api/8.4/com/android/build/api/dsl/ManagedVirtualDevice
-                // [info] defines a virtual device managed entirely by Gradle (creation, boot, shutdown)
+                // [info] defines a virtual device managed entirely by Gradle (creation, boot, shutdown, delete)
                 pixel_6_aosp_atd_30 {
                     // [doc] https://developer.android.com/reference/tools/gradle-api/8.4/com/android/build/api/dsl/ManagedVirtualDevice#device()
                     // [info] hardware profile to emulate (Pixel 6)
@@ -204,6 +222,34 @@ android {
         }
     }
 }
+
+// --- SDL3 export task ordering ---------------------------------------------
+// build/generated/sdl3 (Java bindings, base AndroidManifest.xml, base
+// proguard rules) is written by the CMake configure step in
+// cmake/cpm/sdl3-config.cmake, which AGP runs as configureCMake<Config>[<abi>]
+// tasks. AGP does not order those before the tasks that consume the export,
+// so a clean checkout fails with "Input file does not exist"
+// (process*MainManifest) or "package org.libsdl.app does not exist"
+// (compile*JavaWithJavac).
+//
+// Wire consumer -> producer explicitly. preBuild cannot be the anchor:
+// configureCMake* already depends on pre*Build, so that would be a cycle.
+// The export is identical for every config/abi and the copy is idempotent,
+// so depending on every configure task is correct — the rest are cache hits.
+//
+// Name matching is deliberate: AGP's public API exposes no typed handles for
+// these tasks, and the variant -> CMake config mapping (release ->
+// RelWithDebInfo) is AGP-internal — deriving task names from variants would
+// be more fragile, not less. `==~` is a full-string match, so the patterns
+// are self-anchoring.
+final Pattern cmakeConfigureTask = ~/configureCMake\w+\[.+\]/
+final Pattern sdl3ExportConsumerTask =
+        ~/(process\w+Manifest|compile\w+JavaWithJavac|minify\w+With(R8|Proguard))/
+
+final TaskCollection<Task> sdl3Export =
+        tasks.matching { it.name ==~ cmakeConfigureTask }
+tasks.matching { it.name ==~ sdl3ExportConsumerTask }
+        .configureEach { dependsOn sdl3Export }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
