@@ -64,6 +64,9 @@ cpmaddpackage(
     OPTIONS
     # ---- build tooling ----
     "SDL_CCACHE ON"
+    # SDL is a third-party dependency built in-tree via CPM: never let its
+    # own warnings become errors in our build, and don't surface them.
+    "SDL_WERROR OFF"
     # ---- library type ----
     "SDL_STATIC ${sdl_static}"
     "SDL_SHARED ${sdl_shared}"
@@ -107,6 +110,28 @@ cpmaddpackage(
     "SDL_INSTALL OFF"
     "SDL_INSTALL_TESTS OFF"
     "SDL_DISABLE_INSTALL_DOCS ON")
+
+# -------------------------------------------------------------------
+# Treat SDL as a system library: silence the warnings it raises when
+# compiled with its own aggressive flag set (SDL_AddCommonCompilerFlags
+# adds -Wall -Wundef -Wfloat-conversion -Wdocumentation -Wshadow ...).
+# CPM's SYSTEM TRUE marks SDL's *interface* include dirs SYSTEM, which
+# keeps SDL headers from warning in *our* TUs — but it does not stop SDL
+# warning on its *own* sources. Marking the targets SYSTEM here drops
+# those self-warnings from our build output.
+# -------------------------------------------------------------------
+foreach(sdl3_target IN ITEMS SDL3-shared SDL3-static SDL_uclibc SDL3_Headers)
+    if(TARGET ${sdl3_target})
+        get_target_property(sdl3_inc ${sdl3_target} INTERFACE_INCLUDE_DIRECTORIES)
+        if(sdl3_inc)
+            set_target_properties(${sdl3_target}
+                                  PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                                             "${sdl3_inc}")
+        endif()
+    endif()
+endforeach()
+unset(sdl3_target)
+unset(sdl3_inc)
 
 # -------------------------------------------------------------------
 # Normalise to the standard imported target name expected by downstreams
