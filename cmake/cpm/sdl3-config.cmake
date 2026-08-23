@@ -21,10 +21,10 @@ set(sdl_opengles ON)   # Apple platforms use desktop GL instead of ES
 set(sdl_shared ON)     # Emscripten has no dynamic linking: static-only
 set(sdl_static OFF)
 
-if(ANDROID)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     set(sdl_sensor ON)
 endif()
-if(LINUX)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(sdl_wayland ON)
     set(sdl_dbus ON)
     set(sdl_ibus ON)
@@ -158,7 +158,7 @@ endif()
 # task-order coupling to the native build — a build-time target raced
 # AGP's compile*JavaWithJavac and broke CI (package org.libsdl.app does
 # not exist).
-if(ANDROID)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     # The Android app lives in the top-level project; CMAKE_SOURCE_DIR
     # names it directly — no git lookup, and it stays correct when this
     # project is itself consumed via add_subdirectory()/FetchContent.
