@@ -56,7 +56,7 @@ jobs:
                     - os: ubuntu-latest
                       preset: gcc-full
                       artifact-name: linux-gcc
-                    - os: windows-2022  # Pin to windows-2022 for VS 2022
+                    - os: windows-2022 # Pin to windows-2022 for VS 2022
                       preset: msvc-full
                       artifact-name: windows-msvc
 
@@ -234,9 +234,9 @@ jobs:
               with:
                   name: web-emscripten-bundle
                   path: |
-                      build/emscripten/**/web_app.html
-                      build/emscripten/**/web_app.js
-                      build/emscripten/**/web_app.wasm
+                      build/emscripten/**/05_webassembly.html
+                      build/emscripten/**/05_webassembly.js
+                      build/emscripten/**/05_webassembly.wasm
                   if-no-files-found: error
                   compression-level: 0
 
