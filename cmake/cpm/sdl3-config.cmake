@@ -100,10 +100,12 @@ cpmaddpackage(
     "SDL_INSTALL_TESTS OFF"
     "SDL_DISABLE_INSTALL_DOCS ON")
 
-# --- Android: ship SDL's Java bindings + base manifest/proguard -----------
+# --- Android: ship SDL's Java bindings + base proguard rules --------------
 # Configure-time copy from the fetched tree — a build-time target raced
 # AGP's compile*JavaWithJavac. file(COPY/COPY_FILE) without RESULT fail
 # fatally on missing input: no manual existence checks needed.
+# SDL's base AndroidManifest.xml is deliberately NOT exported:
+# manifest.srcFile replaces rather than merges — see app/build.gradle.
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     set(sdl3_gen
         "${CMAKE_SOURCE_DIR}/android-project/app/build/generated/sdl3")
@@ -113,11 +115,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
          FILES_MATCHING PATTERN "*.java")
 
     # ONLY_IF_DIFFERENT keeps the timestamp when unchanged: no pointless
-    # Gradle manifest merge on re-configure.
-    file(COPY_FILE
-         "${SDL3_SOURCE_DIR}/android-project/app/src/main/AndroidManifest.xml"
-         "${sdl3_gen}/AndroidManifest.xml"
-         ONLY_IF_DIFFERENT)
+    # R8 re-run on re-configure.
     file(COPY_FILE
          "${SDL3_SOURCE_DIR}/android-project/app/proguard-rules.pro"
          "${sdl3_gen}/proguard-rules.pro"
