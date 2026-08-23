@@ -1,49 +1,46 @@
-block(
-    PROPAGATE
-    sdl_sensor
-    sdl_wayland
-    sdl_dbus
-    sdl_ibus
-    sdl_libdecor
-    sdl_opengles
-    sdl_shared
-    sdl_static)
-# Only mobile builds need the sensor subsystem
-set(sdl_sensor OFF)
-if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    set(sdl_sensor ON)
-endif()
+# SDL3 package config — reached via find_package(sdl3 CONFIG ...), which
+# cmake/cpm.cmake routes here through CMAKE_PREFIX_PATH. Fetches SDL3 with
+# CPM and exposes SDL's own targets; nothing is re-named or re-exported:
+#   SDL3::SDL3          - shared, or static where shared is unavailable
+#   SDL3::SDL3-shared   - shared library (SDL_SHARED ON)
+#   SDL3::SDL3-static   - static library (SDL_STATIC ON)
+# All three aliases are created by SDL's own CMakeLists.
 
-# Wayland + desktop integration are Linux-only
-set(sdl_wayland OFF)
-set(sdl_dbus OFF)
+# A second find_package(sdl3) from another directory scope re-includes
+# this file; CPM dedups the fetch itself, everything below runs once.
+include_guard(GLOBAL)
+
+# --- platform-conditional subsystems --------------------------------------
+# Defaults first, per-platform overrides after; values feed OPTIONS below.
+set(sdl_sensor OFF)    # only mobile builds need the sensor subsystem
+set(sdl_wayland OFF)   # Linux desktop integration:
+set(sdl_dbus OFF)      #   Wayland, D-Bus, IBus, libdecor
 set(sdl_ibus OFF)
 set(sdl_libdecor OFF)
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+set(sdl_opengles ON)   # Apple platforms use desktop GL instead of ES
+set(sdl_shared ON)     # Emscripten has no dynamic linking: static-only
+set(sdl_static OFF)
+
+if(ANDROID)
+    set(sdl_sensor ON)
+endif()
+if(LINUX)
     set(sdl_wayland ON)
     set(sdl_dbus ON)
     set(sdl_ibus ON)
     set(sdl_libdecor ON)
 endif()
-
-# Disable OpenGL ES on Apple platforms (desktop GL is used instead)
-set(sdl_opengles ON)
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin|iOS")
     set(sdl_opengles OFF)
 endif()
-
-# Emscripten has no dynamic linking — build SDL3 static-only there
-set(sdl_shared ON)
-set(sdl_static OFF)
 if(EMSCRIPTEN)
     set(sdl_shared OFF)
     set(sdl_static ON)
 endif()
-endblock()
 
-# -------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # Fetch SDL3: windowing, events, OpenGL context creation only
-# -------------------------------------------------------------------
+# --------------------------------------------------------------------------
 cpmaddpackage(
     NAME
     SDL3
@@ -64,13 +61,12 @@ cpmaddpackage(
     OPTIONS
     # ---- build tooling ----
     "SDL_CCACHE ON"
-    # SDL is a third-party dependency built in-tree via CPM: never let its
-    # own warnings become errors in our build, and don't surface them.
+    # SDL is vetted third-party code built in-tree: never let its own
+    # warnings become errors in our build.
     "SDL_WERROR OFF"
-    # SDL's precompiled header (target_precompile_headers) breaks incremental
-    # Android Studio builds: the .pch is generated once per build tree and
-    # goes stale/missing on partial rebuilds, failing with "unable to read
-    # PCH file". Compile without it — negligible cost for a dependency.
+    # SDL's precompiled header breaks incremental Android Studio builds:
+    # the .pch is generated once per build tree and goes stale on partial
+    # rebuilds ("unable to read PCH file"). Negligible cost for a dep.
     "SDL_PCH OFF"
     # ---- library type ----
     "SDL_STATIC ${sdl_static}"
@@ -116,90 +112,62 @@ cpmaddpackage(
     "SDL_INSTALL_TESTS OFF"
     "SDL_DISABLE_INSTALL_DOCS ON")
 
-# -------------------------------------------------------------------
-# Silence warnings from SDL's own compilation. SDL arms its targets
-# with an aggressive flag set (SDL_AddCommonCompilerFlags: -Wall
-# -Wundef -Wfloat-conversion -Wdocumentation -Wshadow ...), and any
-# compiler newer than SDL's CI matrix finds something to say.
+# --------------------------------------------------------------------------
+# Silence warnings from SDL's own compilation. SDL arms its targets with
+# an aggressive flag set (SDL_AddCommonCompilerFlags: -Wall -Wundef
+# -Wfloat-conversion -Wdocumentation -Wshadow ...), and any compiler newer
+# than SDL's CI matrix finds something to say.
 #
-# SYSTEM include dirs are not the tool for this job: CPM's SYSTEM TRUE
-# (and the SYSTEM default on imported targets) only marks SDL's
+# No CPM-level switch does this: SYSTEM TRUE above only marks SDL's
 # *interface* includes as system for *consuming* translation units —
 # warnings raised while compiling SDL's own sources are unaffected.
-# Inhibit warnings on SDL's compile-bearing targets directly; SDL is a
-# vetted third-party dependency, so its self-warnings are not
-# actionable in this build.
+# Inhibit warnings on SDL's compile-bearing targets directly; SDL's
+# self-warnings are not actionable in this build.
 #
 # Guarded on SDL3_SOURCE_DIR: only a CPM-fetched SDL compiles anything.
 # A system-provided SDL3 (CPM_USE_LOCAL_PACKAGES) is imported and needs
-# nothing. Targets are enumerated from the fetched tree itself so SDL
-# adding/renaming targets in a future bump stays covered; INTERFACE and
-# UTILITY targets compile no sources and are skipped.
-# -------------------------------------------------------------------
+# nothing. Targets are enumerated from the fetched tree itself, so SDL
+# adding or renaming targets in a future bump stays covered; INTERFACE
+# and UTILITY targets compile no sources and are skipped.
+# --------------------------------------------------------------------------
 if(SDL3_SOURCE_DIR)
-    get_property(sdl3_targets
-                 DIRECTORY "${SDL3_SOURCE_DIR}"
+    get_property(sdl3_targets DIRECTORY "${SDL3_SOURCE_DIR}"
                  PROPERTY BUILDSYSTEM_TARGETS)
     foreach(sdl3_target IN LISTS sdl3_targets)
         get_target_property(sdl3_target_type ${sdl3_target} TYPE)
-        if(sdl3_target_type MATCHES "INTERFACE_LIBRARY|UTILITY")
-            continue()
+        if(NOT sdl3_target_type MATCHES "INTERFACE_LIBRARY|UTILITY")
+            target_compile_options(
+                ${sdl3_target}
+                PRIVATE "$<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-w>"
+                        "$<$<COMPILE_LANG_AND_ID:C,MSVC>:/w>")
         endif()
-        target_compile_options(
-            ${sdl3_target}
-            PRIVATE "$<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-w>"
-                    "$<$<COMPILE_LANG_AND_ID:C,MSVC>:/w>")
     endforeach()
-    unset(sdl3_target)
-    unset(sdl3_target_type)
-    unset(sdl3_targets)
 endif()
 
-# -------------------------------------------------------------------
-# Normalise to the standard imported target name expected by downstreams
-# -------------------------------------------------------------------
-if(NOT TARGET SDL3::SDL3)
-    if(TARGET SDL3-shared)
-        add_library(SDL3::SDL3 ALIAS SDL3-shared)
-    elseif(TARGET SDL3-static)
-        add_library(SDL3::SDL3 ALIAS SDL3-static)
-    else()
-        message(
-            FATAL_ERROR "SDL3 was fetched but no linkable target exists. "
-                        "Expected one of: SDL3::SDL3, SDL3-shared, SDL3-static."
-        )
-    endif()
-endif()
-
-# -------------------------------------------------------------------
-# Android: export SDL's Java bindings + manifest/proguard for the Gradle build
-# -------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# Android: export SDL's Java bindings + manifest/proguard for the Gradle
+# build
+# --------------------------------------------------------------------------
 # android-project compiles org.libsdl.app.* straight from the fetched SDL
 # tree, so bumping VERSION/GIT_TAG above updates the C++ and Java sides
 # atomically — no vendored Java copy to keep in sync by hand.
 #
 # Configure-time copy, not a build target: the Java sources are dependency
-# sources (part of the fetched tree), not build artifacts, so they exist as
-# soon as CPM fetches SDL. Gradle's javac then sees them with no task-order
-# coupling to the native build — a build-time target raced AGP's
-# compile*JavaWithJavac and broke CI (package org.libsdl.app does not exist).
-if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    # CPM clones SDL with git, so git is a hard requirement of this build.
-    # Anchor the destination at the git work-tree root (not a relative ../..)
-    # so the path stays correct no matter where this package config is moved.
-    find_package(Git REQUIRED)
-    execute_process(
-        COMMAND "${GIT_EXECUTABLE}" rev-parse --show-toplevel
-        WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
-        OUTPUT_VARIABLE sdl3_repo_root
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        COMMAND_ECHO STDOUT
-        COMMAND_ERROR_IS_FATAL ANY)
-    cmake_path(SET sdl3_repo_root NORMALIZE "${sdl3_repo_root}")
-
-    # CPM exposes the fetched tree as <NAME>_SOURCE_DIR; NAME is SDL3.
+# sources (part of the fetched tree), not build artifacts, so they exist
+# as soon as CPM fetches SDL. Gradle's javac then sees them with no
+# task-order coupling to the native build — a build-time target raced
+# AGP's compile*JavaWithJavac and broke CI (package org.libsdl.app does
+# not exist).
+if(ANDROID)
+    # The Android app lives in the top-level project; CMAKE_SOURCE_DIR
+    # names it directly — no git lookup, and it stays correct when this
+    # project is itself consumed via add_subdirectory()/FetchContent.
+    set(sdl3_android_gen
+        "${CMAKE_SOURCE_DIR}/android-project/app/build/generated/sdl3")
     set(sdl3_java_src
         "${SDL3_SOURCE_DIR}/android-project/app/src/main/java/org")
+    set(sdl3_java_dst "${sdl3_android_gen}/java/org")
+
     if(NOT IS_DIRECTORY "${sdl3_java_src}")
         message(
             FATAL_ERROR
@@ -208,43 +176,34 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
                 "CPM may not have fetched SDL3 before this block ran.")
     endif()
 
-    set(sdl3_android_gen
-        "${sdl3_repo_root}/android-project/app/build/generated/sdl3")
-    set(sdl3_java_dst "${sdl3_android_gen}/java/org")
-
     # file(COPY) is idempotent: re-copies only when contents differ, so a
     # re-configure after an SDL version bump refreshes the bindings.
-    file(
-        COPY "${sdl3_java_src}/"
-        DESTINATION "${sdl3_java_dst}"
-        FILES_MATCHING
-        PATTERN "*.java")
+    file(COPY "${sdl3_java_src}/" DESTINATION "${sdl3_java_dst}"
+         FILES_MATCHING PATTERN "*.java")
 
-    # Verify the copy actually produced sources — never let javac discover an
-    # empty srcDir as a cryptic "package does not exist" downstream.
-    file(GLOB sdl3_java_exported CONFIGURE_DEPENDS
-         "${sdl3_java_dst}/libsdl/app/*.java")
-    list(LENGTH sdl3_java_exported sdl3_java_count)
-    if(sdl3_java_count EQUAL 0)
+    # Never let javac discover an empty srcDir as a cryptic "package
+    # org.libsdl.app does not exist" downstream — fail loudly here.
+    file(GLOB sdl3_java_exported "${sdl3_java_dst}/libsdl/app/*.java")
+    if(NOT sdl3_java_exported)
         message(
             FATAL_ERROR
                 "SDL3 Java export produced no files in '${sdl3_java_dst}'. "
                 "Source dir was '${sdl3_java_src}'.")
     endif()
+    list(LENGTH sdl3_java_exported sdl3_java_count)
     message(
         STATUS
             "Exported ${sdl3_java_count} SDL3 Java bindings -> ${sdl3_java_dst}"
     )
 
-    # ---- SDL's base manifest + proguard rules ---------------------------
-    # Ship SDL's own AndroidManifest.xml / proguard-rules.pro alongside the
-    # app as the *base*; the app's files are merged over / appended to them by
-    # AGP, so an SDL bump never leaves a missing permission or JNI keep rule.
-    # The app still owns its Activity/manifest entries and any extra keeps —
-    # these are SDL's defaults, replaceable by editing the app's own files.
-    # Both are REQUIRED inputs to the Gradle build (manifest.srcFile and
-    # proguardFiles point at them), so a missing copy must fail loudly here
-    # rather than as AGP's "Input file does not exist" downstream.
+    # ---- SDL's base manifest + proguard rules --------------------------
+    # Ship SDL's own AndroidManifest.xml / proguard-rules.pro alongside
+    # the app as the *base*; the app's files are merged over / appended
+    # to them by AGP, so an SDL bump never leaves a missing permission or
+    # JNI keep rule. Both are REQUIRED inputs to the Gradle build
+    # (manifest.srcFile and proguardFiles point at them), so a missing
+    # copy must fail loudly here rather than as AGP's "Input file does
+    # not exist" downstream.
     set(sdl3_manifest_src
         "${SDL3_SOURCE_DIR}/android-project/app/src/main/AndroidManifest.xml")
     set(sdl3_proguard_src
@@ -260,5 +219,4 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     endforeach()
     file(COPY "${sdl3_manifest_src}" "${sdl3_proguard_src}"
          DESTINATION "${sdl3_android_gen}")
-    unset(sdl3_base_file)
 endif()
