@@ -23,6 +23,7 @@ list(
 
 include(ct_cpm) # dependency bootstrap: CPM + package configs
 include(ct_warnings) # warnings interface target
+include(ct_targets) # ct_add_executable(): exe / Android SHARED fork
 
 if(PROJECT_IS_TOP_LEVEL)
     include(ct_clang_format)

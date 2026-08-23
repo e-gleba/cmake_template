@@ -2,11 +2,7 @@
 # The Android JNI bridge is pulled in by a generator expression, so it
 # compiles only for Android instead of being marked HEADER_FILE_ONLY
 # everywhere else.
-if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    add_library(tests SHARED)
-else()
-    add_executable(tests)
-endif()
+ct_add_executable(tests)
 
 target_sources(
     tests PRIVATE main.cpp doctest_example.cpp
@@ -34,7 +30,7 @@ target_compile_definitions(
 if(NOT CMAKE_CROSSCOMPILING)
     include(doctest)
     doctest_discover_tests(tests)
-elseif(EMSCRIPTEN)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     # Discovery needs a host-runnable binary (see above), but the suite
     # runs fine under Node.js — the Emscripten toolchain sets
     # CMAKE_CROSSCOMPILING_EMULATOR to node when found, and ctest

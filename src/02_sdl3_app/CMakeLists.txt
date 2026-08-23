@@ -2,11 +2,7 @@ if(NOT TARGET SDL3::SDL3-shared)
     return()
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    add_library(02_sdl3_app SHARED)
-else()
-    add_executable(02_sdl3_app)
-endif()
+ct_add_executable(02_sdl3_app)
 
 target_sources(02_sdl3_app PRIVATE main.cpp)
 
