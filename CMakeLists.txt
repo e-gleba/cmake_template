@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 4.4)
 project(
     cxx_project
     VERSION 1.0.0
-    DESCRIPTION "My awesome C/C++ project!"
-    HOMEPAGE_URL "https://github.com/e-gleba/cxx-skeleton"
+    DESCRIPTION "Production-ready cross-platform C++ project template"
+    HOMEPAGE_URL "https://github.com/e-gleba/cmake_template"
     LANGUAGES C CXX)
 
 # No C++20 modules in use — do not pay for the module dependency scan.

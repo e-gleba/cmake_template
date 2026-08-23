@@ -2,6 +2,12 @@
 # Sets CPack metadata and platform-specific packaging variables.
 # Loaded from the root CMakeLists.txt via include(package_description).
 #
+# Everything derivable comes from the root project() call
+# (PROJECT_NAME, PROJECT_VERSION, PROJECT_DESCRIPTION,
+# PROJECT_HOMEPAGE_URL) — edit project() once and every package,
+# desktop entry, and generated file follows. Only the fields project()
+# has no slot for (vendor, contact, license) are kept here.
+#
 # CMAKE_CURRENT_LIST_DIR = directory containing THIS file
 #                          (cmake/description/)
 # PROJECT_SOURCE_DIR     = root of the calling project
@@ -11,9 +17,9 @@
 # Ref: Professional CMake §8.3 "Project-relative Variables"
 # ───────────────────────────────────────────────────────────────────
 
-# ─── Project metadata ─────────────────────────────────────────────
+# ─── Project metadata (no project() slot for these) ───────────────
 set(PROJECT_VENDOR "e-gleba")
-set(PROJECT_CONTACT "glebajk@gmail.com")
+set(PROJECT_CONTACT "i@egleba.ru")
 set(PROJECT_LICENSE "MIT") # SPDX identifier
 set(PROJECT_GROUP "System")
 
@@ -34,20 +40,25 @@ set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_LICENSE_FILE}")
 set(CPACK_RESOURCE_FILE_README "${PROJECT_README_FILE}")
 set(CPACK_VERBATIM_VARIABLES YES) # always set, prevents escaping bugs
 
-# Long description: use dedicated file if present, fall back
-# to the project readme.  block() isolates the temp variable.
-block(SCOPE_FOR VARIABLES) # no manual unset() needed
-set(pkg_desc_file "${CMAKE_CURRENT_LIST_DIR}/description.txt")
-if(EXISTS "${pkg_desc_file}")
-    set(CPACK_PACKAGE_DESCRIPTION_FILE
-        "${pkg_desc_file}"
-        PARENT_SCOPE)
-else()
-    set(CPACK_PACKAGE_DESCRIPTION_FILE
-        "${PROJECT_README_FILE}"
-        PARENT_SCOPE)
-endif()
-endblock()
+# ─── Long description ──────────────────────────────────────────────
+# Generated from the root project() metadata — no hand-maintained text
+# file to drift out of sync with the project. file(GENERATE) writes
+# into the build tree and only when the content changes, so the source
+# tree stays clean and re-configures stay cheap.
+set(CPACK_PACKAGE_DESCRIPTION_FILE
+    "${PROJECT_BINARY_DIR}/package_description.txt")
+file(
+    GENERATE
+    OUTPUT "${CPACK_PACKAGE_DESCRIPTION_FILE}"
+    CONTENT
+        "${PROJECT_DESCRIPTION}
+
+Version:  ${PROJECT_VERSION}
+Homepage: ${PROJECT_HOMEPAGE_URL}
+Vendor:   ${PROJECT_VENDOR}
+Contact:  ${PROJECT_CONTACT}
+License:  ${PROJECT_LICENSE}
+")
 
 # ─── CPack icon ────────────────────────────────────────────────────
 if(EXISTS "${PROJECT_ICON_FILE}")
