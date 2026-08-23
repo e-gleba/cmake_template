@@ -11,9 +11,9 @@ if (isLibrary) {
 }
 
 // SDL3's CPM export (cmake/cpm/sdl3-config.cmake) drops the fetched tree's
-// Java bindings, base AndroidManifest.xml, and base proguard-rules.pro here at
-// CMake configure time. Bumping the SDL version there refreshes all three
-// atomically — nothing SDL-specific is vendored in this module.
+// Java bindings and base proguard-rules.pro here at CMake configure time.
+// Bumping the SDL version there refreshes both atomically — nothing
+// SDL-specific is vendored in this module.
 final File sdl3Gen = file('build/generated/sdl3')
 
 android {
@@ -102,9 +102,14 @@ android {
             assets.srcDirs = ['../../assets']
             // org.libsdl.app.* exported from the CPM-fetched SDL3 tree.
             java.srcDirs += [file("${sdl3Gen}/java")]
-            // SDL's base manifest is merged under the app's own (the app's
-            // manifest wins on conflict and still declares .AppActivity).
-            manifest.srcFile file("${sdl3Gen}/AndroidManifest.xml")
+            // The app's own manifest is the main manifest. SDL's base
+            // AndroidManifest.xml is NOT used: manifest.srcFile *replaces*
+            // (not merges) the main manifest, and SDL's base declares
+            // android:name="SDLActivity" — which resolves against this
+            // namespace to the nonexistent com.egleba.app.SDLActivity. The
+            // app's manifest declares the real launcher .AppActivity and
+            // already carries every permission/feature the app needs.
+            manifest.srcFile file('src/main/AndroidManifest.xml')
             if (!excludeNativeLibs) {
                 jniLibs.srcDirs = ['libs']
             }
@@ -224,13 +229,12 @@ android {
 }
 
 // --- SDL3 export task ordering ---------------------------------------------
-// build/generated/sdl3 (Java bindings, base AndroidManifest.xml, base
-// proguard rules) is written by the CMake configure step in
-// cmake/cpm/sdl3-config.cmake, which AGP runs as configureCMake<Config>[<abi>]
-// tasks. AGP does not order those before the tasks that consume the export,
-// so a clean checkout fails with "Input file does not exist"
-// (process*MainManifest) or "package org.libsdl.app does not exist"
-// (compile*JavaWithJavac).
+// build/generated/sdl3 (Java bindings, base proguard rules) is written by the
+// CMake configure step in cmake/cpm/sdl3-config.cmake, which AGP runs as
+// configureCMake<Config>[<abi>] tasks. AGP does not order those before the
+// tasks that consume the export, so a clean checkout fails with
+// "package org.libsdl.app does not exist" (compile*JavaWithJavac) or an R8
+// "input does not exist" on the proguard rules.
 //
 // Wire consumer -> producer explicitly. preBuild cannot be the anchor:
 // configureCMake* already depends on pre*Build, so that would be a cycle.
@@ -244,7 +248,7 @@ android {
 // are self-anchoring.
 final Pattern cmakeConfigureTask = ~/configureCMake\w+\[.+\]/
 final Pattern sdl3ExportConsumerTask =
-        ~/(process\w+Manifest|compile\w+JavaWithJavac|minify\w+With(R8|Proguard))/
+        ~/(compile\w+JavaWithJavac|minify\w+With(R8|Proguard))/
 
 final TaskCollection<Task> sdl3Export =
         tasks.matching { it.name ==~ cmakeConfigureTask }
