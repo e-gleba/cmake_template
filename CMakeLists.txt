@@ -49,10 +49,6 @@ if(PROJECT_IS_TOP_LEVEL)
 
     include(ct_cpack)
 
-    # Append processor to system name so packages for different
-    # architectures don't collide ("Windows-x86_64" vs "Windows-aarch64").
-    string(APPEND CPACK_SYSTEM_NAME "-${CMAKE_SYSTEM_PROCESSOR}")
-
     # include(CPack) reads all CPACK_* variables at include-time and
     # ignores later changes — keep it last.
     # Ref: Professional CMake §36.1 "Packaging Basics"

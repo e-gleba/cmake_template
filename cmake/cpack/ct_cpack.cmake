@@ -121,3 +121,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             COMPONENT runtime)
     endif()
 endif()
+
+# Append processor to system name so packages for different
+# architectures don't collide ("Windows-x86_64" vs "Windows-aarch64").
+string(APPEND CPACK_SYSTEM_NAME "-${CMAKE_SYSTEM_PROCESSOR}")
