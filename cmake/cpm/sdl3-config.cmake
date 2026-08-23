@@ -117,26 +117,43 @@ cpmaddpackage(
     "SDL_DISABLE_INSTALL_DOCS ON")
 
 # -------------------------------------------------------------------
-# Treat SDL as a system library: silence the warnings it raises when
-# compiled with its own aggressive flag set (SDL_AddCommonCompilerFlags
-# adds -Wall -Wundef -Wfloat-conversion -Wdocumentation -Wshadow ...).
-# CPM's SYSTEM TRUE marks SDL's *interface* include dirs SYSTEM, which
-# keeps SDL headers from warning in *our* TUs — but it does not stop SDL
-# warning on its *own* sources. Marking the targets SYSTEM here drops
-# those self-warnings from our build output.
+# Silence warnings from SDL's own compilation. SDL arms its targets
+# with an aggressive flag set (SDL_AddCommonCompilerFlags: -Wall
+# -Wundef -Wfloat-conversion -Wdocumentation -Wshadow ...), and any
+# compiler newer than SDL's CI matrix finds something to say.
+#
+# SYSTEM include dirs are not the tool for this job: CPM's SYSTEM TRUE
+# (and the SYSTEM default on imported targets) only marks SDL's
+# *interface* includes as system for *consuming* translation units —
+# warnings raised while compiling SDL's own sources are unaffected.
+# Inhibit warnings on SDL's compile-bearing targets directly; SDL is a
+# vetted third-party dependency, so its self-warnings are not
+# actionable in this build.
+#
+# Guarded on SDL3_SOURCE_DIR: only a CPM-fetched SDL compiles anything.
+# A system-provided SDL3 (CPM_USE_LOCAL_PACKAGES) is imported and needs
+# nothing. Targets are enumerated from the fetched tree itself so SDL
+# adding/renaming targets in a future bump stays covered; INTERFACE and
+# UTILITY targets compile no sources and are skipped.
 # -------------------------------------------------------------------
-foreach(sdl3_target IN ITEMS SDL3-shared SDL3-static SDL_uclibc SDL3_Headers)
-    if(TARGET ${sdl3_target})
-        get_target_property(sdl3_inc ${sdl3_target} INTERFACE_INCLUDE_DIRECTORIES)
-        if(sdl3_inc)
-            set_target_properties(${sdl3_target}
-                                  PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                                             "${sdl3_inc}")
+if(SDL3_SOURCE_DIR)
+    get_property(sdl3_targets
+                 DIRECTORY "${SDL3_SOURCE_DIR}"
+                 PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(sdl3_target IN LISTS sdl3_targets)
+        get_target_property(sdl3_target_type ${sdl3_target} TYPE)
+        if(sdl3_target_type MATCHES "INTERFACE_LIBRARY|UTILITY")
+            continue()
         endif()
-    endif()
-endforeach()
-unset(sdl3_target)
-unset(sdl3_inc)
+        target_compile_options(
+            ${sdl3_target}
+            PRIVATE "$<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-w>"
+                    "$<$<COMPILE_LANG_AND_ID:C,MSVC>:/w>")
+    endforeach()
+    unset(sdl3_target)
+    unset(sdl3_target_type)
+    unset(sdl3_targets)
+endif()
 
 # -------------------------------------------------------------------
 # Normalise to the standard imported target name expected by downstreams
