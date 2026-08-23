@@ -255,7 +255,8 @@ namespace {
 
         const int exit_code = context.run();
 
-        const std::string output = report.str();
+        // non-const on purpose: the return below must move, not copy
+        std::string output = report.str();
         if (!output.empty()) {
             std::cout << output;
         }

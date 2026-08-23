@@ -33,14 +33,11 @@ import java.util.Objects;
 public final class DoctestRunner extends ParentRunner<DoctestRunner.NativeTestCase> {
 
     /// A discovered native case: the JUnit-facing description plus the exact
-    /// doctest name needed to run it.
-    static final class NativeTestCase {
-        final Description description;
-        final String nativeName;
-
-        NativeTestCase(final Description description, final String nativeName) {
-            this.description = description;
-            this.nativeName = nativeName;
+    /// doctest name needed to run it. Immutable by construction (record).
+    record NativeTestCase(Description description, String nativeName) {
+        NativeTestCase {
+            Objects.requireNonNull(description, "description");
+            Objects.requireNonNull(nativeName, "nativeName");
         }
     }
 
@@ -79,7 +76,7 @@ public final class DoctestRunner extends ParentRunner<DoctestRunner.NativeTestCa
 
     @Override
     protected Description describeChild(final NativeTestCase child) {
-        return child.description;
+        return child.description();
     }
 
     @Override
@@ -87,13 +84,13 @@ public final class DoctestRunner extends ParentRunner<DoctestRunner.NativeTestCa
         runLeaf(new Statement() {
             @Override
             public void evaluate() {
-                final String report = NativeDoctestTests.runTest(child.nativeName);
+                final String report = NativeDoctestTests.runTest(child.nativeName());
                 if (report != null) {
                     throw new AssertionError(
-                            "Native doctest case failed: " + child.nativeName + '\n' + report);
+                            "Native doctest case failed: " + child.nativeName() + '\n' + report);
                 }
             }
-        }, child.description, notifier);
+        }, child.description(), notifier);
     }
 
     /// Makes a doctest case name safe for the line-based instrumentation
