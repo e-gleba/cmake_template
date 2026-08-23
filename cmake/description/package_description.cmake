@@ -42,13 +42,16 @@ set(CPACK_VERBATIM_VARIABLES YES) # always set, prevents escaping bugs
 
 # ─── Long description ──────────────────────────────────────────────
 # Generated from the root project() metadata — no hand-maintained text
-# file to drift out of sync with the project. file(GENERATE) writes
-# into the build tree and only when the content changes, so the source
-# tree stays clean and re-configures stay cheap.
+# file to drift out of sync with the project. Must exist at configure
+# time: include(CPack) validates CPACK_PACKAGE_DESCRIPTION_FILE when it
+# is included, so a generate-time file(GENERATE) is too late and fails
+# with "CPack package description file ... could not be found".
+# file(CONFIGURE) writes immediately and, like configure_file(), only
+# touches the file when the content changes — re-configures stay cheap.
 set(CPACK_PACKAGE_DESCRIPTION_FILE
     "${PROJECT_BINARY_DIR}/package_description.txt")
 file(
-    GENERATE
+    CONFIGURE
     OUTPUT "${CPACK_PACKAGE_DESCRIPTION_FILE}"
     CONTENT
         "${PROJECT_DESCRIPTION}
