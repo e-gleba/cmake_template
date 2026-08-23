@@ -34,7 +34,7 @@ target_compile_definitions(
 if(NOT CMAKE_CROSSCOMPILING)
     include(doctest)
     doctest_discover_tests(tests)
-elseif(EMSCRIPTEN)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     # Discovery needs a host-runnable binary (see above), but the suite
     # runs fine under Node.js — the Emscripten toolchain sets
     # CMAKE_CROSSCOMPILING_EMULATOR to node when found, and ctest

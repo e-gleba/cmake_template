@@ -1,4 +1,4 @@
-if(NOT EMSCRIPTEN)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     return()
 endif()
 # WebAssembly deploy target - SDL3 + OpenGL (WebGL2) + Dear ImGui demo.

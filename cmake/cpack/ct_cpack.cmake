@@ -1,6 +1,6 @@
 # ─── Package Description ───────────────────────────────────────────
 # Sets CPack metadata and platform-specific packaging variables.
-# Loaded from the root CMakeLists.txt via include(package_description).
+# Loaded from the root CMakeLists.txt via include(ct_cpack).
 #
 # Everything derivable comes from the root project() call
 # (PROJECT_NAME, PROJECT_VERSION, PROJECT_DESCRIPTION,
@@ -9,7 +9,7 @@
 # has no slot for (vendor, contact, license) are kept here.
 #
 # CMAKE_CURRENT_LIST_DIR = directory containing THIS file
-#                          (cmake/description/)
+#                          (cmake/cpack/)
 # PROJECT_SOURCE_DIR     = root of the calling project
 #
 # Never use CMAKE_SOURCE_DIR — it breaks when this project is
@@ -90,7 +90,8 @@ set(CPACK_NSIS_MODIFY_PATH ON)
 # Platform-specific install rules (Linux freedesktop integration)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    include(GNUInstallDirs)
+    # CMAKE_INSTALL_* come from GNUInstallDirs, already included by the
+    # root CMakeLists.txt before this module runs.
 
     # ── .desktop file ──────────────────────────────────────
     block(SCOPE_FOR VARIABLES)
@@ -122,7 +123,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 endif()
 
-# Append processor to system name so packages for different
-# architectures don't collide ("Windows-x86_64" vs "Windows-aarch64").
-# todo: package name like: <os>_<compiler>_<arch>
-string(APPEND CPACK_SYSTEM_NAME "-${CMAKE_SYSTEM_PROCESSOR}")
+# ─── Package file naming: <os>_<compiler>_<arch> ───────────────────
+# CPACK_SYSTEM_NAME feeds CPack's default file name
+# (<name>-<version>-<system>). The compiler tag keeps native packages
+# from different toolchains apart (Linux_GNU vs Linux_Clang produced
+# identical names before); the arch tag keeps cross builds apart
+# (Windows_x86_64 vs Windows_arm64). CMake's own spellings are used
+# as-is — no case folding, no renaming (GNU stays GNU).
+set(CPACK_SYSTEM_NAME
+    "${CMAKE_SYSTEM_NAME}_${CMAKE_CXX_COMPILER_ID}_${CMAKE_SYSTEM_PROCESSOR}")
