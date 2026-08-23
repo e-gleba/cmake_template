@@ -100,25 +100,6 @@ cpmaddpackage(
     "SDL_INSTALL_TESTS OFF"
     "SDL_DISABLE_INSTALL_DOCS ON")
 
-# --- silence SDL's own compile --------------------------------------------
-# SDL arms its targets aggressively (SDL_AddCommonCompilerFlags); SYSTEM
-# TRUE above covers only consumers' view of the headers. Inhibit per
-# target. Enumerated from the fetched tree: future renames stay covered;
-# INTERFACE/UTILITY targets compile nothing. No-op for a system SDL3.
-if(SDL3_SOURCE_DIR)
-    get_property(sdl3_targets DIRECTORY "${SDL3_SOURCE_DIR}"
-                 PROPERTY BUILDSYSTEM_TARGETS)
-    foreach(sdl3_target IN LISTS sdl3_targets)
-        get_target_property(sdl3_target_type ${sdl3_target} TYPE)
-        if(NOT sdl3_target_type MATCHES "INTERFACE_LIBRARY|UTILITY")
-            target_compile_options(
-                ${sdl3_target}
-                PRIVATE "$<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-w>"
-                        "$<$<COMPILE_LANG_AND_ID:C,MSVC>:/w>")
-        endif()
-    endforeach()
-endif()
-
 # --- Android: ship SDL's Java bindings + base manifest/proguard -----------
 # Configure-time copy from the fetched tree — a build-time target raced
 # AGP's compile*JavaWithJavac. file(COPY/COPY_FILE) without RESULT fail
