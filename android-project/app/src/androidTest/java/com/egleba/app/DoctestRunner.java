@@ -34,8 +34,12 @@ public final class DoctestRunner extends ParentRunner<DoctestRunner.NativeTestCa
 
     /// A discovered native case: the JUnit-facing description plus the exact
     /// doctest name needed to run it. Immutable by construction (record).
-    record NativeTestCase(Description description, String nativeName) {
-        NativeTestCase {
+    ///
+    /// Public on purpose: the record is the type parameter of ParentRunner
+    /// and appears in the protected overrides below, so a package-private
+    /// type would be exposed outside its defined visibility scope.
+    public record NativeTestCase(Description description, String nativeName) {
+        public NativeTestCase {
             Objects.requireNonNull(description, "description");
             Objects.requireNonNull(nativeName, "nativeName");
         }
