@@ -16,9 +16,11 @@ WORKDIR /app
 
 # ALT uses apt-rpm, names pkg-config as pkgconf, and does not implement
 # Debian's --no-install-recommends option. Versions follow the p11 platform.
+# No cache mount: apt-rpm requires archive subdirectories that an empty BuildKit
+# cache masks. The package manager cache is removed in the same layer instead.
 # hadolint ignore=DL3008,DL3015
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    apt-get update \
+RUN mkdir -p /var/cache/apt/archives/partial /var/lib/apt/lists/partial \
+    && apt-get update \
     && apt-get install -y \
         gcc-c++ \
         clang \

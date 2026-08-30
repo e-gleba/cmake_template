@@ -13,6 +13,9 @@ LABEL org.opencontainers.image.title="cmake_template Steam Runtime toolchain" \
       org.opencontainers.image.source="${SOURCE}" \
       org.opencontainers.image.licenses="MIT"
 
+# Valve's pinned SDK defaults to a named unprivileged user. Root is required
+# only while installing packages; restore numeric UID before final output.
+# hadolint ignore=DL3066
 USER root
 WORKDIR /app
 
@@ -30,8 +33,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         graphviz \
         pkg-config
 
-# Restore the SDK's unprivileged account. Name and numeric ID are defined by
-# Valve's pinned SDK image.
 USER 1000
 
 ENTRYPOINT ["cmake", "--workflow", "--preset=gcc-full"]
