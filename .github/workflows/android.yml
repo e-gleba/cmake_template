@@ -26,6 +26,7 @@ env:
     -Dorg.gradle.daemon=false
     -Dorg.gradle.parallel=true
     -Dorg.gradle.configureondemand=true
+  NDK_VERSION: 30.0.14904198
 
 jobs:
   android_build:
@@ -46,6 +47,8 @@ jobs:
           distribution: temurin
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Install Android NDK
+        run: yes | sdkmanager --licenses >/dev/null && sdkmanager "ndk;${NDK_VERSION}"
       - name: Cache CPM sources
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
@@ -54,7 +57,7 @@ jobs:
           restore-keys: cpm-android-
       - name: Build release APK
         working-directory: ${{ env.ANDROID_PROJECT_DIR }}
-        run: gradle --stacktrace :app:assembleRelease
+        run: ./gradlew --stacktrace :app:assembleRelease
       - name: Upload release APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -81,6 +84,8 @@ jobs:
           distribution: temurin
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Install Android NDK
+        run: yes | sdkmanager --licenses >/dev/null && sdkmanager "ndk;${NDK_VERSION}"
       - name: Cache CPM sources
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
@@ -99,7 +104,7 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
-          script: cd ${{ env.ANDROID_PROJECT_DIR }} && gradle --stacktrace :app:connectedDebugAndroidTest --info
+          script: cd ${{ env.ANDROID_PROJECT_DIR }} && ./gradlew --stacktrace :app:connectedDebugAndroidTest --info
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
