@@ -1,24 +1,9 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-
-  // config:best-practices = config:recommended + docker:pinDigests +
-  // helpers:pinGitHubActionDigests + :configMigration + :pinDevDependencies +
-  // abandonments:recommended + security:minimumReleaseAgeNpm +
-  // :maintainLockFilesWeekly
   extends: ["config:best-practices"],
 
-  // ─── General ──────────────────────────────────────────────────────────────
   timezone: "UTC",
   schedule: ["before 8am on monday"],
-
-  // No hourly PR cap: the self-hosted runner executes once per week, so any
-  // hourly limit trickles PR creation across weekly runs. 0 = unlimited per
-  // run; prConcurrentLimit still caps simultaneously open PRs.
-  // NOTE: if renovate/* branches appear but NO pull requests ever do, the
-  // cause is token permissions, not this limit — see the token comment in
-  // .github/workflows/renovate.yml. Seen so far: 403 on PR create, and 403
-  // on the renovate/stability commit status (minimumReleaseAge below) which
-  // aborts the run pre-PR with "Repository has changed during renovation".
   prHourlyLimit: 0,
   prConcurrentLimit: 10,
 
@@ -27,67 +12,58 @@
   commitMessageAction: "update",
   commitMessageTopic: "{{depName}}",
   commitMessageExtra: "to {{newValue}}",
-
-  // Never ship zero-day releases: wait 3 days so yanked/broken upstream
-  // releases are filtered out before a PR is even created.
   minimumReleaseAge: "3 days",
 
-  // ─── Dependency Dashboard ─────────────────────────────────────────────────
-  // Persistent tracking issue listing pending/open/rate-limited updates and
-  // run errors. Tick a checkbox there to force-create any PR on demand —
-  // the Dependabot-like workflow, no CLI required.
   dependencyDashboard: true,
   dependencyDashboardTitle: "Renovate dependency dashboard",
-
-  // ─── Vulnerability alerts ─────────────────────────────────────────────────
-  // OSV database coverage on top of GitHub advisories.
+  dependencyDashboardAutoclose: true,
+  configMigration: true,
   osvVulnerabilityAlerts: true,
   vulnerabilityAlerts: {
     enabled: true,
     schedule: ["at any time"],
     labels: ["dependencies", "security"],
-    // Security fixes bypass the 3-day release-age gate.
     minimumReleaseAge: null,
   },
 
-  // Dependabot owns github-actions + docker updates (see .github/dependabot.yml) —
-  // disable here so the two bots never open duplicate PRs.
-  // Gradle/AGP updates stay enabled — including majors.
-  "github-actions": {
-    enabled: false,
-  },
-  dockerfile: {
-    enabled: false,
-  },
+  // Dependabot owns GitHub Actions and Docker updates.
+  "github-actions": { enabled: false },
+  dockerfile: { enabled: false },
 
   packageRules: [
     {
-      description: "Auto-merge patch and pin updates after CI passes",
-      matchUpdateTypes: ["patch", "pin"],
+      description: "Auto-merge non-major updates after CI passes",
+      matchUpdateTypes: ["digest", "patch", "pin", "pinDigest"],
       automerge: true,
       automergeStrategy: "squash",
       platformAutomerge: true,
     },
     {
-      description:
-        "Group CPM minor updates into one weekly PR (patches stay separate and auto-merge, majors stay isolated)",
+      description: "Group Gradle and Android plugin non-major updates",
+      matchManagers: ["gradle", "gradle-wrapper"],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "Gradle dependencies",
+      groupSlug: "gradle",
+    },
+    {
+      description: "Group CPM minor updates",
       matchFileNames: ["cmake/cpm/**", "cmake/cpm-config.cmake"],
       matchUpdateTypes: ["minor"],
-      groupName: "CPM dependencies (minor)",
+      groupName: "CPM dependencies",
       groupSlug: "cpm-minor",
+    },
+    {
+      description: "Require dashboard approval for major updates",
+      matchUpdateTypes: ["major"],
+      dependencyDashboardApproval: true,
+      labels: ["dependencies", "major"],
     },
   ],
 
-  // ─── CPM (CMake Package Manager) ──────────────────────────────────────────
-  // No native CPM manager — regex customManagers over cmake/cpm-config.cmake
-  // (CPM itself) and cmake/cpm/*-config.cmake (deps). Both
-  // GIT_REPOSITORY https://github.com/owner/repo and GITHUB_REPOSITORY owner/repo
-  // forms are matched.
   customManagers: [
-    // Matches: set(cpm_version "0.43.1")
     {
       customType: "regex",
-      description: "CPM.cmake itself (cpm_version variable)",
+      description: "CPM.cmake version",
       managerFilePatterns: ["/(^|/)cpm-config\\.cmake$/"],
       matchStrings: [
         "set\\(cpm_version\\s+\"(?<currentValue>[^\"]+)\"\\)",
@@ -96,14 +72,9 @@
       datasourceTemplate: "github-releases",
       extractVersionTemplate: "^v?(?<version>.+)$",
     },
-
-    // Matches: GIT_TAG v1.17.0 / GIT_TAG 1.0.3 / GIT_TAG VER-2-14-3
-    // paired with the repository declaration (either order, adjacent lines).
-    // Pure hex SHAs also match here but fail tag lookup harmlessly —
-    // they are handled by the digest manager below.
     {
       customType: "regex",
-      description: "CPM deps pinned by GIT_TAG (version tags)",
+      description: "CPM dependencies pinned by GIT_TAG",
       managerFilePatterns: ["/(^|/)cmake/cpm/[^/]+-config\\.cmake$/"],
       matchStrings: [
         "GIT_TAG\\s+(?<currentValue>v?[A-Za-z]*\\d[^\\s\"]*?)\\s+(?:GIT_REPOSITORY\\s+https://github\\.com/|GITHUB_REPOSITORY\\s+)(?<depName>[^\\s\"]+?)(?:\\.git)?\\s",
@@ -112,12 +83,9 @@
       datasourceTemplate: "github-tags",
       extractVersionTemplate: "^(?:v|VER-)?(?<version>.+)$",
     },
-
-    // Matches: VERSION 1.92.8 paired with the repository declaration
-    // (implies GIT_TAG v{VERSION}). Used by: imgui, lua.
     {
       customType: "regex",
-      description: "CPM deps pinned by VERSION field",
+      description: "CPM dependencies pinned by VERSION",
       managerFilePatterns: ["/(^|/)cmake/cpm/[^/]+-config\\.cmake$/"],
       matchStrings: [
         "VERSION\\s+(?<currentValue>\\d[^\\s\"]*?)\\s+(?:GIT_REPOSITORY\\s+https://github\\.com/|GITHUB_REPOSITORY\\s+)(?<depName>[^\\s\"]+?)(?:\\.git)?\\s",
@@ -126,12 +94,9 @@
       datasourceTemplate: "github-tags",
       extractVersionTemplate: "^v?(?<version>.+)$",
     },
-
-    // Matches: GIT_TAG 7bddff8c01f5fb931c3cb73d4aa8e66d303d97bc
-    // Tracks the default branch HEAD via git-refs.
     {
       customType: "regex",
-      description: "CPM deps pinned to a commit SHA",
+      description: "CPM dependencies pinned to commit SHA",
       managerFilePatterns: ["/(^|/)cmake/cpm/[^/]+-config\\.cmake$/"],
       matchStrings: [
         "GIT_TAG\\s+(?<currentDigest>[0-9a-f]{7,40})\\s+(?:GIT_REPOSITORY\\s+https://github\\.com/|GITHUB_REPOSITORY\\s+)(?<depName>[^\\s\"]+?)(?:\\.git)?\\s",
@@ -141,15 +106,9 @@
       depNameTemplate: "https://github.com/{{{depName}}}.git",
       currentValueTemplate: "main",
     },
-
-    // ─── Toolchains ─────────────────────────────────────────────────────────
-    // Matches: set(LLVM_MINGW_VERSION "20260826" ...) in the llvm-mingw
-    // toolchain file. Release tags are bare dates (YYYYMMDD, no v prefix),
-    // so semver-coerced versioning makes them comparable (20260826 ->
-    // 20260826.0.0) while the raw tag is written back as-is.
     {
       customType: "regex",
-      description: "llvm-mingw toolchain (LLVM_MINGW_VERSION release tag)",
+      description: "llvm-mingw toolchain",
       managerFilePatterns: ["/(^|/)cmake/toolchains/llvm_mingw\\.cmake$/"],
       matchStrings: [
         "set\\(LLVM_MINGW_VERSION\\s+\"(?<currentValue>[^\"]+)\"",
@@ -158,5 +117,27 @@
       datasourceTemplate: "github-releases",
       versioningTemplate: "semver-coerced",
     },
+    {
+      customType: "regex",
+      description: "Android NDK",
+      managerFilePatterns: ["/(^|/)android_project/app/build\\.gradle$/"],
+      matchStrings: [
+        "ndkVersion\\s*=\\s*'(?<currentValue>[^']+)'",
+      ],
+      depNameTemplate: "Android NDK",
+      datasourceTemplate: "custom.android-ndk",
+      versioningTemplate: "loose",
+    },
   ],
+
+  customDatasources: {
+    "android-ndk": {
+      defaultRegistryUrlTemplate:
+        "https://raw.githubusercontent.com/android/ndk/main/README.md",
+      format: "plain",
+      transformTemplates: [
+        '{"releases": $map($match($, /r(?<version>[0-9]+(?:[a-z]+)?)/), function($v) { {"version": $v.groups.version} })}',
+      ],
+    },
+  },
 }
