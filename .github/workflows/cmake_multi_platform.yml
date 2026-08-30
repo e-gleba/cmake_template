@@ -211,7 +211,9 @@ jobs:
             printf '::error::expected html, JavaScript, and WebAssembly outputs; found %d\n' "${#web_files[@]}"
             exit 1
           fi
-          cmake -E tar cf "${RUNNER_TEMP}/release-assets/cxx_project-Web_Emscripten_wasm32.zip" \
+          staging_dir="${RUNNER_TEMP}/release-assets"
+          mkdir -p "${staging_dir}"
+          cmake -E tar cf "${staging_dir}/cxx_project-Web_Emscripten_wasm32.zip" \
             --format=zip -- "${web_files[@]}"
       - name: Upload release assets
         uses: actions/upload-artifact@v7
