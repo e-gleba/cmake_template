@@ -1,39 +1,34 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: nix
+name: nix_ci
 
 on:
   pull_request:
-    paths:
+    paths: &nix_paths
       - "nix/**"
       - ".github/workflows/nix.yml"
   push:
     branches: [main]
-    paths:
-      - "nix/**"
-      - ".github/workflows/nix.yml"
+    paths: *nix_paths
   workflow_dispatch:
 
 concurrency:
-  group: nix-${{ github.ref }}
+  group: nix_ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: flake and OCI image
+  nix_build:
+    name: linux_nix_x86_64
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
       - name: Install Nix
         uses: cachix/install-nix-action@v31
-
       - name: Check flake
         run: nix flake check ./nix --no-write-lock-file
-
       - name: Build OCI image
         run: nix build ./nix#docker --no-link --no-write-lock-file
