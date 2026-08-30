@@ -2,24 +2,47 @@
 # scanning disabled for ordinary C++ sources project-wide.
 message(CHECK_START "Checking C++23 named modules")
 
-try_compile(
-    cxx_modules_supported
-    SOURCES_TYPE CXX_MODULE
-    SOURCE_FROM_CONTENT cxx_modules_probe.cppm [[
+# The generated source-file try_compile project assigns its CXX_MODULES
+# file set the caller's source directory as its default base directory.
+# Generate a complete probe project so its file-set base is self-contained.
+set(cxx_modules_probe_source_dir
+    "${CMAKE_CURRENT_BINARY_DIR}/cxx_modules_probe")
+file(
+    WRITE "${cxx_modules_probe_source_dir}/CMakeLists.txt"
+    [[
+cmake_minimum_required(VERSION 4.4)
+project(cxx_modules_probe LANGUAGES CXX)
+
+add_executable(cxx_modules_probe main.cpp)
+target_sources(
+    cxx_modules_probe
+    PRIVATE
+        FILE_SET CXX_MODULES
+        FILES cxx_modules_probe.cppm)
+target_compile_features(cxx_modules_probe PRIVATE cxx_std_23)
+set_target_properties(cxx_modules_probe PROPERTIES CXX_EXTENSIONS OFF)
+]])
+file(
+    WRITE "${cxx_modules_probe_source_dir}/cxx_modules_probe.cppm"
+    [[
 export module cxx_modules_probe;
 export constexpr int module_value = 42;
-]]
-    SOURCES_TYPE NORMAL
-    SOURCE_FROM_CONTENT main.cpp [[
+]])
+file(
+    WRITE "${cxx_modules_probe_source_dir}/main.cpp"
+    [[
 import cxx_modules_probe;
 int main()
 {
     static_assert(module_value == 42);
 }
-]]
-    CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED ON
-    CXX_EXTENSIONS OFF
+]])
+
+try_compile(
+    cxx_modules_supported
+    PROJECT cxx_modules_probe
+    SOURCE_DIR "${cxx_modules_probe_source_dir}"
+    TARGET cxx_modules_probe
     LOG_DESCRIPTION "Check whether the active toolchain builds C++23 named modules")
 
 if(cxx_modules_supported)
