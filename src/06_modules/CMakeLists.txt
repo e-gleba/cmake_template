@@ -14,7 +14,7 @@ message(CHECK_START "Checking for C++20 modules support")
 
 # CMake added C++20 module scanning in 3.28; older CMake cannot build
 # modules at all, so skip the probe (and the target) there. This also
-# guarantees the SOURCES_TYPE CXX_MODULE probe signature below exists.
+# guarantees the whole-project try_compile signature (3.25+) exists.
 if(CMAKE_VERSION VERSION_LESS 3.28)
     message(CHECK_FAIL "CMake ${CMAKE_VERSION} < 3.28 - skipping 06_modules")
     return()
@@ -23,36 +23,52 @@ endif()
 # Cached like every Check* result: clear the CMake cache to re-probe
 # after a toolchain change.
 if(NOT DEFINED cxx_modules_supported)
-    # try_compile source-file signature (3.25+). SOURCE_FROM_CONTENT
-    # (3.25+) passes sources as bracket arguments - nothing written to
-    # disk by us. SOURCES_TYPE CXX_MODULE (3.28+) makes CMake place the
-    # interface unit in a CXX_MODULES file set in the generated project,
-    # so the probe exercises real module scanning end to end.
-    try_compile(
-        cxx_modules_supported
-        SOURCES_TYPE CXX_MODULE
-        SOURCE_FROM_CONTENT probe.cppm
-                            [[
+    # Whole-project try_compile (3.25+). The probe project is written
+    # into the binary dir with BASE_DIRS covering its own sources, which
+    # the source-file signature cannot express (its generated project
+    # defaults the CXX_MODULES base dir to the calling source dir and
+    # rejects the scratch-dir member). Built with the same generator,
+    # toolchain, and compiler as the real build.
+    set(cxx_modules_probe_dir
+        "${CMAKE_CURRENT_BINARY_DIR}/cxx_modules_probe")
+    file(
+        WRITE "${cxx_modules_probe_dir}/CMakeLists.txt"
+        [[
+cmake_minimum_required(VERSION 3.28)
+project(cxx_modules_probe LANGUAGES CXX)
+
+add_executable(probe main.cpp)
+target_compile_features(probe PRIVATE cxx_std_23)
+set_target_properties(probe PROPERTIES CXX_EXTENSIONS OFF
+                                       CXX_SCAN_FOR_MODULES ON)
+target_sources(probe PRIVATE FILE_SET CXX_MODULES BASE_DIRS
+               "${CMAKE_CURRENT_SOURCE_DIR}" FILES probe.cppm)
+]])
+    file(
+        WRITE "${cxx_modules_probe_dir}/probe.cppm"
+        [[
 export module cxx_modules_probe;
 
 export int probe()
 {
     return 0;
 }
-]]
-        SOURCES_TYPE NORMAL
-        SOURCE_FROM_CONTENT main.cpp
-                            [[
+]])
+    file(
+        WRITE "${cxx_modules_probe_dir}/main.cpp"
+        [[
 import cxx_modules_probe;
 
 int main()
 {
     return probe();
 }
-]]
-        CXX_STANDARD 23
-        CXX_STANDARD_REQUIRED ON
-        CXX_EXTENSIONS OFF
+]])
+    try_compile(
+        cxx_modules_supported
+        PROJECT cxx_modules_probe
+        SOURCE_DIR "${cxx_modules_probe_dir}"
+        TARGET probe
         LOG_DESCRIPTION "compiling a minimal C++20 module")
     set(cxx_modules_supported
         "${cxx_modules_supported}"
