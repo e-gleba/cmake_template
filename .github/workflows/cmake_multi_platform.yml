@@ -8,6 +8,7 @@ on:
             - "src/**"
             - "include/**"
             - "cmake/**"
+            - "android_project/**"
             - "**/*.cmake"
             - "**/*.cpp"
             - "**/*.hpp"
@@ -24,12 +25,8 @@ on:
     release:
         types: [published]
     workflow_dispatch:
-    # Called by release.yml — same matrix, no duplicated jobs.
     workflow_call:
 
-# github.workflow is the *caller* name when this file is reused.
-# Prefix with this file's identity so a release call cannot share
-# a concurrency group with release.yml itself.
 concurrency:
     group: cmake_multi_platform-${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
@@ -42,6 +39,7 @@ env:
 
 jobs:
     native:
+        if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, '') }}
         name: native_${{ matrix.artifact_name }}
         runs-on: ${{ matrix.os }}
         strategy:
@@ -182,5 +180,98 @@ jobs:
                       build/emscripten/**/05_webassembly.html
                       build/emscripten/**/05_webassembly.js
                       build/emscripten/**/05_webassembly.wasm
+                  if-no-files-found: error
+                  compression-level: 0
+
+    build_apk:
+        name: android_build_apk
+        runs-on: ubuntu-latest
+        env:
+            ANDROID_PROJECT_DIR: ${{ github.workspace }}/android_project
+            GRADLE_OPTS: >-
+                -Dorg.gradle.daemon=false
+                -Dorg.gradle.parallel=true
+                -Dorg.gradle.configureondemand=true
+        steps:
+            - name: checkout
+              uses: actions/checkout@v7
+            - name: setup_cmake
+              uses: lukka/get-cmake@v4.4.2
+            - name: setup_jdk_21
+              uses: actions/setup-java@v5
+              with:
+                  java-version: "21"
+                  distribution: temurin
+            - name: setup_gradle
+              uses: gradle/actions/setup-gradle@v6.3.0
+            - name: cache_cpm_sources
+              uses: actions/cache@v6
+              with:
+                  path: ${{ github.workspace }}/.cpm_cache
+                  key: cpm-android-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+                  restore-keys: cpm-android-
+            - name: accept_android_sdk_licenses
+              run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+            - name: build_apk
+              working-directory: ${{ env.ANDROID_PROJECT_DIR }}
+              run: gradle --stacktrace :app:assembleRelease
+            - name: upload_apk_artifact
+              uses: actions/upload-artifact@v7
+              with:
+                  name: android_release_apk
+                  path: ${{ env.ANDROID_PROJECT_DIR }}/app/build/outputs/apk/release/*.apk
+                  if-no-files-found: error
+                  compression-level: 0
+
+    android_test:
+        name: android_instrumented_tests
+        runs-on: ubuntu-latest
+        env:
+            ANDROID_PROJECT_DIR: ${{ github.workspace }}/android_project
+            GRADLE_OPTS: >-
+                -Dorg.gradle.daemon=false
+                -Dorg.gradle.parallel=true
+                -Dorg.gradle.configureondemand=true
+        steps:
+            - name: checkout
+              uses: actions/checkout@v7
+            - name: setup_cmake
+              uses: lukka/get-cmake@v4.4.2
+            - name: setup_jdk_21
+              uses: actions/setup-java@v5
+              with:
+                  java-version: "21"
+                  distribution: temurin
+            - name: setup_gradle
+              uses: gradle/actions/setup-gradle@v6.3.0
+            - name: cache_cpm_sources
+              uses: actions/cache@v6
+              with:
+                  path: ${{ github.workspace }}/.cpm_cache
+                  key: cpm-android-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+                  restore-keys: cpm-android-
+            - name: accept_android_sdk_licenses
+              run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+            - name: enable_kvm
+              run: |
+                  echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4ci.rules
+                  sudo udevadm control --reload-rules
+                  sudo udevadm trigger --name-match=kvm
+            - name: run_instrumented_tests
+              uses: ReactiveCircus/android-emulator-runner@v2
+              with:
+                  api-level: 30
+                  arch: x86_64
+                  target: default
+                  disable-animations: true
+                  script: cd ${{ env.ANDROID_PROJECT_DIR }} && gradle --stacktrace :app:connectedDebugAndroidTest --info
+            - name: upload_test_results
+              if: always()
+              uses: actions/upload-artifact@v7
+              with:
+                  name: android_test_results
+                  path: |
+                      ${{ env.ANDROID_PROJECT_DIR }}/app/build/outputs/androidTest-results/
+                      ${{ env.ANDROID_PROJECT_DIR }}/app/build/reports/androidTests/
                   if-no-files-found: error
                   compression-level: 0
