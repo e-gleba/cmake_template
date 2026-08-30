@@ -1,0 +1,121 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit AI review — first-pass only: reads code, writes PR comments,
+# never requests changes, never blocks merges (issue #17).
+# Config reference: https://docs.coderabbit.ai/guides/configuration-file
+#
+# Activation: install the CodeRabbit GitHub App on this repo (free for OSS).
+# NOTE: CodeRabbit reads this file from the repository ROOT only —
+# .github/ is not a supported location.
+
+language: en-US
+early_access: false
+
+tone_instructions: |-
+  Concise and technical. No pleasantries, no praise filler.
+  Every finding: problem -> why it matters in this repo -> concrete fix.
+  Follow CLAUDE.md conventions. Suggest nothing beyond the diff's scope:
+  no speculative refactors, no drive-by cleanups.
+
+reviews:
+  profile: chill
+  # Comments only — the bot must never block a merge.
+  request_changes_workflow: false
+  fail_commit_status: false
+  high_level_summary: true
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  poem: false
+  suggested_labels: true
+  suggested_reviewers: false
+  auto_review:
+    enabled: true
+    # Never spam Draft PRs or WIP branches.
+    drafts: false
+    ignore_title_keywords:
+      - wip
+      - draft
+  path_filters:
+    # Generated / vendored trees — never review these.
+    - "!**/build/**"
+    - "!**/_deps/**"
+    - "!.emsdk/**"
+    - "!android_project/.gradle/**"
+    - "!**/node_modules/**"
+  path_instructions:
+    - path: "**/CMakeLists.txt"
+      instructions: >-
+        Modern CMake 4.4+ only: target_* commands over directory/global
+        state — flag include_directories(), add_definitions(), and
+        CMAKE_CXX_FLAGS mutations. Headers belong in
+        target_sources(... FILE_SET ...). CPM.cmake is the only dependency
+        mechanism: flag new find_package calls, conanfile.txt, or
+        vcpkg.json (tracked in issues #3 and #8). Keep FETCHCONTENT_QUIET
+        OFF. Must stay .cmake-format.yaml clean.
+    - path: "cmake/**"
+      instructions: >-
+        Same rules as the root CMakeLists.txt: target_* over globals, no
+        ad-hoc platform hacks — cross-compilation logic lives in presets
+        or cmake/toolchains/*.cmake. warnings.cmake and
+        code_quality.cmake stay per-toolchain and opt-in.
+    - path: "CMakePresets.json"
+      instructions: >-
+        Schema v12, CMake >= 4.4. Naming: '<compiler>-<variant>'
+        configure, '<name>-release/debug' build, '<name>-package' CPack,
+        '<name>-full' workflow. Every native configure preset needs
+        matching build and test presets; cross presets (android-*,
+        llvm-mingw-*) disable test. binaryDir stays build/<preset>.
+        Keep the vendor block minimal.
+    - path: "src/**"
+      instructions: >-
+        C++23/26. Flag missing [[nodiscard]] on non-void public APIs.
+        Prefer std::format/std::print over fmt where the toolchain
+        supports it. No owning raw pointers, no C-style casts. Must stay
+        clang-tidy clean per .clang-tidy.
+    - path: "tests/**"
+      instructions: >-
+        doctest only — flag gtest/catch2 includes. Tests register via
+        doctest_discover_tests() in tests/CMakeLists.txt; CTest preset
+        names mirror build presets (gcc-release, clang-debug, ...).
+    - path: ".github/workflows/**"
+      instructions: >-
+        Every workflow starts with the yaml-language-server schema
+        comment. The build matrix lives only in cmake_multi_platform.yml
+        (workflow_call) — flag duplicated matrix jobs elsewhere. No
+        platform-specific hack scripts in CI: logic belongs in presets or
+        Docker. Pin actions; image names stay
+        ghcr.io/${{ github.repository }}/<name>.
+    - path: "docker/**"
+      instructions: >-
+        Toolchain images only — no source COPY. Pin official base images
+        by explicit tag or digest. New images need a matrix row in
+        publish-docker.yml, never a hardcoded name.
+    - path: "readme.md"
+      instructions: >-
+        Keep under 10 KB. Quick Start <= 3 commands. The comparison table
+        is the only long table allowed. Consulting block stays last; no
+        sponsor badges. Flag stale links — every docs/*.md target must
+        exist.
+  finishing_touches:
+    docstrings:
+      enabled: false
+  tools:
+    actionlint:
+      enabled: true
+    cppcheck:
+      enabled: true
+    gitleaks:
+      enabled: true
+    hadolint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    shfmt:
+      enabled: true
+    yamllint:
+      enabled: true
+
+chat:
+  auto_reply: true
