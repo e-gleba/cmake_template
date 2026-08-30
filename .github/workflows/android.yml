@@ -26,7 +26,6 @@ env:
     -Dorg.gradle.daemon=false
     -Dorg.gradle.parallel=true
     -Dorg.gradle.configureondemand=true
-  NDK_VERSION: 30.0.14904198
 
 jobs:
   android_build:
@@ -49,9 +48,15 @@ jobs:
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Install Android NDK
         run: |
+          ndk_version=$(sed -n "s/^[[:space:]]*ndkVersion[[:space:]]*=[[:space:]]*'\([^']*\)'.*/\1/p" app/build.gradle)
+          if [ -z "${ndk_version}" ]; then
+            echo "::error::ndkVersion not found in app/build.gradle"
+            exit 1
+          fi
           sdkmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           yes | "${sdkmanager}" --licenses >/dev/null
-          "${sdkmanager}" "ndk;${NDK_VERSION}"
+          "${sdkmanager}" --channel=3 "ndk;${ndk_version% rc*}"
+        working-directory: ${{ env.ANDROID_PROJECT_DIR }}
       - name: Cache CPM sources
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
@@ -89,9 +94,15 @@ jobs:
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Install Android NDK
         run: |
+          ndk_version=$(sed -n "s/^[[:space:]]*ndkVersion[[:space:]]*=[[:space:]]*'\([^']*\)'.*/\1/p" app/build.gradle)
+          if [ -z "${ndk_version}" ]; then
+            echo "::error::ndkVersion not found in app/build.gradle"
+            exit 1
+          fi
           sdkmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           yes | "${sdkmanager}" --licenses >/dev/null
-          "${sdkmanager}" "ndk;${NDK_VERSION}"
+          "${sdkmanager}" --channel=3 "ndk;${ndk_version% rc*}"
+        working-directory: ${{ env.ANDROID_PROJECT_DIR }}
       - name: Cache CPM sources
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
