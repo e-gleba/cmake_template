@@ -2,6 +2,27 @@
 # scanning disabled for ordinary C++ sources project-wide.
 message(CHECK_START "Checking C++23 named modules")
 
+# CMake knows which compiler families and versions provide its module
+# dependency scanner. Avoid configuring a probe CXX_MODULES target when
+# that scanner is unavailable: unsupported module targets are rejected
+# during generation, before try_compile can return FALSE.
+set(cxx_modules_scanner_supported FALSE)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"
+   AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.34)
+    set(cxx_modules_scanner_supported TRUE)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang"
+       AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+    set(cxx_modules_scanner_supported TRUE)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+       AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
+    set(cxx_modules_scanner_supported TRUE)
+endif()
+
+if(NOT cxx_modules_scanner_supported)
+    message(CHECK_FAIL "CMake has no scanner for this compiler; skipping 06_modules")
+    return()
+endif()
+
 # The generated source-file try_compile project assigns its CXX_MODULES
 # file set the caller's source directory as its default base directory.
 # Generate a complete probe project so its file-set base is self-contained.
