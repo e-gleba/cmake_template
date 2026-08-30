@@ -30,4 +30,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         graphviz \
         pkg-config
 
+# Restore the SDK's unprivileged account. Name and numeric ID are defined by
+# Valve's pinned SDK image.
+USER 1000
+
 ENTRYPOINT ["cmake", "--workflow", "--preset=gcc-full"]

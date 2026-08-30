@@ -16,6 +16,10 @@ Reproducible **toolchain** images. Source is not baked in — mount repo at `/ap
 SteamOS is appliance firmware, not a build sysroot. Valve recommends Steam Linux
 Runtime 4 for new native Linux games, so the Steam image uses its official SDK.
 
+ALT p11 does not package Ninja under the expected cross-distro name. Its validator
+uses Make while all other images exercise Ninja. This keeps ALT coverage native
+instead of downloading an unrelated tool binary.
+
 Alpine and Wolfi are intentionally omitted. Their musl ABI would add divergence
 without improving coverage for this glibc/Wayland/Android-oriented template.
 

@@ -31,14 +31,19 @@ jobs:
         include:
           - name: fedora
             file: fedora.Dockerfile
+            tools: ninja --version
           - name: manjaro
             file: manjaro.Dockerfile
+            tools: ninja --version
           - name: steamos
             file: steamos.Dockerfile
+            tools: ninja --version
           - name: cachyos
             file: cachyos.Dockerfile
+            tools: ninja --version
           - name: alt
             file: alt.Dockerfile
+            tools: make --version
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -61,8 +66,8 @@ jobs:
         run: |
           docker run --rm --entrypoint sh cmake-template:${{ matrix.name }} -c '
             cmake --version &&
-            ninja --version &&
             git --version &&
             c++ --version &&
-            clang++ --version
+            clang++ --version &&
+            ${{ matrix.tools }}
           '
