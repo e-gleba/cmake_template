@@ -147,9 +147,10 @@ jobs:
             echo "::error::next_version must be plain semantic version (got '${NEXT_VERSION}')"
             exit 1
           fi
-          current=$(cmake -P cmake/project-version.cmake 2>/dev/null || true)
+          current=$(sed -n 's/^[[:space:]]*VERSION[[:space:]]\+\([0-9][0-9.]*\).*/\1/p' CMakeLists.txt | head -n1)
           if [ -z "${current}" ]; then
-            current=$(sed -n 's/^[[:space:]]*VERSION[[:space:]]\+\([0-9][0-9.]*\).*/\1/p' CMakeLists.txt | head -n1)
+            echo "::error::project VERSION not found in CMakeLists.txt"
+            exit 1
           fi
           if [ "$(printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -V | tail -n1)" != "${NEXT_VERSION}" ] || [ "${current}" = "${NEXT_VERSION}" ]; then
             echo "::error::next_version (${NEXT_VERSION}) must be greater than current version (${current})"
