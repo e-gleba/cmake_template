@@ -26,11 +26,11 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - name: Set up CMake
-        uses: lukka/get-cmake@v4.4.2
+        uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # v4.4.2
       - name: Validate JSON syntax
         run: find cmake/presets -name '*.json' -print0 | sort -z | xargs -0 -n1 jq empty && jq empty CMakePresets.json
       - name: Validate CMake preset schema and includes
