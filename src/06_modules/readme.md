@@ -1,10 +1,12 @@
 # 06_modules - C++20 named modules
 
-Demo of C++20 modules on modern CMake. Nothing to enable: the
-CMakeLists probes the toolchain at configure time and reports through
-`message(CHECK_START ...)` - look for the `Checking for C++20 modules
-support` line. Unsupported toolchains and cross builds skip the target,
-so every preset keeps configuring cleanly.
+Demo of C++20 modules on modern CMake. Nothing to enable: at configure
+time the CMakeLists compiles a minimal module with `try_compile` - one
+ground-truth test for compiler, dependency scanner, generator, and build
+tool - and reports through `message(CHECK_START ...)`. Unsupported
+toolchains skip the target, so every preset keeps configuring cleanly.
+The probe result is cached; clear the CMake cache to re-probe after a
+toolchain change.
 
 ```bash
 cmake --preset gcc && cmake --build --preset gcc-release --target 06_modules
@@ -27,8 +29,9 @@ every feature below and exits non-zero on mismatch.
 
 ## Requirements
 
-Probed at configure time; a failed probe skips the target instead of
-erroring.
+The probe compiles a real module, so the whole chain is verified at
+once; a failed probe skips the target instead of erroring. Effective
+minimums:
 
 | Toolchain | Minimum | Notes |
 | --- | --- | --- |
@@ -39,8 +42,8 @@ erroring.
 | GCC | 14 | `-fdeps-format=p1689r5` dependency scanning |
 
 Generators with module scanning support: Ninja, Ninja Multi-Config,
-Visual Studio 17 2022 and newer. Cross-compilation presets are skipped
-by the probe.
+Visual Studio 17 2022 and newer. Cross toolchains are probed like any
+other: if the cross compiler can build a module, the demo is built.
 
 ## Known limitations
 
@@ -68,6 +71,7 @@ by the probe.
 ## References
 
 - [CMake `cmake-cxxmodules(7)`](https://cmake.org/cmake/help/latest/manual/cmake-cxxmodules.7.html)
+- [CMake `try_compile`](https://cmake.org/cmake/help/latest/command/try_compile.html)
 - [Kitware - Import CMake C++20 Modules](https://www.kitware.com/import-cmake-c-20-modules/)
 - [cppreference - Modules](https://en.cppreference.com/w/cpp/language/modules)
 - [Clang - Standard C++ Modules](https://clang.llvm.org/docs/StandardCPlusPlusModules.html)
