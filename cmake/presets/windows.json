@@ -1,6 +1,7 @@
 {
     "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
     "version": 12,
+    "include": ["base.json"],
     "configurePresets": [
         {"name": "windows_msvc_x86_64", "displayName": "Windows MSVC x86_64", "description": "Native Windows x86_64 build with Visual Studio 2022", "inherits": "base", "generator": "Visual Studio 17 2022", "architecture": {"value": "x64", "strategy": "set"}, "toolset": {"value": "host=x64", "strategy": "set"}, "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows"}},
         {"name": "windows_llvm_mingw_x86", "displayName": "Windows LLVM-MinGW x86", "description": "Cross-compile Windows x86 binaries from Linux with LLVM-MinGW", "inherits": "base", "toolchainFile": "${sourceDir}/cmake/toolchains/llvm_mingw.cmake", "cacheVariables": {"CMAKE_SYSTEM_PROCESSOR": "i686"}, "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}},

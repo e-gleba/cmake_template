@@ -1,6 +1,7 @@
 {
     "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
     "version": 12,
+    "include": ["base.json"],
     "configurePresets": [
         {
             "name": "linux_clang_x86_64",

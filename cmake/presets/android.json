@@ -1,6 +1,7 @@
 {
     "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
     "version": 12,
+    "include": ["base.json"],
     "configurePresets": [
         {"name": "android_clang_aarch64", "displayName": "Android Clang AArch64", "description": "Android arm64-v8a build with NDK Clang", "inherits": "base", "cacheVariables": {"CMAKE_SYSTEM_NAME": "Android", "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK_HOME}", "CMAKE_ANDROID_STL_TYPE": "c++_shared", "CMAKE_ANDROID_API": "24", "CMAKE_ANDROID_ARCH_ABI": "arm64-v8a"}},
         {"name": "android_clang_armv7", "displayName": "Android Clang ARMv7", "description": "Android armeabi-v7a build with NDK Clang", "inherits": "android_clang_aarch64", "cacheVariables": {"CMAKE_ANDROID_ARCH_ABI": "armeabi-v7a"}},
