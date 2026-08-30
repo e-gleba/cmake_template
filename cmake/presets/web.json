@@ -1,9 +1,9 @@
 {
-    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+    "$schema": "https://json.schemastore.org/cmake-presets.json",
     "version": 12,
     "include": ["base.json"],
     "configurePresets": [
-        {"name": "web_emscripten_wasm32", "displayName": "Web Emscripten wasm32", "description": "WebAssembly build with Emscripten; tests run with Node.js", "inherits": "base", "toolchainFile": "${sourceDir}/cmake/toolchains/emscripten.cmake", "cacheVariables": {"CMAKE_CXX_CLANG_TIDY": ""}}
+        {"name": "web_emscripten_wasm32", "displayName": "Web Emscripten wasm32", "description": "WebAssembly build with Emscripten; tests run with Node.js", "inherits": "base", "toolchainFile": "${sourceDir}/cmake/toolchains/emscripten.cmake", "cacheVariables": {"CMAKE_CXX_CLANG_TIDY": "", "CT_IMGUI_SDL3_OPENGL3": "ON"}}
     ],
     "buildPresets": [
         {"name": "web_emscripten_wasm32_release", "configurePreset": "web_emscripten_wasm32", "inherits": "build_release"},
