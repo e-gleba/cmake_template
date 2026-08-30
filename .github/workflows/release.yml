@@ -1,18 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 #
 # One-click GitHub Release.
-#
-# Pipeline (jobs run in parallel where they can):
-#   docker    → reusable publish-docker.yml  (optional, matrix per image)
-#   packages  → reusable cmake_multi_platform.yml (native / cross / android)
-#   publish   → tag + gh release, attach CPack/APK artifacts from `packages`
-#   bump      → after publish: PR that bumps project(VERSION) on main, then merge
-#
-# Adapt:
-#   - version / next_version are inputs — never hardcoded
-#   - add/remove docker images in publish-docker.yml matrix
-#   - add package globs in the "Collect release assets" step if you add formats
-#   - permissions below are the union of what the called workflows need
 name: release
 
 on:
@@ -94,7 +82,6 @@ jobs:
             echo "::error::tag ${VERSION} already exists"
             exit 1
           fi
-          echo "Releasing ${VERSION} at ${{ github.sha }}"
 
       - name: Download package artifacts
         uses: actions/download-artifact@v8
@@ -103,16 +90,25 @@ jobs:
 
       - name: Collect release assets
         run: |
-          # Single line: a line break after \( makes shellcheck misparse the
-          # predicate list as commands (SC2215/SC2288).
           find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.xz' -o -name '*.apk' \) -print0 | sort -z > /tmp/release-assets
           mapfile -d '' files < /tmp/release-assets
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::error::no package artifacts (zip / tar.gz / tar.xz / apk)"
-            echo "## Artifacts on this run" >> "$GITHUB_STEP_SUMMARY"
-            find artifacts -type f | sort >> "$GITHUB_STEP_SUMMARY" || true
             exit 1
           fi
+
+          declare -A asset_names=()
+          for file in "${files[@]}"; do
+            name=${file##*/}
+            if [[ -n "${asset_names[${name}]:-}" ]]; then
+              echo "::error::duplicate release asset name '${name}'"
+              echo "::error::${asset_names[${name}]}"
+              echo "::error::${file}"
+              exit 1
+            fi
+            asset_names[${name}]=${file}
+          done
+
           {
             echo "## Release assets (${#files[@]})"
             printf -- '- %s\n' "${files[@]}"
@@ -137,9 +133,6 @@ jobs:
           echo "Created ${{ github.server_url }}/${{ github.repository }}/releases/tag/${VERSION}" \
             >> "$GITHUB_STEP_SUMMARY"
 
-  # After the tag+artifacts exist. Does not rewrite the just-shipped
-  # project(VERSION) — packages always match their own tag. Prepares
-  # main for the NEXT release via a PR (not a direct push to main).
   bump_cmake_version:
     name: bump cmake version via pr
     needs: publish
@@ -151,15 +144,11 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    # Two release runs must never race the bump PR:
-    # queue the jobs, never cancel them mid-push.
     concurrency:
       group: post-release-cmake-version-bump
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Bound once via env — never expand a workflow input into shell
-      # source (zizmor template-injection).
       NEXT_VERSION: ${{ inputs.next_version }}
       VERSION: ${{ inputs.version }}
     steps:
@@ -180,15 +169,12 @@ jobs:
             echo "::error::could not read the current project version from CMakeLists.txt"
             exit 1
           fi
-          # sort -V: smaller of the two sorts first, so an equal or
-          # lower next_version sorts first — reject both.
           lowest=$(printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -V | head -n1)
           if [[ "${lowest}" == "${NEXT_VERSION}" ]]; then
             printf "::error::next_version (%s) must be greater than the current project version (%s)\n" "${NEXT_VERSION}" "${current}"
             exit 1
           fi
           echo "current=${current}" >> "${GITHUB_ENV}"
-          echo "Bumping project(VERSION) ${current} → ${NEXT_VERSION} (release ${VERSION})"
 
       - name: Bump project version
         run: |
@@ -209,25 +195,11 @@ jobs:
             --base main \
             --head "${branch}" \
             --title "chore: bump CMake project version to ${NEXT_VERSION}" \
-            --body "$(cat <<EOF
-          Post-release bump. Tag \`${VERSION}\` already published with \`project(VERSION)\` ${current}.
-
-          Prepares main for the next release so packages always ship the version of their own tag.
-
-          - \`CMakeLists.txt\` \`project(VERSION)\`: ${current} → ${NEXT_VERSION}
-
-          Opened by the [release workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
-          EOF
-          )")
+            --body "Post-release version bump for ${VERSION}: ${current} to ${NEXT_VERSION}.")
 
           echo "Opened ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
-
-          # Leave the PR open if merge is blocked (reviews / checks).
-          # Settings → Actions → General → "Allow GitHub Actions to create
-          # and approve pull requests" must be on, or gh pr create fails.
           if gh pr merge --squash --delete-branch; then
             echo "Merged ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
           else
             echo "::warning::could not merge ${pr_url} — merge it manually"
-            echo "Merge blocked — merge ${pr_url} manually" >> "${GITHUB_STEP_SUMMARY}"
           fi
