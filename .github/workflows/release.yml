@@ -8,6 +8,10 @@ on:
         description: "Release tag (for example, v1.0.0)"
         required: true
         type: string
+      next_version:
+        description: "Next development version (for example, 1.0.1)"
+        required: true
+        type: string
       prerelease:
         description: "Mark as prerelease"
         required: false
@@ -119,3 +123,53 @@ jobs:
           fi
           gh release create "${args[@]}" "${files[@]}"
           echo "Released [${VERSION}](${{ github.server_url }}/${{ github.repository }}/releases/tag/${VERSION})" >> "$GITHUB_STEP_SUMMARY"
+
+  bump_version:
+    name: open next-version PR
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Validate and bump version
+        env:
+          NEXT_VERSION: ${{ inputs.next_version }}
+        run: |
+          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::next_version must be plain semantic version (got '${NEXT_VERSION}')"
+            exit 1
+          fi
+          current=$(cmake -P cmake/project-version.cmake 2>/dev/null || true)
+          if [ -z "${current}" ]; then
+            current=$(sed -n 's/^[[:space:]]*VERSION[[:space:]]\+\([0-9][0-9.]*\).*/\1/p' CMakeLists.txt | head -n1)
+          fi
+          if [ "$(printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -V | tail -n1)" != "${NEXT_VERSION}" ] || [ "${current}" = "${NEXT_VERSION}" ]; then
+            echo "::error::next_version (${NEXT_VERSION}) must be greater than current version (${current})"
+            exit 1
+          fi
+          sed -i -E "s/^([[:space:]]*VERSION[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${NEXT_VERSION}/" CMakeLists.txt
+
+      - name: Open next-version PR
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: automation/next-version
+          delete-branch: true
+          commit-message: "chore: start ${{ inputs.next_version }} development"
+          title: "chore: start ${{ inputs.next_version }} development"
+          body: |
+            Automated post-release version bump after `${{ inputs.version }}`.
+
+            Merge after required checks pass.
+          labels: |
+            automated
+            release
