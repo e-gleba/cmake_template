@@ -12,10 +12,15 @@ language: en-US
 early_access: false
 
 tone_instructions: |-
-  Concise and technical. No pleasantries, no praise filler.
-  Every finding: problem -> why it matters in this repo -> concrete fix.
-  Follow CLAUDE.md conventions. Suggest nothing beyond the diff's scope:
-  no speculative refactors, no drive-by cleanups.
+  Concise and technical. No pleasantries, praise, or restatement.
+  Put the concrete fix first, then explain the problem and repository impact.
+  Ground C++ claims in primary sources, in order: cppreference, the C++
+  working draft when exact wording matters, compiler-support tables before
+  assuming availability, and Compiler Explorer for generated-code claims.
+  Mark unverified claims as [unverified] and name the check that settles them.
+  Performance claims require generated code or measurements.
+  Follow CLAUDE.md conventions. Review only changed lines and behavior:
+  no speculative abstractions, drive-by cleanup, or unrelated refactors.
 
 reviews:
   profile: chill
@@ -67,16 +72,58 @@ reviews:
         llvm-mingw-*) disable test. binaryDir stays build/<preset>.
         Keep the vendor block minimal.
     - path: "src/**"
-      instructions: >-
-        C++23/26. Flag missing [[nodiscard]] on non-void public APIs.
-        Prefer std::format/std::print over fmt where the toolchain
-        supports it. No owning raw pointers, no C-style casts. Must stay
-        clang-tidy clean per .clang-tidy.
+      instructions: |-
+        Review as C++23 project code. Where these rules conflict with nearby
+        code, follow existing code and report the conflict instead of forcing
+        an unrelated rewrite.
+
+        Review in this order: lifetime and ownership; undefined behavior;
+        uninitialized state and narrowing; concurrency; error paths; public
+        and binary interface impact; measured performance; style last.
+
+        All project-owned declarations live in namespace tb; only main may
+        remain global. Internals use tb::detail and must not leak through
+        public headers. Never add file-scope using namespace directives.
+
+        Use std::int32_t/std::uint32_t/std::int64_t/std::uint64_t with std::
+        qualification for fixed-width values. Use std::size_t for sizes and
+        indices, std::ptrdiff_t for pointer differences, and bare int only
+        when an external API requires it. Prefer initialized declarations,
+        brace initialization, and designated initializers for aggregates.
+        Add final to project types not designed as bases.
+
+        Prefer value semantics, rule of zero, RAII, const by default, and
+        unique ownership. Flag raw owning pointers, new/delete, malloc/free,
+        manual resource cleanup, output parameters where return values work,
+        and stored std::span/std::string_view values that may outlive their
+        backing storage. Shared ownership requires an explicit lifetime need.
+
+        Prefer the standard library, then an already-linked Boost or approved
+        dependency; do not hand-roll tested facilities. Do not add a dependency
+        for a small reusable facility. Prefer algorithms/ranges and named
+        concepts when they improve clarity. Never return a view over a local;
+        remember lazy views re-evaluate on traversal.
+
+        Public results that matter use [[nodiscard]]. Use constexpr where
+        useful at no runtime cost and noexcept only when all reachable work
+        honestly cannot throw. Fallible operations return std::expected or an
+        explicit checked status, never a magic value. Use existing GSL
+        contracts when linked; otherwise prefer the project's dependency-free
+        contract vocabulary. No exceptions across binary boundaries.
+
+        Prefer snake_case for types, functions, variables, and namespaces;
+        reserve UPPER_CASE for macros. Use class for invariant-bearing types,
+        struct for plain data, and ASCII in identifiers and comments. Flag
+        implicit single-argument constructors unless conversion is intended.
+        Keep code clang-tidy clean per .clang-tidy.
     - path: "tests/**"
       instructions: >-
-        doctest only — flag gtest/catch2 includes. Tests register via
-        doctest_discover_tests() in tests/CMakeLists.txt; CTest preset
-        names mirror build presets (gcc-release, clang-debug, ...).
+        Apply the src/** C++23 rules to test helper code. doctest only — flag
+        gtest/catch2 includes. Tests register via doctest_discover_tests() in
+        tests/CMakeLists.txt; CTest preset names mirror build presets
+        (gcc-release, clang-debug, ...). Require changed behavior, error paths,
+        lifetime boundaries, and contract failures to have focused tests;
+        do not request unrelated coverage.
     - path: ".github/workflows/**"
       instructions: >-
         Every workflow starts with the yaml-language-server schema
