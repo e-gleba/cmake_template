@@ -15,100 +15,87 @@ cpmaddpackage(
 include_guard(GLOBAL)
 
 # imgui ships no build system of its own, so its libraries are defined here:
-#   imgui::imgui        - context, widgets, draw lists (platform-agnostic)
-#   imgui::sdl3_opengl3 - SDL3 platform + OpenGL3 renderer backend
+#   ct::imgui              - context, widgets, draw lists
+#   ct::imgui_sdl3_opengl3 - SDL3 platform + OpenGL3 renderer backend
+#   ct::imgui_sdl3_renderer - SDL3 platform + SDL_Renderer backend
 #
-# Both are EXCLUDE_FROM_ALL: imgui is only compiled where a target actually
+# All are EXCLUDE_FROM_ALL: imgui is only compiled where a target actually
 # links it (currently the Emscripten web_app) - native builds skip it.
 
 add_library(
-    imgui STATIC EXCLUDE_FROM_ALL
+    ct_imgui STATIC EXCLUDE_FROM_ALL
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_demo.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp)
-add_library(imgui::imgui ALIAS imgui)
+add_library(ct::imgui ALIAS ct_imgui)
 target_include_directories(
-    imgui SYSTEM PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}>
-                        $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/misc/cpp>)
-target_compile_features(imgui PUBLIC cxx_std_23)
+    ct_imgui SYSTEM PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}>
+                           $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/misc/cpp>)
+target_compile_features(ct_imgui PUBLIC cxx_std_23)
 
 # FreeType rasterizer is opt-in: imgui_freetype.cpp hard-includes
-# <ft2build.h>, so it is only compiled when the Freetype::Freetype target
-# already exists (e.g. after find_package(freetype2_upstream) - see
-# cmake/cpm/freetype-config.cmake). No find_package here: the dependency is
-# optional and absent on Emscripten.
-if(TARGET Freetype::Freetype)
-    target_sources(imgui
-                   PRIVATE ${imgui_SOURCE_DIR}/misc/freetype/imgui_freetype.cpp)
+# <ft2build.h>, so it is only compiled when CT_IMGUI_FREETYPE is enabled.
+if(CT_IMGUI_FREETYPE)
+    find_package(freetype CONFIG REQUIRED)
+    target_sources(
+        ct_imgui PRIVATE ${imgui_SOURCE_DIR}/misc/freetype/imgui_freetype.cpp)
     # PUBLIC because imgui_freetype.h exposes FreeType types to consumers.
-    target_link_libraries(imgui PUBLIC Freetype::Freetype)
+    target_link_libraries(ct_imgui PUBLIC Freetype::Freetype)
     target_include_directories(
-        imgui SYSTEM
+        ct_imgui SYSTEM
         PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/misc/freetype>)
-    target_compile_definitions(imgui PUBLIC IMGUI_ENABLE_FREETYPE)
+    target_compile_definitions(ct_imgui PUBLIC IMGUI_ENABLE_FREETYPE)
 endif()
 
-# SDL3 + OpenGL3 renderer backend. Built when SDL3 is present and we are
-# either on Emscripten or a desktop OpenGL target is available.
-#
-# OpenGL is linked only when the OpenGL::GL target already exists (desktop GL
-# via find_package(OpenGL) called before this config runs). On Emscripten the
-# GLES3/WebGL2 symbols come from the emcc link flags on the final executable
-# (-sUSE_WEBGL2=1 -sFULL_ES3=1), so no OpenGL target is needed there.
-#
-# Platform packages needed for the desktop find_package(OpenGL):
-#   Windows : vcpkg install opengl --triplet=x64-windows
-#   Fedora  : sudo dnf install mesa-libGL-devel mesa-libGLU-devel
-#   Arch    : sudo pacman -S mesa glu
-#   Ubuntu  : sudo apt-get install libgl1-mesa-dev libglu1-mesa-dev
-#   macOS   : OpenGL.framework is included in the SDK
-if(TARGET SDL3::SDL3 AND (EMSCRIPTEN OR TARGET OpenGL::GL))
+# SDL3 + OpenGL3 renderer backend. Built when requested; Emscripten gets
+# GLES3/WebGL2 symbols from final executable link flags, while native builds
+# need the standard OpenGL imported target.
+if(CT_IMGUI_SDL3_OPENGL3)
+    if(NOT TARGET SDL3::SDL3)
+        message(FATAL_ERROR
+                "CT_IMGUI_SDL3_OPENGL3 requires the SDL3::SDL3 target")
+    endif()
+    if(NOT EMSCRIPTEN)
+        find_package(OpenGL REQUIRED)
+    endif()
+
     add_library(
-        imgui_sdl3_opengl3 STATIC EXCLUDE_FROM_ALL
+        ct_imgui_sdl3_opengl3 STATIC EXCLUDE_FROM_ALL
         ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-    add_library(imgui::sdl3_opengl3 ALIAS imgui_sdl3_opengl3)
+    add_library(ct::imgui_sdl3_opengl3 ALIAS ct_imgui_sdl3_opengl3)
     target_include_directories(
-        imgui_sdl3_opengl3 SYSTEM
+        ct_imgui_sdl3_opengl3 SYSTEM
         PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/backends>)
-    target_compile_features(imgui_sdl3_opengl3 PUBLIC cxx_std_23)
-    # The OpenGL3 backend defaults to ES2 on Emscripten - force GLES3.
+    target_compile_features(ct_imgui_sdl3_opengl3 PUBLIC cxx_std_23)
     target_compile_definitions(
-        imgui_sdl3_opengl3
+        ct_imgui_sdl3_opengl3
         PRIVATE $<$<PLATFORM_ID:Emscripten>:IMGUI_IMPL_OPENGL_ES3>)
-    target_link_libraries(imgui_sdl3_opengl3 PUBLIC imgui::imgui SDL3::SDL3)
-    # Link desktop OpenGL only when its target actually exists. A genexp
-    # cannot be used here: it would name OpenGL::GL unconditionally and fail
-    # at generate time when the target was never created.
+    target_link_libraries(ct_imgui_sdl3_opengl3 PUBLIC ct::imgui SDL3::SDL3)
     if(TARGET OpenGL::GL)
-        target_link_libraries(imgui_sdl3_opengl3 PUBLIC OpenGL::GL)
+        target_link_libraries(ct_imgui_sdl3_opengl3 PUBLIC OpenGL::GL)
     endif()
 endif()
 
 # SDL3 renderer backend: stock imgui_impl_sdl3 + imgui_impl_sdlrenderer3.
-# Needs no OpenGL development files — SDL3 loads the platform graphics
-# APIs (Direct3D/Vulkan/OpenGL/software) dynamically at runtime, so the
-# executable stays self-contained. Works for native and cross builds.
-if(TARGET SDL3::SDL3 AND ct_sdl_render)
-    add_library(imgui_sdl3_renderer STATIC EXCLUDE_FROM_ALL )
-    add_library(imgui::sdl3_renderer ALIAS imgui_sdl3_renderer)
+if(CT_IMGUI_SDL3_RENDERER)
+    if(NOT CT_SDL_RENDER)
+        message(FATAL_ERROR
+                "CT_IMGUI_SDL3_RENDERER requires CT_SDL_RENDER=ON")
+    endif()
 
+    add_library(ct_imgui_sdl3_renderer STATIC EXCLUDE_FROM_ALL)
+    add_library(ct::imgui_sdl3_renderer ALIAS ct_imgui_sdl3_renderer)
     target_sources(
-        imgui_sdl3_renderer
+        ct_imgui_sdl3_renderer
         PRIVATE ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
                 ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp)
-
-    # Backends include <imgui.h> and <imgui_impl_*.h>.
-    # imgui::imgui already exposes ${imgui_SOURCE_DIR}; we only need the
-    # backends directory here.
     target_include_directories(
-        imgui_sdl3_renderer SYSTEM
+        ct_imgui_sdl3_renderer SYSTEM
         PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/backends>)
-
-    target_link_libraries(imgui_sdl3_renderer PUBLIC imgui::imgui SDL3::SDL3)
-
-    target_compile_features(imgui_sdl3_renderer PUBLIC cxx_std_23)
+    target_link_libraries(ct_imgui_sdl3_renderer PUBLIC ct::imgui SDL3::SDL3)
+    target_compile_features(ct_imgui_sdl3_renderer PUBLIC cxx_std_23)
 endif()
