@@ -1,44 +1,73 @@
 # Docker Build Environment Reference
 
-Reproducible **toolchain** images. Source is not baked in — mount the repo at `/app`.
+Reproducible **toolchain** images. Source is not baked in — mount repo at `/app`.
 
-## Files
+## Image matrix
 
-| File | Purpose |
-|------|---------|
-| `fedora.Dockerfile` | Primary image. Official `fedora:44`. Recommended default. |
-| `manjaro.Dockerfile` | Rolling validator. Official `manjarolinux/base:latest`. |
-| `.dockerignore` | Context is this directory — only the Dockerfiles ship. |
+| File | Base | Purpose | Architecture |
+|------|------|---------|--------------|
+| `fedora.Dockerfile` | Official `fedora:44` | Primary, stable native validator | amd64, arm64 |
+| `manjaro.Dockerfile` | `manjarolinux/base:latest` | General Arch-family rolling validator | amd64, arm64 where upstream provides it |
+| `steamos.Dockerfile` | Valve Steam Runtime 3 SDK | Steam/Steam Deck ABI validation | amd64 |
+| `cachyos.Dockerfile` | CachyOS official image | Optimized x86-64-v3 rolling validator | amd64 (x86-64-v3 CPU required) |
+| `alt.Dockerfile` | Docker Official Image `alt:p11` | Stable ALT Linux platform validation | amd64, arm64 |
+| `.dockerignore` | — | Keeps build context minimal | — |
+
+SteamOS itself is immutable appliance firmware, not a supported build sysroot. The
+Steam image therefore uses Valve's official Steam Runtime SDK: this validates the
+ABI users actually run through Steam and avoids depending on unofficial SteamOS
+root filesystems.
+
+Alpine and Wolfi are intentionally omitted. Both use musl; this template's native
+Wayland/EGL stack and Android/glibc assumptions make them poor representative
+validators. Manjaro and CachyOS already cover minimal rolling/Arch-family needs.
 
 ## Usage
 
-Full guide: [`docs/docker.md`](../docs/docker.md).
-
 ```bash
-# Build (context = this directory)
-docker build -t cmake-template:fedora -f fedora.Dockerfile .
-docker build -t cmake-template:manjaro -f manjaro.Dockerfile .
+# Run from repository root.
+docker build -t cmake-template:fedora -f docker/fedora.Dockerfile docker
+docker run --rm -v "$PWD:/app" cmake-template:fedora
 
-# Full workflow (mount project root)
-docker run --rm -v "$(pwd)/..:/app" cmake-template:fedora
+# Choose another validator.
+docker build -t cmake-template:steamos -f docker/steamos.Dockerfile docker
+docker run --rm -v "$PWD:/app" cmake-template:steamos
 
-# Interactive shell
-docker run --rm -it -v "$(pwd)/..:/app" --entrypoint bash cmake-template:fedora
+# Interactive shell.
+docker run --rm -it -v "$PWD:/app" --entrypoint bash cmake-template:fedora
 ```
 
-> BuildKit required (`DOCKER_BUILDKIT=1`) for cache mounts.
+BuildKit is required for package-manager cache mounts.
+
+## NixOS / nixpkgs
+
+Nix support is a native flake rather than a Dockerfile. This preserves nixpkgs'
+compiler wrappers and dependency environment instead of flattening them into a
+mutable image.
+
+```bash
+nix develop
+cmake --workflow --preset=gcc-full
+
+# One-shot CI/local check.
+nix develop --command cmake --workflow --preset=gcc-full
+```
+
+`flake.lock` should be generated and committed by a Nix-enabled contributor before
+reproducible Nix CI is made required. Until then, `nixos-unstable` supplies current
+toolchains but is not bit-for-bit pinned.
 
 ## Design
 
-- Single stage. Toolchain only — not a runtime image, not a source snapshot.
-- BuildKit cache mounts persist `dnf` / `pacman` caches.
-- `ENTRYPOINT` is `cmake --workflow --preset=gcc-full`.
-- Published to GHCR by [`.github/workflows/publish-docker.yml`](../.github/workflows/publish-docker.yml). Add a matrix row to ship another image.
+- Toolchain images only: no source snapshot and no runtime packaging.
+- One image per distribution; compiler choice remains a CMake preset/runtime choice.
+- BuildKit cache mounts persist package downloads.
+- Default `ENTRYPOINT`: `cmake --workflow --preset=gcc-full`.
+- GHCR publication includes provenance and SBOM attestations.
+- Docker CI runs only when Docker or its workflow changes.
 
 ## Contributing
 
-1. Image builds with `docker build --no-cache`.
-2. Full workflow: `docker run --rm -v "$(pwd)/..:/app" <image>`.
-3. Update `docs/docker.md` if images or usage change.
-
-See [`docs/contributing.md`](../docs/contributing.md).
+1. Build affected image with `docker build --no-cache`.
+2. Mount repository root and run its default workflow.
+3. Update this matrix when adding/removing images.

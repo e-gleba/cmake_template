@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: docker
+
+on:
+  pull_request:
+    paths:
+      - "docker/**"
+      - ".github/workflows/docker.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docker/**"
+      - ".github/workflows/docker.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: fedora
+            file: fedora.Dockerfile
+          - name: manjaro
+            file: manjaro.Dockerfile
+          - name: steamos
+            file: steamos.Dockerfile
+          - name: cachyos
+            file: cachyos.Dockerfile
+          - name: alt
+            file: alt.Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: docker
+          file: docker/${{ matrix.file }}
+          load: true
+          tags: cmake-template:${{ matrix.name }}
+          build-args: SOURCE=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=docker-${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=docker-${{ matrix.name }}
+
+      - name: Verify toolchain
+        run: |
+          docker run --rm --entrypoint sh cmake-template:${{ matrix.name }} -c '
+            cmake --version &&
+            ninja --version &&
+            git --version &&
+            c++ --version &&
+            clang++ --version
+          '

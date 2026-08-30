@@ -50,6 +50,9 @@ jobs:
         file:
           - docker/fedora.Dockerfile
           - docker/manjaro.Dockerfile
+          - docker/steamos.Dockerfile
+          - docker/cachyos.Dockerfile
+          - docker/alt.Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v7
