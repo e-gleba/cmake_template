@@ -7,10 +7,6 @@
         "patch": 0
     },
     "include": [
-        "cmake/presets/configure.json",
-        "cmake/presets/build.json",
-        "cmake/presets/test.json",
-        "cmake/presets/package.json",
         "cmake/presets/workflow.json"
     ]
 }
