@@ -5,22 +5,19 @@
 #
 #   docker build -t cmake-template:fedora -f docker/fedora.Dockerfile docker
 #   docker run --rm -v "$PWD:/app" -w /app cmake-template:fedora \
-#     cmake --workflow --preset=gcc-full
+#     cmake --workflow --preset=linux_gcc_x86_64_release_package
 
-# Pin the current stable. Dependabot / Renovate bump this tag.
 FROM fedora:44
 
 ARG SOURCE=""
 
 LABEL org.opencontainers.image.title="cmake_template fedora toolchain" \
-      org.opencontainers.image.description="GCC + Clang + CMake 3.31+ + Ninja" \
+      org.opencontainers.image.description="GCC + Clang + CMake 4.4+ + Ninja" \
       org.opencontainers.image.source="${SOURCE}" \
       org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
-# Distro packages track the image tag (fedora:44). Pinning each RPM
-# would fight Dependabot and add no reproducibility here.
 # hadolint ignore=DL3041
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     dnf -y upgrade --refresh \
@@ -40,5 +37,4 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
         mesa-libEGL-devel \
     && dnf clean all
 
-# Override: docker run --entrypoint bash … for a shell.
-ENTRYPOINT ["cmake", "--workflow", "--preset=gcc-full"]
+ENTRYPOINT ["cmake", "--workflow", "--preset=linux_gcc_x86_64_release_package"]

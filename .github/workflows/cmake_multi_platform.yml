@@ -57,19 +57,19 @@ jobs:
             platform: linux
             compiler: clang
             arch: x86_64
-            preset: clang-full
+            preset: linux_clang_x86_64_release_package
             artifact_name: linux_clang_x86_64
           - os: ubuntu-latest
             platform: linux
             compiler: gcc
             arch: x86_64
-            preset: gcc-full
+            preset: linux_gcc_x86_64_release_package
             artifact_name: linux_gcc_x86_64
           - os: windows-2022
             platform: windows
             compiler: msvc
             arch: x86_64
-            preset: msvc-full
+            preset: windows_msvc_x86_64_release_package
             artifact_name: windows_msvc_x86_64
     steps:
       - name: Checkout
@@ -94,20 +94,20 @@ jobs:
       - name: Build and test
         run: cmake --workflow --preset ${{ matrix.preset }}
       - name: Build documentation
-        if: matrix.preset == 'clang-full'
-        run: cmake --build --preset clang-docs
+        if: matrix.compiler == 'clang'
+        run: cmake --build --preset linux_clang_x86_64_docs
       - name: Verify documentation
-        if: matrix.preset == 'clang-full'
+        if: matrix.compiler == 'clang'
         shell: bash
         run: |
-          index_path="build/clang/generated_docs/html/index.html"
+          index_path="build/linux_clang_x86_64/generated_docs/html/index.html"
           test -f "${index_path}" || { echo "::error::Documentation index not found at ${index_path}"; exit 1; }
       - name: Upload documentation
-        if: matrix.preset == 'clang-full'
+        if: matrix.compiler == 'clang'
         uses: actions/upload-artifact@v7
         with:
           name: doxygen_html_${{ github.run_id }}
-          path: build/clang/generated_docs/html/
+          path: build/linux_clang_x86_64/generated_docs/html/
           retention-days: 30
           if-no-files-found: error
       - name: Upload zip package
@@ -134,13 +134,13 @@ jobs:
         include:
           - compiler: llvm_mingw
             arch: x86_64
-            preset: llvm-mingw-x86_64-full
+            preset: windows_llvm_mingw_x86_64_release_package
           - compiler: llvm_mingw
             arch: i686
-            preset: llvm-mingw-i686-full
+            preset: windows_llvm_mingw_x86_release_package
           - compiler: llvm_mingw
             arch: aarch64
-            preset: llvm-mingw-aarch64-full
+            preset: windows_llvm_mingw_aarch64_release_package
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -187,14 +187,14 @@ jobs:
           key: cpm-web_emscripten_wasm32-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
           restore-keys: cpm-web_emscripten_wasm32-
       - name: Build and test
-        run: cmake --workflow --preset emscripten-full
+        run: cmake --workflow --preset web_emscripten_wasm32_release_test
       - name: Upload web bundle
         uses: actions/upload-artifact@v7
         with:
           name: web_emscripten_wasm32_bundle
           path: |
-            build/emscripten/**/05_webassembly.html
-            build/emscripten/**/05_webassembly.js
-            build/emscripten/**/05_webassembly.wasm
+            build/web_emscripten_wasm32/**/05_webassembly.html
+            build/web_emscripten_wasm32/**/05_webassembly.js
+            build/web_emscripten_wasm32/**/05_webassembly.wasm
           if-no-files-found: error
           compression-level: 0
