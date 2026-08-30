@@ -1,41 +1,29 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-#
-# One-click GitHub Release.
 name: release
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release tag (e.g. v1.0.0)"
-        required: true
-        type: string
-      next_version:
-        description: "Next CMake project() VERSION, no v prefix (e.g. 1.0.1) — bot opens+merges a PR after the release"
+        description: "Release tag (for example, v1.0.0)"
         required: true
         type: string
       prerelease:
-        description: "Mark as pre-release"
+        description: "Mark as prerelease"
         required: false
         type: boolean
         default: false
       publish_docker:
-        description: "Build and push toolchain images to GHCR"
+        description: "Publish toolchain images to GHCR"
         required: false
         type: boolean
         default: true
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  packages: write
-  actions: read
-  id-token: write
-  attestations: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   docker:
@@ -57,7 +45,7 @@ jobs:
       contents: read
 
   publish:
-    name: tag and github release
+    name: github release
     needs: [docker, packages]
     if: >-
       !cancelled()
@@ -67,18 +55,24 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       VERSION: ${{ inputs.version }}
     steps:
-      - name: Validate version
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate release tag
         run: |
           if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::version must look like v1.2.3 or v1.2.3-rc.1 (got '${VERSION}')"
             exit 1
           fi
-          if git ls-remote --tags --exit-code "https://github.com/${{ github.repository }}.git" \
-               "refs/tags/${VERSION}" >/dev/null; then
+          if git rev-parse "refs/tags/${VERSION}" >/dev/null 2>&1; then
             echo "::error::tag ${VERSION} already exists"
             exit 1
           fi
@@ -87,119 +81,44 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: artifacts
+          pattern: "*_package"
+          merge-multiple: true
 
-      - name: Collect release assets
+      - name: Verify release assets
         run: |
-          find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.xz' -o -name '*.apk' \) -print0 | sort -z > /tmp/release-assets
+          find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.xz' \) -print0 | sort -z > /tmp/release-assets
           mapfile -d '' files < /tmp/release-assets
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "::error::no package artifacts (zip / tar.gz / tar.xz / apk)"
+            echo "::error::no release packages found"
             exit 1
           fi
+          printf '## Release assets\n\n' >> "$GITHUB_STEP_SUMMARY"
+          printf -- '- `%s`\n' "${files[@]}" >> "$GITHUB_STEP_SUMMARY"
 
-          declare -A asset_names=()
-          for file in "${files[@]}"; do
-            name=${file##*/}
-            if [[ -n "${asset_names[${name}]:-}" ]]; then
-              echo "::error::duplicate release asset name '${name}'"
-              echo "::error::${asset_names[${name}]}"
-              echo "::error::${file}"
-              exit 1
-            fi
-            asset_names[${name}]=${file}
-          done
+      - name: Attest release assets
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            artifacts/*.zip
+            artifacts/*.tar.gz
+            artifacts/*.tar.xz
 
-          {
-            echo "## Release assets (${#files[@]})"
-            printf -- '- %s\n' "${files[@]}"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Create GitHub Release
+      - name: Create GitHub release
         env:
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
           mapfile -d '' files < /tmp/release-assets
           args=(
             "${VERSION}"
-            --repo "${{ github.repository }}"
             --target "${{ github.sha }}"
             --title "${VERSION}"
             --generate-notes
+            --verify-tag
           )
+          git tag "${VERSION}" "${{ github.sha }}"
+          git push origin "${VERSION}"
           if [ "${PRERELEASE}" = "true" ]; then
             args+=(--prerelease)
           fi
           gh release create "${args[@]}" "${files[@]}"
-          echo "Created ${{ github.server_url }}/${{ github.repository }}/releases/tag/${VERSION}" \
-            >> "$GITHUB_STEP_SUMMARY"
-
-  bump_cmake_version:
-    name: bump cmake version via pr
-    needs: publish
-    if: >-
-      !cancelled()
-      && needs.publish.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-      pull-requests: write
-    concurrency:
-      group: post-release-cmake-version-bump
-      cancel-in-progress: false
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      NEXT_VERSION: ${{ inputs.next_version }}
-      VERSION: ${{ inputs.version }}
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@v7
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Validate next_version
-        run: |
-          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            printf "::error::next_version must be plain semver, no v prefix (e.g. 1.0.1) — got '%s'\n" "${NEXT_VERSION}"
-            exit 1
-          fi
-          current=$(grep -E '^[[:space:]]*VERSION[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$' CMakeLists.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
-          if [[ -z "${current}" ]]; then
-            echo "::error::could not read the current project version from CMakeLists.txt"
-            exit 1
-          fi
-          lowest=$(printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -V | head -n1)
-          if [[ "${lowest}" == "${NEXT_VERSION}" ]]; then
-            printf "::error::next_version (%s) must be greater than the current project version (%s)\n" "${NEXT_VERSION}" "${current}"
-            exit 1
-          fi
-          echo "current=${current}" >> "${GITHUB_ENV}"
-
-      - name: Bump project version
-        run: |
-          sed -i -E "s/^([[:space:]]*VERSION[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/\1${NEXT_VERSION}/" CMakeLists.txt
-          grep -E "^[[:space:]]*VERSION[[:space:]]+${NEXT_VERSION}[[:space:]]*$" CMakeLists.txt
-
-      - name: Open and merge bump PR
-        run: |
-          branch="chore/bump-cmake-version-${NEXT_VERSION}-${GITHUB_RUN_ID}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "${branch}"
-          git add CMakeLists.txt
-          git commit -m "chore: bump CMake project version to ${NEXT_VERSION}"
-          git push origin "HEAD:${branch}"
-
-          pr_url=$(gh pr create \
-            --base main \
-            --head "${branch}" \
-            --title "chore: bump CMake project version to ${NEXT_VERSION}" \
-            --body "Post-release version bump for ${VERSION}: ${current} to ${NEXT_VERSION}.")
-
-          echo "Opened ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
-          if gh pr merge --squash --delete-branch; then
-            echo "Merged ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
-          else
-            echo "::warning::could not merge ${pr_url} — merge it manually"
-          fi
+          echo "Released [${VERSION}](${{ github.server_url }}/${{ github.repository }}/releases/tag/${VERSION})" >> "$GITHUB_STEP_SUMMARY"

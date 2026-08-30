@@ -4,31 +4,41 @@ name: workflow_lint
 on:
   pull_request:
     paths: &workflow_paths
-      - ".github/workflows/**"
+      - ".github/**"
   push:
     branches: [main]
     paths: *workflow_paths
   workflow_dispatch:
 
 concurrency:
-  group: workflow_lint-${{ github.ref }}
+  group: workflow_lint-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  workflow_lint:
-    name: linux_actionlint_x86_64
+  actionlint:
+    name: actionlint
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Lint workflows
-        run: |
-          docker run --rm \
-            -v "${{ github.workspace }}:/repo:ro" \
-            -w /repo \
-            rhysd/actionlint:1.7.12 \
-            -color
+        uses: raven-actions/actionlint@v2
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Audit workflow security
+        uses: zizmorcore/zizmor-action@v0.3.2

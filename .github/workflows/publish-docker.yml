@@ -23,14 +23,10 @@ on:
       - ".github/workflows/publish-docker.yml"
 
 concurrency:
-  group: docker_publish-${{ github.workflow }}-${{ github.ref }}
+  group: docker_publish-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
-  attestations: write
+permissions: {}
 
 env:
   REGISTRY: ghcr.io
@@ -41,6 +37,11 @@ jobs:
     name: linux_docker_${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -67,6 +68,7 @@ jobs:
             type=sha,prefix=sha-
             type=ref,event=branch
       - name: Build and push image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: docker
@@ -74,8 +76,15 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          provenance: true
-          sbom: true
+          provenance: false
+          sbom: false
           build-args: SOURCE=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+      - name: Attest image provenance and SBOM
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.name }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+          sbom: true
