@@ -14,7 +14,7 @@ export module cxx_project;
 // Re-export the :math partition: importers of "cxx_project" also see
 // clamp/fibonacci. A plain "import :math;" would keep them internal.
 // Every interface partition must be (in)directly exported by the primary
-// interface unit — https://eel.is/c++draft/module.unit
+// interface unit - https://eel.is/c++draft/module.unit
 export import :math;
 
 namespace cxx_project {
@@ -28,7 +28,7 @@ export struct version_info final
     std::uint32_t patch{};
 };
 
-// Contract only — the body lives in the module implementation unit
+// Contract only - the body lives in the module implementation unit
 // (cxx_project.impl.cpp), attached to the module but never reachable
 // to importers.
 export [[nodiscard]] std::string describe(const version_info& version);

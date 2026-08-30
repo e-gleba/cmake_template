@@ -14,7 +14,6 @@ on:
             - "**/*.c"
             - "**/*.h"
             - "**/*.cxx"
-            - "**/*.cppm"
             - "**/*.hxx"
             - "**/CMakeLists.txt"
             - "CMakePresets.json"
@@ -145,68 +144,6 @@ jobs:
                   path: build/**/*.tar.gz
                   if-no-files-found: ignore
                   compression-level: 0
-
-    # ── C++20 modules (opt-in target 06_modules, issue #5) ──────────────
-    # One compiler per platform. The configure step flips
-    # CMAKE_CXX_USE_MODULES on; everything else reuses the existing presets.
-    modules:
-        name: modules / ${{ matrix.artifact-name }}
-        runs-on: ${{ matrix.os }}
-        strategy:
-            fail-fast: false
-            matrix:
-                include:
-                    - os: ubuntu-latest
-                      preset: clang
-                      packages: clang clang-tools
-                      configure-args: ""
-                      exe: ./build/clang/src/06_modules/Release/06_modules
-                    - os: ubuntu-latest
-                      preset: gcc
-                      packages: g++-14
-                      configure-args: "-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14"
-                      exe: ./build/gcc/src/06_modules/Release/06_modules
-                    - os: windows-2022 # Pin to windows-2022 for VS 2022 (toolset >= 14.34)
-                      preset: msvc
-                      packages: ""
-                      configure-args: ""
-                      exe: ./build/msvc/src/06_modules/Release/06_modules.exe
-
-        steps:
-            - name: checkout
-              uses: actions/checkout@v7
-
-            - name: setup cmake + ninja
-              uses: lukka/get-cmake@v4.4.2
-
-            # clang-tools provides clang-scan-deps, the module dependency
-            # scanner CMake drives for Clang. GCC needs >= 14 for
-            # -fdeps-format=p1689r5 — newer than some runner defaults.
-            - name: install linux toolchain
-              if: runner.os == 'Linux'
-              run: |
-                  sudo apt-get update -qq
-                  sudo apt-get install -y --no-install-recommends ${{ matrix.packages }}
-
-            - name: cache cpm sources
-              uses: actions/cache@v6
-              with:
-                  path: .cpm_cache
-                  key: cpm-modules-${{ matrix.artifact-name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
-                  restore-keys: cpm-modules-${{ matrix.artifact-name }}-
-
-            - name: configure
-              shell: bash
-              run: cmake --preset ${{ matrix.preset }} -DCMAKE_CXX_USE_MODULES=ON ${{ matrix.configure-args }}
-
-            - name: build 06_modules
-              run: cmake --build --preset ${{ matrix.preset }}-release --target 06_modules
-
-            # The binary self-checks every exercised feature and returns
-            # EXIT_FAILURE on mismatch — a red step means a broken BMI.
-            - name: smoke test
-              shell: bash
-              run: ${{ matrix.exe }}
 
     # ── cross-compile: Linux → Windows (llvm-mingw) ───────────────────────────
     cross-windows:

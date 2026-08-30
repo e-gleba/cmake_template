@@ -2,7 +2,7 @@
 //
 // Partitions split one module into focused units. A partition is visible
 // only inside its own module unless the primary interface unit
-// re-exports it — see "export import :math;" in cxx_project.cppm.
+// re-exports it - see "export import :math;" in cxx_project.cppm.
 //
 // Ref: https://en.cppreference.com/w/cpp/language/modules
 
