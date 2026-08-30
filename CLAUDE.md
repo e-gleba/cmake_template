@@ -89,7 +89,7 @@ cmake --build build/gcc --target cpplint  # cppcheck/cpplint
 
 - Every workflow file starts with `# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json`.
 - Build matrix lives in `.github/workflows/cmake_multi_platform.yml` (`workflow_call` so `release.yml` can reuse it). Do not duplicate jobs.
-- Release is `.github/workflows/release.yml` (`workflow_dispatch`, required `version` + `next_version`). A `validate` job checks semver shape, tag uniqueness (read-only `gh api`), and `project(VERSION)` match before the build matrix starts; then it pipes `publish-docker.yml` + the multi-platform workflow, `gh release create`, and a PR that bumps `CMakeLists.txt` `project(VERSION)` (`automerge` input, default on). Never rewrite the just-tagged version.
+- Release is `.github/workflows/release.yml` (`workflow_dispatch`, required `version` + `next_version`). A `validate` job checks semver shape, tag uniqueness (read-only `gh api`), and `project(VERSION)` match before the build matrix starts, and exports the previous release tag (`gh release view`) as the changelog base for `gh release create --notes-start-tag`. Then it pipes `publish-docker.yml` + the multi-platform workflow and opens a PR that bumps `CMakeLists.txt` `project(VERSION)` (`automerge` input, default on). Never rewrite the just-tagged version.
 - Docker images: add a row to `publish-docker.yml` `jobs.publish.strategy.matrix.include`. No hardcoded image names — `ghcr.io/${{ github.repository }}/<name>`.
 - New matrix entries must use existing presets from `CMakePresets.json`.
 - Do NOT add platform-specific hack scripts in CI — encode logic in presets or Docker.

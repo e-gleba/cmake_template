@@ -44,6 +44,8 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+    outputs:
+      prev_tag: ${{ steps.plan.outputs.prev_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -51,6 +53,7 @@ jobs:
       # Inputs reach the shell via env vars only — inline ${{ inputs.* }}
       # expansion inside run: blocks is a script-injection vector.
       - name: Validate inputs
+        id: plan
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,6 +94,19 @@ jobs:
             exit 1
           fi
 
+          # Hint: the latest release is the changelog base — the publish job
+          # passes it to gh release create --notes-start-tag. Empty on the
+          # first release (gh release view fails → tolerate).
+          prev_tag=$(gh release view --json tagName --jq .tagName 2>/dev/null || true)
+          echo "prev_tag=${prev_tag}" >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "### Release plan"
+            echo "- previous release: \`${prev_tag:-none — first release}\`"
+            echo "- this release: \`${IN_VERSION}\`"
+            echo "- next project version: \`${IN_NEXT_VERSION}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
   docker:
     name: docker
     needs: validate
@@ -113,7 +129,7 @@ jobs:
 
   publish:
     name: tag and github release
-    needs: [docker, packages]
+    needs: [validate, docker, packages]
     if: >-
       !cancelled()
       && needs.packages.result == 'success'
@@ -125,6 +141,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       VERSION: ${{ inputs.version }}
+      PREV_TAG: ${{ needs.validate.outputs.prev_tag }}
     steps:
       - name: Download release assets
         uses: actions/download-artifact@v8
@@ -161,6 +178,10 @@ jobs:
             --title "${VERSION}"
             --generate-notes
           )
+          # Deterministic changelog: diff against the previous release tag.
+          if [ -n "${PREV_TAG}" ]; then
+            args+=(--notes-start-tag "${PREV_TAG}")
+          fi
           if [ "${PRERELEASE}" = "true" ]; then
             args+=(--prerelease)
           fi
@@ -217,7 +238,7 @@ jobs:
           base: main
           title: "chore: bump CMake project version to ${{ inputs.next_version }}"
           body: |
-            Post-release version bump after `${{ inputs.version }}`.
+            Post-release version bump after [`${{ inputs.version }}`](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.version }}).
 
             - Next project version: `${{ inputs.next_version }}`
             - Changed file: `CMakeLists.txt`
