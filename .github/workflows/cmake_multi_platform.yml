@@ -39,7 +39,6 @@ env:
 
 jobs:
     native:
-        if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, '') }}
         name: native_${{ matrix.artifact_name }}
         runs-on: ${{ matrix.os }}
         strategy:
