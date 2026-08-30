@@ -11,7 +11,7 @@ on:
         required: true
         type: string
       next_version:
-        description: "Next CMake project() VERSION, no v prefix (e.g. 1.0.1) — bot opens+merges a PR after the release"
+        description: "Next CMake project() VERSION, no v prefix (e.g. 1.0.1) — bot opens a PR after the release"
         required: true
         type: string
       prerelease:
@@ -29,13 +29,7 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  packages: write
-  actions: read
-  id-token: write
-  attestations: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   docker:
@@ -126,7 +120,7 @@ jobs:
             >> "$GITHUB_STEP_SUMMARY"
 
   bump_cmake_version:
-    name: bump cmake version via pr
+    name: open cmake version bump pr
     needs: publish
     if: >-
       !cancelled()
@@ -140,58 +134,80 @@ jobs:
       group: post-release-cmake-version-bump
       cancel-in-progress: false
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       NEXT_VERSION: ${{ inputs.next_version }}
-      VERSION: ${{ inputs.version }}
+      RELEASE_VERSION: ${{ inputs.version }}
     steps:
       - name: Checkout main
         uses: actions/checkout@v7
         with:
           ref: main
-          fetch-depth: 0
 
-      - name: Validate next_version
+      - name: Set up CMake
+        uses: lukka/get-cmake@v4.4.2
+
+      - name: Validate versions
         run: |
           if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             printf "::error::next_version must be plain semver, no v prefix (e.g. 1.0.1) — got '%s'\n" "${NEXT_VERSION}"
             exit 1
           fi
-          current=$(grep -E '^[[:space:]]*VERSION[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$' CMakeLists.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+
+          cmake -S . -B build/version-check -DBUILD_TESTING=OFF
+          current=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/version-check/CMakeCache.txt)
           if [[ -z "${current}" ]]; then
-            echo "::error::could not read the current project version from CMakeLists.txt"
+            echo "::error::CMake did not report CMAKE_PROJECT_VERSION"
             exit 1
           fi
-          lowest=$(printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -V | head -n1)
-          if [[ "${lowest}" == "${NEXT_VERSION}" ]]; then
-            printf "::error::next_version (%s) must be greater than the current project version (%s)\n" "${NEXT_VERSION}" "${current}"
+          if [[ "${RELEASE_VERSION}" != "v${current}" ]]; then
+            printf "::error::release version (%s) must match CMake project version (v%s)\n" \
+              "${RELEASE_VERSION}" "${current}"
             exit 1
           fi
-          echo "current=${current}" >> "${GITHUB_ENV}"
+          if ! printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -C -V \
+            || [[ "${current}" == "${NEXT_VERSION}" ]]; then
+            printf "::error::next_version (%s) must be greater than current project version (%s)\n" \
+              "${NEXT_VERSION}" "${current}"
+            exit 1
+          fi
+          echo "CURRENT_VERSION=${current}" >> "${GITHUB_ENV}"
 
       - name: Bump project version
         run: |
-          sed -i -E "s/^([[:space:]]*VERSION[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/\1${NEXT_VERSION}/" CMakeLists.txt
-          grep -E "^[[:space:]]*VERSION[[:space:]]+${NEXT_VERSION}[[:space:]]*$" CMakeLists.txt
+          cmake -DPROJECT_FILE=CMakeLists.txt -DVERSION="${NEXT_VERSION}" -P cmake/scripts/set_project_version.cmake
 
-      - name: Open and merge bump PR
+      - name: Verify bumped project
         run: |
-          branch="chore/bump-cmake-version-${NEXT_VERSION}-${GITHUB_RUN_ID}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "${branch}"
-          git add CMakeLists.txt
-          git commit -m "chore: bump CMake project version to ${NEXT_VERSION}"
-          git push origin "HEAD:${branch}"
+          cmake -S . -B build/version-verify -DBUILD_TESTING=OFF
+          actual=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/version-verify/CMakeCache.txt)
+          test "${actual}" = "${NEXT_VERSION}" || {
+            printf "::error::expected CMake project version %s, got %s\n" "${NEXT_VERSION}" "${actual}"
+            exit 1
+          }
+          git diff --check
+          git diff --exit-code -- . ':!CMakeLists.txt'
 
-          pr_url=$(gh pr create \
-            --base main \
-            --head "${branch}" \
-            --title "chore: bump CMake project version to ${NEXT_VERSION}" \
-            --body "Post-release version bump for ${VERSION}: ${current} to ${NEXT_VERSION}.")
+      - name: Create version bump pull request
+        id: bump-pr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          add-paths: CMakeLists.txt
+          commit-message: "chore: bump CMake project version to ${{ inputs.next_version }}"
+          committer: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          author: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          branch: chore/bump-cmake-version
+          delete-branch: true
+          base: main
+          title: "chore: bump CMake project version to ${{ inputs.next_version }}"
+          body: |
+            Post-release version bump after `${{ inputs.version }}`.
 
-          echo "Opened ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
-          if gh pr merge --squash --delete-branch; then
-            echo "Merged ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
-          else
-            echo "::warning::could not merge ${pr_url} — merge it manually"
-          fi
+            - Previous project version: `${{ env.CURRENT_VERSION }}`
+            - Next project version: `${{ inputs.next_version }}`
+            - Changed file: `CMakeLists.txt`
+
+            Generated by the release workflow.
+
+      - name: Report version bump
+        if: steps.bump-pr.outputs.pull-request-url != ''
+        run: echo "Opened ${{ steps.bump-pr.outputs.pull-request-url }}" >> "${GITHUB_STEP_SUMMARY}"
