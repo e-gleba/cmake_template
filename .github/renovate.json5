@@ -10,19 +10,41 @@
   // ─── General ──────────────────────────────────────────────────────────────
   timezone: "UTC",
   schedule: ["before 8am on monday"],
+
+  // PR creation must not be hourly-limited: the self-hosted runner executes
+  // once per week, so a low prHourlyLimit defers the remaining PRs to the
+  // NEXT weekly run. Branch pushes are not capped, PR creation is — that is
+  // how renovate/* branches ended up existing with no PRs attached.
+  // 0 = unlimited per run; prConcurrentLimit still caps simultaneously open PRs.
+  prHourlyLimit: 0,
   prConcurrentLimit: 10,
-  prHourlyLimit: 3,
+
   labels: ["dependencies"],
   commitMessagePrefix: "chore(deps):",
   commitMessageAction: "update",
   commitMessageTopic: "{{depName}}",
   commitMessageExtra: "to {{newValue}}",
 
+  // Never ship zero-day releases: wait 3 days so yanked/broken upstream
+  // releases are filtered out before a PR is even created.
+  minimumReleaseAge: "3 days",
+
+  // ─── Dependency Dashboard ─────────────────────────────────────────────────
+  // Persistent tracking issue listing pending/open/rate-limited updates and
+  // run errors. Tick a checkbox there to force-create any PR on demand —
+  // the Dependabot-like workflow, no CLI required.
+  dependencyDashboard: true,
+  dependencyDashboardTitle: "Renovate dependency dashboard",
+
   // ─── Vulnerability alerts ─────────────────────────────────────────────────
+  // OSV database coverage on top of GitHub advisories.
+  osvVulnerabilityAlerts: true,
   vulnerabilityAlerts: {
     enabled: true,
     schedule: ["at any time"],
     labels: ["dependencies", "security"],
+    // Security fixes bypass the 3-day release-age gate.
+    minimumReleaseAge: null,
   },
 
   // Dependabot owns github-actions + docker updates (see .github/dependabot.yml) —
@@ -42,6 +64,14 @@
       automerge: true,
       automergeStrategy: "squash",
       platformAutomerge: true,
+    },
+    {
+      description:
+        "Group CPM minor updates into one weekly PR (patches stay separate and auto-merge, majors stay isolated)",
+      matchFileNames: ["cmake/cpm/**", "cmake/cpm-config.cmake"],
+      matchUpdateTypes: ["minor"],
+      groupName: "CPM dependencies (minor)",
+      groupSlug: "cpm-minor",
     },
   ],
 
@@ -107,6 +137,23 @@
       datasourceTemplate: "git-refs",
       depNameTemplate: "https://github.com/{{{depName}}}.git",
       currentValueTemplate: "main",
+    },
+
+    // ─── Toolchains ─────────────────────────────────────────────────────────
+    // Matches: set(LLVM_MINGW_VERSION "20260826" ...) in the llvm-mingw
+    // toolchain file. Release tags are bare dates (YYYYMMDD, no v prefix),
+    // so semver-coerced versioning makes them comparable (20260826 ->
+    // 20260826.0.0) while the raw tag is written back as-is.
+    {
+      customType: "regex",
+      description: "llvm-mingw toolchain (LLVM_MINGW_VERSION release tag)",
+      managerFilePatterns: ["/(^|/)cmake/toolchains/llvm_mingw\\.cmake$/"],
+      matchStrings: [
+        "set\\(LLVM_MINGW_VERSION\\s+\"(?<currentValue>[^\"]+)\"",
+      ],
+      depNameTemplate: "mstorsjo/llvm-mingw",
+      datasourceTemplate: "github-releases",
+      versioningTemplate: "semver-coerced",
     },
   ],
 }
