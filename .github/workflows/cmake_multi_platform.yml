@@ -39,21 +39,18 @@ env:
 
 jobs:
     native:
-        name: native_${{ matrix.artifact_name }}
+        name: ${{ matrix.preset }}
         runs-on: ${{ matrix.os }}
         strategy:
             fail-fast: false
             matrix:
                 include:
                     - os: ubuntu-latest
-                      preset: clang-full
-                      artifact_name: linux_clang
+                      preset: linux_clang_x86_64_release
                     - os: ubuntu-latest
-                      preset: gcc-full
-                      artifact_name: linux_gcc
+                      preset: linux_gcc_x86_64_release
                     - os: windows-2022
-                      preset: msvc-full
-                      artifact_name: windows_msvc
+                      preset: windows_msvc_x86_64_release
         steps:
             - name: checkout
               uses: actions/checkout@v7
@@ -72,58 +69,41 @@ jobs:
               uses: actions/cache@v6
               with:
                   path: .cpm_cache
-                  key: cpm-${{ matrix.artifact_name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
-                  restore-keys: cpm-${{ matrix.artifact_name }}-
+                  key: cpm-${{ matrix.preset }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+                  restore-keys: cpm-${{ matrix.preset }}-
             - name: build
               run: cmake --workflow --preset ${{ matrix.preset }}
             - name: build_documentation
-              if: matrix.preset == 'clang-full'
-              run: cmake --build --preset clang-docs
-            - name: verify_documentation
-              if: matrix.preset == 'clang-full'
-              shell: bash
-              run: |
-                  index_path="build/clang/generated_docs/html/index.html"
-                  if [[ ! -f "${index_path}" ]]; then
-                    echo "::error::Documentation index not found at ${index_path}"
-                    exit 1
-                  fi
+              if: matrix.preset == 'linux_clang_x86_64_release'
+              run: cmake --build --preset linux_clang_x86_64_docs
             - name: upload_documentation_artifact
-              if: matrix.preset == 'clang-full'
+              if: matrix.preset == 'linux_clang_x86_64_release'
               uses: actions/upload-artifact@v7
               with:
-                  name: doxygen_html_${{ github.run_id }}
-                  path: build/clang/generated_docs/html/
+                  name: linux_clang_x86_64_doxygen_html
+                  path: build/linux_clang_x86_64/generated_docs/html/
                   retention-days: 30
                   if-no-files-found: error
-            - name: upload_zip_artifact
+            - name: upload_packages
               uses: actions/upload-artifact@v7
               with:
-                  name: ${{ matrix.artifact_name }}_zip
-                  path: build/**/*.zip
-                  if-no-files-found: ignore
-                  compression-level: 0
-            - name: upload_tgz_artifact
-              uses: actions/upload-artifact@v7
-              with:
-                  name: ${{ matrix.artifact_name }}_tgz
-                  path: build/**/*.tar.gz
+                  name: ${{ matrix.preset }}
+                  path: |
+                      build/**/*.zip
+                      build/**/*.tar.gz
                   if-no-files-found: ignore
                   compression-level: 0
 
     cross_windows:
-        name: cross_windows_${{ matrix.artifact_name }}
+        name: ${{ matrix.preset }}
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                include:
-                    - preset: llvm-mingw-x86_64-full
-                      artifact_name: windows_mingw_x86_64
-                    - preset: llvm-mingw-i686-full
-                      artifact_name: windows_mingw_i686
-                    - preset: llvm-mingw-aarch64-full
-                      artifact_name: windows_mingw_aarch64
+                preset:
+                    - windows_llvm_mingw_x86_64_release
+                    - windows_llvm_mingw_i686_release
+                    - windows_llvm_mingw_aarch64_release
         steps:
             - name: checkout
               uses: actions/checkout@v7
@@ -138,20 +118,20 @@ jobs:
               uses: actions/cache@v6
               with:
                   path: .cpm_cache
-                  key: cpm-${{ matrix.artifact_name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
-                  restore-keys: cpm-${{ matrix.artifact_name }}-
+                  key: cpm-${{ matrix.preset }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+                  restore-keys: cpm-${{ matrix.preset }}-
             - name: build
               run: cmake --workflow --preset ${{ matrix.preset }}
-            - name: upload_txz_artifact
+            - name: upload_package
               uses: actions/upload-artifact@v7
               with:
-                  name: ${{ matrix.artifact_name }}_txz
+                  name: ${{ matrix.preset }}
                   path: build/**/*.tar.xz
                   if-no-files-found: ignore
                   compression-level: 0
 
     web:
-        name: web_emscripten
+        name: wasm_emscripten_wasm32_release
         runs-on: ubuntu-latest
         steps:
             - name: checkout
@@ -167,30 +147,27 @@ jobs:
               uses: actions/cache@v6
               with:
                   path: .cpm_cache
-                  key: cpm-web-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
-                  restore-keys: cpm-web-
+                  key: cpm-wasm_emscripten_wasm32-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+                  restore-keys: cpm-wasm_emscripten_wasm32-
             - name: build_and_test
-              run: cmake --workflow --preset emscripten-full
+              run: cmake --workflow --preset wasm_emscripten_wasm32_release
             - name: upload_web_bundle
               uses: actions/upload-artifact@v7
               with:
-                  name: web_emscripten_bundle
+                  name: wasm_emscripten_wasm32_release
                   path: |
-                      build/emscripten/**/05_webassembly.html
-                      build/emscripten/**/05_webassembly.js
-                      build/emscripten/**/05_webassembly.wasm
+                      build/wasm_emscripten_wasm32/**/05_webassembly.html
+                      build/wasm_emscripten_wasm32/**/05_webassembly.js
+                      build/wasm_emscripten_wasm32/**/05_webassembly.wasm
                   if-no-files-found: error
                   compression-level: 0
 
     build_apk:
-        name: android_build_apk
+        name: android_gradle_arm64_v8a_release_apk
         runs-on: ubuntu-latest
         env:
             ANDROID_PROJECT_DIR: ${{ github.workspace }}/android_project
-            GRADLE_OPTS: >-
-                -Dorg.gradle.daemon=false
-                -Dorg.gradle.parallel=true
-                -Dorg.gradle.configureondemand=true
+            GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
         steps:
             - name: checkout
               uses: actions/checkout@v7
@@ -206,31 +183,26 @@ jobs:
             - name: cache_cpm_sources
               uses: actions/cache@v6
               with:
-                  path: ${{ github.workspace }}/.cpm_cache
+                  path: .cpm_cache
                   key: cpm-android-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
                   restore-keys: cpm-android-
-            - name: accept_android_sdk_licenses
-              run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
             - name: build_apk
               working-directory: ${{ env.ANDROID_PROJECT_DIR }}
               run: gradle --stacktrace :app:assembleRelease
-            - name: upload_apk_artifact
+            - name: upload_apk
               uses: actions/upload-artifact@v7
               with:
-                  name: android_release_apk
+                  name: android_gradle_release_apk
                   path: ${{ env.ANDROID_PROJECT_DIR }}/app/build/outputs/apk/release/*.apk
                   if-no-files-found: error
                   compression-level: 0
 
     android_test:
-        name: android_instrumented_tests
+        name: android_gradle_x86_64_api_30_instrumented_tests
         runs-on: ubuntu-latest
         env:
             ANDROID_PROJECT_DIR: ${{ github.workspace }}/android_project
-            GRADLE_OPTS: >-
-                -Dorg.gradle.daemon=false
-                -Dorg.gradle.parallel=true
-                -Dorg.gradle.configureondemand=true
+            GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
         steps:
             - name: checkout
               uses: actions/checkout@v7
@@ -243,14 +215,6 @@ jobs:
                   distribution: temurin
             - name: setup_gradle
               uses: gradle/actions/setup-gradle@v6.3.0
-            - name: cache_cpm_sources
-              uses: actions/cache@v6
-              with:
-                  path: ${{ github.workspace }}/.cpm_cache
-                  key: cpm-android-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
-                  restore-keys: cpm-android-
-            - name: accept_android_sdk_licenses
-              run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
             - name: enable_kvm
               run: |
                   echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4ci.rules
@@ -268,7 +232,7 @@ jobs:
               if: always()
               uses: actions/upload-artifact@v7
               with:
-                  name: android_test_results
+                  name: android_gradle_x86_64_api_30_test_results
                   path: |
                       ${{ env.ANDROID_PROJECT_DIR }}/app/build/outputs/androidTest-results/
                       ${{ env.ANDROID_PROJECT_DIR }}/app/build/reports/androidTests/
