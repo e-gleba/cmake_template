@@ -4,6 +4,8 @@
 # excluded from multi-architecture publishing.
 # Source is not baked in — mount the repo at /app.
 
+# Rolling image by design; successful outputs also receive immutable sha-* tags.
+# hadolint ignore=DL3007
 FROM cachyos/cachyos:latest
 
 ARG SOURCE=""

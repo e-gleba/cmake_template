@@ -6,30 +6,27 @@ Reproducible **toolchain** images. Source is not baked in — mount repo at `/ap
 
 | File | Base | Purpose | Architecture |
 |------|------|---------|--------------|
-| `fedora.Dockerfile` | Official `fedora:44` | Primary, stable native validator | amd64, arm64 |
-| `manjaro.Dockerfile` | `manjarolinux/base:latest` | General Arch-family rolling validator | amd64, arm64 where upstream provides it |
-| `steamos.Dockerfile` | Valve Steam Runtime 3 SDK | Steam/Steam Deck ABI validation | amd64 |
-| `cachyos.Dockerfile` | CachyOS official image | Optimized x86-64-v3 rolling validator | amd64 (x86-64-v3 CPU required) |
-| `alt.Dockerfile` | Docker Official Image `alt:p11` | Stable ALT Linux platform validation | amd64, arm64 |
-| `.dockerignore` | — | Keeps build context minimal | — |
+| `fedora.Dockerfile` | Official `fedora:44` | Primary native validator | amd64, arm64 |
+| `manjaro.Dockerfile` | `manjarolinux/base:latest` | Arch-family rolling validator | Upstream-dependent |
+| `steamos.Dockerfile` | Valve Steam Runtime 4 SDK | Current Steam Linux ABI validation | amd64 |
+| `cachyos.Dockerfile` | CachyOS official image | Optimized x86-64-v3 rolling validator | amd64; x86-64-v3 required |
+| `alt.Dockerfile` | Docker Official Image `alt:p11` | Stable ALT compiler/tool validation | amd64, arm64 |
+| `../nix/flake.nix` | nixpkgs `dockerTools` | Reproducible Nix dev shell and OCI image | amd64, arm64 |
 
-SteamOS itself is immutable appliance firmware, not a supported build sysroot. The
-Steam image therefore uses Valve's official Steam Runtime SDK: this validates the
-ABI users actually run through Steam and avoids depending on unofficial SteamOS
-root filesystems.
+SteamOS is appliance firmware, not a build sysroot. Valve recommends Steam Linux
+Runtime 4 for new native Linux games, so the Steam image uses its official SDK.
 
-Alpine and Wolfi are intentionally omitted. Both use musl; this template's native
-Wayland/EGL stack and Android/glibc assumptions make them poor representative
-validators. Manjaro and CachyOS already cover minimal rolling/Arch-family needs.
+Alpine and Wolfi are intentionally omitted. Their musl ABI would add divergence
+without improving coverage for this glibc/Wayland/Android-oriented template.
 
-## Usage
+## Docker usage
 
 ```bash
 # Run from repository root.
 docker build -t cmake-template:fedora -f docker/fedora.Dockerfile docker
 docker run --rm -v "$PWD:/app" cmake-template:fedora
 
-# Choose another validator.
+# Current Steam ABI target.
 docker build -t cmake-template:steamos -f docker/steamos.Dockerfile docker
 docker run --rm -v "$PWD:/app" cmake-template:steamos
 
@@ -39,35 +36,31 @@ docker run --rm -it -v "$PWD:/app" --entrypoint bash cmake-template:fedora
 
 BuildKit is required for package-manager cache mounts.
 
-## NixOS / nixpkgs
+## Nix usage
 
-Nix support is a native flake rather than a Dockerfile. This preserves nixpkgs'
-compiler wrappers and dependency environment instead of flattening them into a
-mutable image.
+Nix lives under `nix/` with other environment definitions. One flake defines both
+the interactive shell and OCI image, preventing package-list drift.
 
 ```bash
-nix develop
-cmake --workflow --preset=gcc-full
+# Development shell.
+nix develop ./nix
+nix develop ./nix --command cmake --workflow --preset=gcc-full
 
-# One-shot CI/local check.
-nix develop --command cmake --workflow --preset=gcc-full
+# Build and load the OCI image.
+nix build ./nix#docker
+./result | docker load
+docker run --rm -v "$PWD:/app" cmake-template-nix:latest
 ```
 
-`flake.lock` should be generated and committed by a Nix-enabled contributor before
-reproducible Nix CI is made required. Until then, `nixos-unstable` supplies current
-toolchains but is not bit-for-bit pinned.
+CI evaluates and builds the Nix image whenever `nix/**` changes. A committed lock
+file can be added after generating it with Nix; CI currently resolves the selected
+nixpkgs branch on each build instead of claiming a fixed dependency snapshot.
 
 ## Design
 
 - Toolchain images only: no source snapshot and no runtime packaging.
-- One image per distribution; compiler choice remains a CMake preset/runtime choice.
+- One image per distribution; compiler selection remains a CMake preset choice.
 - BuildKit cache mounts persist package downloads.
-- Default `ENTRYPOINT`: `cmake --workflow --preset=gcc-full`.
+- Default entrypoint: `cmake --workflow --preset=gcc-full`.
 - GHCR publication includes provenance and SBOM attestations.
-- Docker CI runs only when Docker or its workflow changes.
-
-## Contributing
-
-1. Build affected image with `docker build --no-cache`.
-2. Mount repository root and run its default workflow.
-3. Update this matrix when adding/removing images.
+- Docker and Nix jobs run only when their respective files change.
