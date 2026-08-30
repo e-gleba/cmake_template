@@ -35,13 +35,13 @@ jobs:
       VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up CMake and Ninja
         uses: lukka/get-cmake@v4.4.2
 
       - name: Restore vcpkg
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: microsoft/vcpkg
           path: vcpkg

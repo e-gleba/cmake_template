@@ -2,17 +2,7 @@
 #
 # One-click GitHub Release.
 #
-# Pipeline (jobs run in parallel where they can):
-#   docker    → reusable publish-docker.yml  (optional, matrix per image)
-#   packages  → reusable cmake_multi_platform.yml (native / cross / android)
-#   publish   → tag + gh release, attach CPack/APK artifacts from `packages`
-#   bump      → after publish: PR that bumps project(VERSION) on main, then merge
-#
-# Adapt:
-#   - version / next_version are inputs — never hardcoded
-#   - add/remove docker images in publish-docker.yml matrix
-#   - add package globs in the "Collect release assets" step if you add formats
-#   - permissions below are the union of what the called workflows need
+# The post-release bump PR keeps CMakeLists.txt and vcpkg.json versions equal.
 name: release
 
 on:
@@ -23,7 +13,7 @@ on:
         required: true
         type: string
       next_version:
-        description: "Next CMake project() VERSION, no v prefix (e.g. 1.0.1) — bot opens+merges a PR after the release"
+        description: "Next project version, without v prefix (e.g. 1.0.1)"
         required: true
         type: string
       prerelease:
@@ -89,12 +79,10 @@ jobs:
             echo "::error::version must look like v1.2.3 or v1.2.3-rc.1 (got '${VERSION}')"
             exit 1
           fi
-          if git ls-remote --tags --exit-code "https://github.com/${{ github.repository }}.git" \
-               "refs/tags/${VERSION}" >/dev/null; then
+          if git ls-remote --tags --exit-code "https://github.com/${{ github.repository }}.git" "refs/tags/${VERSION}" >/dev/null; then
             echo "::error::tag ${VERSION} already exists"
             exit 1
           fi
-          echo "Releasing ${VERSION} at ${{ github.sha }}"
 
       - name: Download package artifacts
         uses: actions/download-artifact@v8
@@ -103,63 +91,36 @@ jobs:
 
       - name: Collect release assets
         run: |
-          # Single line: a line break after \( makes shellcheck misparse the
-          # predicate list as commands (SC2215/SC2288).
           find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.xz' -o -name '*.apk' \) -print0 | sort -z > /tmp/release-assets
           mapfile -d '' files < /tmp/release-assets
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "::error::no package artifacts (zip / tar.gz / tar.xz / apk)"
-            echo "## Artifacts on this run" >> "$GITHUB_STEP_SUMMARY"
-            find artifacts -type f | sort >> "$GITHUB_STEP_SUMMARY" || true
+            echo "::error::no package artifacts"
             exit 1
           fi
-          {
-            echo "## Release assets (${#files[@]})"
-            printf -- '- %s\n' "${files[@]}"
-          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create GitHub Release
         env:
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
           mapfile -d '' files < /tmp/release-assets
-          args=(
-            "${VERSION}"
-            --repo "${{ github.repository }}"
-            --target "${{ github.sha }}"
-            --title "${VERSION}"
-            --generate-notes
-          )
-          if [ "${PRERELEASE}" = "true" ]; then
-            args+=(--prerelease)
-          fi
+          args=("${VERSION}" --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "${VERSION}" --generate-notes)
+          if [ "${PRERELEASE}" = "true" ]; then args+=(--prerelease); fi
           gh release create "${args[@]}" "${files[@]}"
-          echo "Created ${{ github.server_url }}/${{ github.repository }}/releases/tag/${VERSION}" \
-            >> "$GITHUB_STEP_SUMMARY"
 
-  # After the tag+artifacts exist. Does not rewrite the just-shipped
-  # project(VERSION) — packages always match their own tag. Prepares
-  # main for the NEXT release via a PR (not a direct push to main).
-  bump_cmake_version:
-    name: bump cmake version via pr
+  bump_project_versions:
+    name: bump CMake and vcpkg versions via PR
     needs: publish
-    if: >-
-      !cancelled()
-      && needs.publish.result == 'success'
+    if: needs.publish.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
       pull-requests: write
-    # Two release runs must never race the bump PR:
-    # queue the jobs, never cancel them mid-push.
     concurrency:
-      group: post-release-cmake-version-bump
+      group: post-release-version-bump
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Bound once via env — never expand a workflow input into shell
-      # source (zizmor template-injection).
       NEXT_VERSION: ${{ inputs.next_version }}
       VERSION: ${{ inputs.version }}
     steps:
@@ -169,65 +130,69 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Validate next_version
+      - name: Validate next version and current synchronization
+        shell: bash
         run: |
           if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            printf "::error::next_version must be plain semver, no v prefix (e.g. 1.0.1) — got '%s'\n" "${NEXT_VERSION}"
+            echo "::error::next_version must be plain semver, e.g. 1.0.1"
             exit 1
           fi
           current=$(grep -E '^[[:space:]]*VERSION[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$' CMakeLists.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
-          if [[ -z "${current}" ]]; then
-            echo "::error::could not read the current project version from CMakeLists.txt"
+          vcpkg_current=$(python - <<'PY'
+          import json
+          with open("vcpkg.json", encoding="utf-8") as f:
+              data = json.load(f)
+          value = data.get("version") or data.get("version-string")
+          if not value:
+              raise SystemExit("vcpkg.json has no version or version-string")
+          print(value)
+          PY
+          )
+          if [[ -z "${current}" || -z "${vcpkg_current}" ]]; then
+            echo "::error::could not read project versions"
             exit 1
           fi
-          # sort -V: smaller of the two sorts first, so an equal or
-          # lower next_version sorts first — reject both.
+          if [[ "${current}" != "${vcpkg_current}" ]]; then
+            echo "::error::CMakeLists.txt (${current}) and vcpkg.json (${vcpkg_current}) are not synchronized"
+            exit 1
+          fi
           lowest=$(printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -V | head -n1)
           if [[ "${lowest}" == "${NEXT_VERSION}" ]]; then
-            printf "::error::next_version (%s) must be greater than the current project version (%s)\n" "${NEXT_VERSION}" "${current}"
+            echo "::error::next_version must be greater than ${current}"
             exit 1
           fi
-          echo "current=${current}" >> "${GITHUB_ENV}"
-          echo "Bumping project(VERSION) ${current} → ${NEXT_VERSION} (release ${VERSION})"
+          echo "CURRENT_VERSION=${current}" >> "$GITHUB_ENV"
 
-      - name: Bump project version
+      - name: Bump project versions
+        shell: bash
         run: |
           sed -i -E "s/^([[:space:]]*VERSION[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/\1${NEXT_VERSION}/" CMakeLists.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("vcpkg.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          if "version" in data:
+              data["version"] = "${NEXT_VERSION}"
+          else:
+              data["version-string"] = "${NEXT_VERSION}"
+          path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+          PY
           grep -E "^[[:space:]]*VERSION[[:space:]]+${NEXT_VERSION}[[:space:]]*$" CMakeLists.txt
+          grep -q '"version-string": "' vcpkg.json || grep -q '"version": "' vcpkg.json
 
-      - name: Open and merge bump PR
+      - name: Open bump PR
+        shell: bash
         run: |
-          branch="chore/bump-cmake-version-${NEXT_VERSION}-${GITHUB_RUN_ID}"
+          branch="chore/bump-project-version-${NEXT_VERSION}-${GITHUB_RUN_ID}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "${branch}"
-          git add CMakeLists.txt
-          git commit -m "chore: bump CMake project version to ${NEXT_VERSION}"
+          git add CMakeLists.txt vcpkg.json
+          git commit -m "chore: bump project version to ${NEXT_VERSION}"
           git push origin "HEAD:${branch}"
-
-          pr_url=$(gh pr create \
+          gh pr create \
             --base main \
             --head "${branch}" \
-            --title "chore: bump CMake project version to ${NEXT_VERSION}" \
-            --body "$(cat <<EOF
-          Post-release bump. Tag \`${VERSION}\` already published with \`project(VERSION)\` ${current}.
-
-          Prepares main for the next release so packages always ship the version of their own tag.
-
-          - \`CMakeLists.txt\` \`project(VERSION)\`: ${current} → ${NEXT_VERSION}
-
-          Opened by the [release workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
-          EOF
-          )")
-
-          echo "Opened ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
-
-          # Leave the PR open if merge is blocked (reviews / checks).
-          # Settings → Actions → General → "Allow GitHub Actions to create
-          # and approve pull requests" must be on, or gh pr create fails.
-          if gh pr merge --squash --delete-branch; then
-            echo "Merged ${pr_url}" >> "${GITHUB_STEP_SUMMARY}"
-          else
-            echo "::warning::could not merge ${pr_url} — merge it manually"
-            echo "Merge blocked — merge ${pr_url} manually" >> "${GITHUB_STEP_SUMMARY}"
-          fi
+            --title "chore: bump project version to ${NEXT_VERSION}" \
+            --body "Post-release bump for ${VERSION}: synchronize CMakeLists.txt project(VERSION) and vcpkg.json."
