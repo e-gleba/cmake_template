@@ -1,0 +1,107 @@
+{
+    "$schema": "https://json.schemastore.org/cmake-presets.json",
+    "version": 12,
+    "configurePresets": [
+        {
+            "name": "windows_msvc_x86_64",
+            "displayName": "Windows MSVC x86_64",
+            "description": "Native Windows x86_64 build with Visual Studio 2022",
+            "inherits": "base",
+            "generator": "Visual Studio 17 2022",
+            "architecture": {"value": "x64", "strategy": "set"},
+            "toolset": {"value": "host=x64", "strategy": "set"},
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "windows_llvm_mingw_x86",
+            "displayName": "Windows LLVM-MinGW x86",
+            "description": "Cross-compile Windows x86 binaries from Linux with LLVM-MinGW",
+            "inherits": "base",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/llvm_mingw.cmake",
+            "cacheVariables": {"CMAKE_SYSTEM_PROCESSOR": "i686"},
+            "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
+        },
+        {
+            "name": "windows_llvm_mingw_x86_64",
+            "displayName": "Windows LLVM-MinGW x86_64",
+            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW",
+            "inherits": "base",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/llvm_mingw.cmake",
+            "cacheVariables": {"CMAKE_SYSTEM_PROCESSOR": "x86_64"},
+            "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
+        },
+        {
+            "name": "windows_llvm_mingw_aarch64",
+            "displayName": "Windows LLVM-MinGW AArch64",
+            "description": "Cross-compile Windows AArch64 binaries from Linux with LLVM-MinGW",
+            "inherits": "base",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/llvm_mingw.cmake",
+            "cacheVariables": {"CMAKE_SYSTEM_PROCESSOR": "aarch64"},
+            "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
+        }
+    ],
+    "buildPresets": [
+        {"name": "windows_msvc_x86_64_release", "configurePreset": "windows_msvc_x86_64", "inherits": "build_release"},
+        {"name": "windows_msvc_x86_64_debug", "configurePreset": "windows_msvc_x86_64", "inherits": "build_debug"},
+        {"name": "windows_llvm_mingw_x86_release", "configurePreset": "windows_llvm_mingw_x86", "inherits": "build_release"},
+        {"name": "windows_llvm_mingw_x86_64_release", "configurePreset": "windows_llvm_mingw_x86_64", "inherits": "build_release"},
+        {"name": "windows_llvm_mingw_aarch64_release", "configurePreset": "windows_llvm_mingw_aarch64", "inherits": "build_release"}
+    ],
+    "testPresets": [
+        {"name": "windows_msvc_x86_64_release", "configurePreset": "windows_msvc_x86_64", "inherits": "test_base", "configuration": "Release"},
+        {"name": "windows_msvc_x86_64_debug", "configurePreset": "windows_msvc_x86_64", "inherits": "test_base", "configuration": "Debug"}
+    ],
+    "packagePresets": [
+        {"name": "windows_msvc_x86_64_release_zip", "configurePreset": "windows_msvc_x86_64", "configurations": ["Release"], "generators": ["ZIP"]},
+        {"name": "windows_llvm_mingw_x86_release_txz", "configurePreset": "windows_llvm_mingw_x86", "configurations": ["Release"], "generators": ["TXZ"]},
+        {"name": "windows_llvm_mingw_x86_64_release_txz", "configurePreset": "windows_llvm_mingw_x86_64", "configurations": ["Release"], "generators": ["TXZ"]},
+        {"name": "windows_llvm_mingw_aarch64_release_txz", "configurePreset": "windows_llvm_mingw_aarch64", "configurations": ["Release"], "generators": ["TXZ"]}
+    ],
+    "workflowPresets": [
+        {
+            "name": "windows_msvc_x86_64_release_package",
+            "displayName": "Windows MSVC x86_64 release package",
+            "description": "Configure, build, test, and package a Windows x86_64 release with MSVC",
+            "steps": [
+                {"type": "configure", "name": "windows_msvc_x86_64"},
+                {"type": "build", "name": "windows_msvc_x86_64_release"},
+                {"type": "test", "name": "windows_msvc_x86_64_release"},
+                {"type": "package", "name": "windows_msvc_x86_64_release_zip"}
+            ]
+        },
+        {
+            "name": "windows_llvm_mingw_x86_release_package",
+            "displayName": "Windows LLVM-MinGW x86 release package",
+            "description": "Configure, build, and package Windows x86 binaries with LLVM-MinGW; cross-compiled binaries are not tested on Linux",
+            "steps": [
+                {"type": "configure", "name": "windows_llvm_mingw_x86"},
+                {"type": "build", "name": "windows_llvm_mingw_x86_release"},
+                {"type": "package", "name": "windows_llvm_mingw_x86_release_txz"}
+            ]
+        },
+        {
+            "name": "windows_llvm_mingw_x86_64_release_package",
+            "displayName": "Windows LLVM-MinGW x86_64 release package",
+            "description": "Configure, build, and package Windows x86_64 binaries with LLVM-MinGW; cross-compiled binaries are not tested on Linux",
+            "steps": [
+                {"type": "configure", "name": "windows_llvm_mingw_x86_64"},
+                {"type": "build", "name": "windows_llvm_mingw_x86_64_release"},
+                {"type": "package", "name": "windows_llvm_mingw_x86_64_release_txz"}
+            ]
+        },
+        {
+            "name": "windows_llvm_mingw_aarch64_release_package",
+            "displayName": "Windows LLVM-MinGW AArch64 release package",
+            "description": "Configure, build, and package Windows AArch64 binaries with LLVM-MinGW; cross-compiled binaries are not tested on Linux",
+            "steps": [
+                {"type": "configure", "name": "windows_llvm_mingw_aarch64"},
+                {"type": "build", "name": "windows_llvm_mingw_aarch64_release"},
+                {"type": "package", "name": "windows_llvm_mingw_aarch64_release_txz"}
+            ]
+        }
+    ]
+}

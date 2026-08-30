@@ -1,0 +1,45 @@
+{
+    "$schema": "https://json.schemastore.org/cmake-presets.json",
+    "version": 12,
+    "configurePresets": [
+        {
+            "name": "base",
+            "displayName": "Base configuration",
+            "description": "Shared Ninja Multi-Config settings",
+            "hidden": true,
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "FETCHCONTENT_QUIET": "OFF"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "build_release",
+            "hidden": true,
+            "configuration": "Release"
+        },
+        {
+            "name": "build_debug",
+            "hidden": true,
+            "configuration": "Debug"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "test_base",
+            "hidden": true,
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            },
+            "execution": {
+                "noTestsAction": "error",
+                "stopOnFailure": false
+            }
+        }
+    ]
+}
