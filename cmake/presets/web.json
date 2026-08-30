@@ -1,15 +1,8 @@
 {
-    "$schema": "https://json.schemastore.org/cmake-presets.json",
+    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
     "version": 12,
     "configurePresets": [
-        {
-            "name": "web_emscripten_wasm32",
-            "displayName": "Web Emscripten wasm32",
-            "description": "WebAssembly build with Emscripten; tests run with Node.js",
-            "inherits": "base",
-            "toolchainFile": "${sourceDir}/cmake/toolchains/emscripten.cmake",
-            "cacheVariables": {"CMAKE_CXX_CLANG_TIDY": ""}
-        }
+        {"name": "web_emscripten_wasm32", "displayName": "Web Emscripten wasm32", "description": "WebAssembly build with Emscripten; tests run with Node.js", "inherits": "base", "toolchainFile": "${sourceDir}/cmake/toolchains/emscripten.cmake", "cacheVariables": {"CMAKE_CXX_CLANG_TIDY": ""}}
     ],
     "buildPresets": [
         {"name": "web_emscripten_wasm32_release", "configurePreset": "web_emscripten_wasm32", "inherits": "build_release"},
@@ -19,15 +12,6 @@
         {"name": "web_emscripten_wasm32_release", "configurePreset": "web_emscripten_wasm32", "inherits": "test_base", "configuration": "Release"}
     ],
     "workflowPresets": [
-        {
-            "name": "web_emscripten_wasm32_release_test",
-            "displayName": "Web Emscripten wasm32 release test",
-            "description": "Configure, build, and test a WebAssembly release with Emscripten and Node.js",
-            "steps": [
-                {"type": "configure", "name": "web_emscripten_wasm32"},
-                {"type": "build", "name": "web_emscripten_wasm32_release"},
-                {"type": "test", "name": "web_emscripten_wasm32_release"}
-            ]
-        }
+        {"name": "web_emscripten_wasm32_release_test", "displayName": "Web Emscripten wasm32 release test", "description": "Configure, build, and test a WebAssembly release with Emscripten and Node.js", "steps": [{"type": "configure", "name": "web_emscripten_wasm32"}, {"type": "build", "name": "web_emscripten_wasm32_release"}, {"type": "test", "name": "web_emscripten_wasm32_release"}]}
     ]
 }

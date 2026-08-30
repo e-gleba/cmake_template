@@ -1,5 +1,5 @@
 {
-    "$schema": "https://json.schemastore.org/cmake-presets.json",
+    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
     "version": 12,
     "configurePresets": [
         {
@@ -11,11 +11,7 @@
                 "CMAKE_C_COMPILER": "clang",
                 "CMAKE_CXX_COMPILER": "clang++"
             },
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            }
+            "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
         },
         {
             "name": "linux_gcc_x86_64",
@@ -26,81 +22,25 @@
                 "CMAKE_C_COMPILER": "gcc",
                 "CMAKE_CXX_COMPILER": "g++"
             },
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            }
+            "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
         }
     ],
     "buildPresets": [
-        {
-            "name": "linux_clang_x86_64_release",
-            "configurePreset": "linux_clang_x86_64",
-            "inherits": "build_release"
-        },
-        {
-            "name": "linux_clang_x86_64_debug",
-            "configurePreset": "linux_clang_x86_64",
-            "inherits": "build_debug"
-        },
-        {
-            "name": "linux_clang_x86_64_docs",
-            "displayName": "Linux Clang x86_64 documentation",
-            "configurePreset": "linux_clang_x86_64",
-            "inherits": "build_release",
-            "targets": ["docs"]
-        },
-        {
-            "name": "linux_gcc_x86_64_release",
-            "configurePreset": "linux_gcc_x86_64",
-            "inherits": "build_release"
-        },
-        {
-            "name": "linux_gcc_x86_64_debug",
-            "configurePreset": "linux_gcc_x86_64",
-            "inherits": "build_debug"
-        }
+        {"name": "linux_clang_x86_64_release", "configurePreset": "linux_clang_x86_64", "inherits": "build_release"},
+        {"name": "linux_clang_x86_64_debug", "configurePreset": "linux_clang_x86_64", "inherits": "build_debug"},
+        {"name": "linux_clang_x86_64_docs", "displayName": "Linux Clang x86_64 documentation", "configurePreset": "linux_clang_x86_64", "inherits": "build_release", "targets": ["docs"]},
+        {"name": "linux_gcc_x86_64_release", "configurePreset": "linux_gcc_x86_64", "inherits": "build_release"},
+        {"name": "linux_gcc_x86_64_debug", "configurePreset": "linux_gcc_x86_64", "inherits": "build_debug"}
     ],
     "testPresets": [
-        {
-            "name": "linux_clang_x86_64_release",
-            "configurePreset": "linux_clang_x86_64",
-            "inherits": "test_base",
-            "configuration": "Release"
-        },
-        {
-            "name": "linux_clang_x86_64_debug",
-            "configurePreset": "linux_clang_x86_64",
-            "inherits": "test_base",
-            "configuration": "Debug"
-        },
-        {
-            "name": "linux_gcc_x86_64_release",
-            "configurePreset": "linux_gcc_x86_64",
-            "inherits": "test_base",
-            "configuration": "Release"
-        },
-        {
-            "name": "linux_gcc_x86_64_debug",
-            "configurePreset": "linux_gcc_x86_64",
-            "inherits": "test_base",
-            "configuration": "Debug"
-        }
+        {"name": "linux_clang_x86_64_release", "configurePreset": "linux_clang_x86_64", "inherits": "test_base", "configuration": "Release"},
+        {"name": "linux_clang_x86_64_debug", "configurePreset": "linux_clang_x86_64", "inherits": "test_base", "configuration": "Debug"},
+        {"name": "linux_gcc_x86_64_release", "configurePreset": "linux_gcc_x86_64", "inherits": "test_base", "configuration": "Release"},
+        {"name": "linux_gcc_x86_64_debug", "configurePreset": "linux_gcc_x86_64", "inherits": "test_base", "configuration": "Debug"}
     ],
     "packagePresets": [
-        {
-            "name": "linux_clang_x86_64_release_tgz",
-            "configurePreset": "linux_clang_x86_64",
-            "configurations": ["Release"],
-            "generators": ["TGZ"]
-        },
-        {
-            "name": "linux_gcc_x86_64_release_tgz",
-            "configurePreset": "linux_gcc_x86_64",
-            "configurations": ["Release"],
-            "generators": ["TGZ"]
-        }
+        {"name": "linux_clang_x86_64_release_tgz", "configurePreset": "linux_clang_x86_64", "configurations": ["Release"], "generators": ["TGZ"]},
+        {"name": "linux_gcc_x86_64_release_tgz", "configurePreset": "linux_gcc_x86_64", "configurations": ["Release"], "generators": ["TGZ"]}
     ],
     "workflowPresets": [
         {

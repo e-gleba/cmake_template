@@ -1,41 +1,11 @@
 {
-    "$schema": "https://json.schemastore.org/cmake-presets.json",
+    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
     "version": 12,
     "configurePresets": [
-        {
-            "name": "android_clang_aarch64",
-            "displayName": "Android Clang AArch64",
-            "description": "Android arm64-v8a build with NDK Clang",
-            "inherits": "base",
-            "cacheVariables": {
-                "CMAKE_SYSTEM_NAME": "Android",
-                "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK_HOME}",
-                "CMAKE_ANDROID_STL_TYPE": "c++_shared",
-                "CMAKE_ANDROID_API": "24",
-                "CMAKE_ANDROID_ARCH_ABI": "arm64-v8a"
-            }
-        },
-        {
-            "name": "android_clang_armv7",
-            "displayName": "Android Clang ARMv7",
-            "description": "Android armeabi-v7a build with NDK Clang",
-            "inherits": "android_clang_aarch64",
-            "cacheVariables": {"CMAKE_ANDROID_ARCH_ABI": "armeabi-v7a"}
-        },
-        {
-            "name": "android_clang_x86_64",
-            "displayName": "Android Clang x86_64",
-            "description": "Android x86_64 emulator build with NDK Clang",
-            "inherits": "android_clang_aarch64",
-            "cacheVariables": {"CMAKE_ANDROID_ARCH_ABI": "x86_64"}
-        },
-        {
-            "name": "android_clang_x86",
-            "displayName": "Android Clang x86",
-            "description": "Android x86 emulator build with NDK Clang",
-            "inherits": "android_clang_aarch64",
-            "cacheVariables": {"CMAKE_ANDROID_ARCH_ABI": "x86"}
-        }
+        {"name": "android_clang_aarch64", "displayName": "Android Clang AArch64", "description": "Android arm64-v8a build with NDK Clang", "inherits": "base", "cacheVariables": {"CMAKE_SYSTEM_NAME": "Android", "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK_HOME}", "CMAKE_ANDROID_STL_TYPE": "c++_shared", "CMAKE_ANDROID_API": "24", "CMAKE_ANDROID_ARCH_ABI": "arm64-v8a"}},
+        {"name": "android_clang_armv7", "displayName": "Android Clang ARMv7", "description": "Android armeabi-v7a build with NDK Clang", "inherits": "android_clang_aarch64", "cacheVariables": {"CMAKE_ANDROID_ARCH_ABI": "armeabi-v7a"}},
+        {"name": "android_clang_x86_64", "displayName": "Android Clang x86_64", "description": "Android x86_64 emulator build with NDK Clang", "inherits": "android_clang_aarch64", "cacheVariables": {"CMAKE_ANDROID_ARCH_ABI": "x86_64"}},
+        {"name": "android_clang_x86", "displayName": "Android Clang x86", "description": "Android x86 emulator build with NDK Clang", "inherits": "android_clang_aarch64", "cacheVariables": {"CMAKE_ANDROID_ARCH_ABI": "x86"}}
     ],
     "buildPresets": [
         {"name": "android_clang_aarch64_release", "configurePreset": "android_clang_aarch64", "inherits": "build_release"},
@@ -44,32 +14,8 @@
         {"name": "android_clang_x86_release", "configurePreset": "android_clang_x86", "inherits": "build_release"}
     ],
     "workflowPresets": [
-        {
-            "name": "android_clang_aarch64_release_build",
-            "displayName": "Android Clang AArch64 release build",
-            "description": "Configure and build an Android arm64-v8a release with NDK Clang",
-            "steps": [
-                {"type": "configure", "name": "android_clang_aarch64"},
-                {"type": "build", "name": "android_clang_aarch64_release"}
-            ]
-        },
-        {
-            "name": "android_clang_armv7_release_build",
-            "displayName": "Android Clang ARMv7 release build",
-            "description": "Configure and build an Android armeabi-v7a release with NDK Clang",
-            "steps": [
-                {"type": "configure", "name": "android_clang_armv7"},
-                {"type": "build", "name": "android_clang_armv7_release"}
-            ]
-        },
-        {
-            "name": "android_clang_x86_64_release_build",
-            "displayName": "Android Clang x86_64 release build",
-            "description": "Configure and build an Android x86_64 emulator release with NDK Clang",
-            "steps": [
-                {"type": "configure", "name": "android_clang_x86_64"},
-                {"type": "build", "name": "android_clang_x86_64_release"}
-            ]
-        }
+        {"name": "android_clang_aarch64_release_build", "displayName": "Android Clang AArch64 release build", "description": "Configure and build an Android arm64-v8a release with NDK Clang", "steps": [{"type": "configure", "name": "android_clang_aarch64"}, {"type": "build", "name": "android_clang_aarch64_release"}]},
+        {"name": "android_clang_armv7_release_build", "displayName": "Android Clang ARMv7 release build", "description": "Configure and build an Android armeabi-v7a release with NDK Clang", "steps": [{"type": "configure", "name": "android_clang_armv7"}, {"type": "build", "name": "android_clang_armv7_release"}]},
+        {"name": "android_clang_x86_64_release_build", "displayName": "Android Clang x86_64 release build", "description": "Configure and build an Android x86_64 emulator release with NDK Clang", "steps": [{"type": "configure", "name": "android_clang_x86_64"}, {"type": "build", "name": "android_clang_x86_64_release"}]}
     ]
 }
