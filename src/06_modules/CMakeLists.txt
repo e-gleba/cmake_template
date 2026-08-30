@@ -82,6 +82,11 @@ else()
     return()
 endif()
 
+# Same SDL3 convention as 02_sdl3_app: shared target, skip when absent.
+if(NOT TARGET SDL3::SDL3-shared)
+    return()
+endif()
+
 add_executable(06_modules)
 
 # Scanning is off project-wide (root CMakeLists); this target opts in.
@@ -98,7 +103,7 @@ target_sources(
                   cxx_project.utility.cppm)
 
 target_compile_features(06_modules PRIVATE cxx_std_23)
-target_link_libraries(06_modules PRIVATE SDL3::SDL3-static warnings)
+target_link_libraries(06_modules PRIVATE SDL3::SDL3-shared warnings)
 
 install(TARGETS 06_modules RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
                                  COMPONENT runtime)
