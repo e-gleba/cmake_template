@@ -10,6 +10,10 @@ project(
 # No C++20 modules in use — do not pay for the module dependency scan.
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
+# Project-owned CMake names use CT_* for user-facing cache variables and
+# options, and ct_* for targets, functions, properties, and local variables.
+# Built-in and dependency-owned names keep their upstream spelling.
+
 # Project modules, loaded by name via include(). CMAKE_CURRENT_LIST_DIR
 # (not CMAKE_SOURCE_DIR) keeps this correct when the project is consumed
 # via add_subdirectory()/FetchContent.
