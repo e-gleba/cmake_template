@@ -1,19 +1,30 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 #
 # One-click GitHub Release.
+#
+# Pipeline: validate → docker + packages → publish → version-bump PR.
+# All input validation happens in the validate job, so a bad release
+# request fails in seconds — before a single build minute is spent.
+#
+# Both version inputs are optional: empty `version` releases
+# v<CMake project() VERSION> from main, empty `next_version` patch-bumps
+# the release. The validate Step Summary always shows the previous tag
+# and the resolved plan — dispatch once with empty inputs to preview.
 name: release
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release tag (e.g. v1.0.0)"
-        required: true
+        description: "Release tag (e.g. v1.2.3 or v1.2.3-rc.1). Empty = v<CMake project version>"
+        required: false
         type: string
+        default: ""
       next_version:
-        description: "Next CMake project() VERSION, no v prefix (e.g. 1.0.1) — bot opens and auto-merges a PR after the release"
-        required: true
+        description: "Post-release CMake project() VERSION (e.g. 1.2.4). Empty = patch bump of the release"
+        required: false
         type: string
+        default: ""
       prerelease:
         description: "Mark as pre-release"
         required: false
@@ -32,12 +43,119 @@ concurrency:
 permissions: {}
 
 jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      next_version: ${{ steps.resolve.outputs.next_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Full tag history for the previous-release hint and the
+          # tag-exists check (works for private repos — no ls-remote auth).
+          fetch-depth: 0
+
+      - name: Set up CMake
+        uses: lukka/get-cmake@v4.4.2
+
+      # Inputs reach the shell via env vars only — inline ${{ inputs.* }}
+      # expansion inside run: blocks is a script-injection vector.
+      - name: Resolve and validate versions
+        id: resolve
+        shell: bash
+        env:
+          IN_VERSION: ${{ inputs.version }}
+          IN_NEXT_VERSION: ${{ inputs.next_version }}
+        run: |
+          set -euo pipefail
+
+          # Single source of truth: project() VERSION on main.
+          current=$(cmake -DPROJECT_FILE=CMakeLists.txt \
+            -P cmake/scripts/get_project_version.cmake \
+            | sed -n 's/^PROJECT_VERSION=//p')
+          if [[ -z "${current}" ]]; then
+            echo "::error::could not read project version from CMakeLists.txt"
+            exit 1
+          fi
+
+          # Previous-release hint: newest v* tag ("none" before the first release).
+          prev_tag=$(git tag --list "v*" --sort=-v:refname | sed -n '1p')
+          prev_tag=${prev_tag:-none}
+
+          # Release tag: explicit input (v prefix optional) or derived.
+          version=${IN_VERSION}
+          if [[ -n "${version}" && "${version}" != v* ]]; then
+            version="v${version}"
+            echo "::notice::added missing v prefix — releasing '${version}'"
+          fi
+          if [[ -z "${version}" ]]; then
+            version="v${current}"
+            echo "::notice::no version given — derived '${version}' from CMake project version"
+          fi
+          if [[ ! "${version}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::version must look like v1.2.3 or v1.2.3-rc.1 (got '${version}')"
+            exit 1
+          fi
+
+          # The tag must be new.
+          if git rev-parse -q --verify "refs/tags/${version}" >/dev/null; then
+            echo "::error::tag ${version} already exists (latest release: ${prev_tag})"
+            exit 1
+          fi
+
+          # The released code must carry the released version (core, sans -rc suffix).
+          core=${version#v}
+          core=${core%%-*}
+          if [[ "${core}" != "${current}" ]]; then
+            echo "::error::release ${version} does not match CMake project version v${current} on main — bump project() VERSION first, or leave 'version' empty to release v${current}"
+            exit 1
+          fi
+
+          # Post-release bump: explicit input (v prefix stripped) or patch + 1.
+          next=${IN_NEXT_VERSION#v}
+          if [[ -z "${next}" ]]; then
+            IFS=. read -r major minor patch <<< "${core}"
+            next="${major}.${minor}.$((patch + 1))"
+            echo "::notice::no next_version given — defaulting to patch bump '${next}'"
+          fi
+          if [[ ! "${next}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::next_version must be plain semver without v prefix (e.g. 1.2.4) — got '${IN_NEXT_VERSION}'"
+            exit 1
+          fi
+          if [[ "${next}" == "${core}" ]] || ! printf '%s\n%s\n' "${core}" "${next}" | sort -C -V; then
+            echo "::error::next_version (${next}) must be greater than the released version (${core})"
+            exit 1
+          fi
+
+          {
+            echo "## Release plan"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Previous release | \`${prev_tag}\` |"
+            echo "| CMake project version | \`${current}\` |"
+            echo "| Release tag | \`${version}\` |"
+            echo "| Post-release bump | \`${next}\` |"
+            echo "| Pre-release | \`${{ inputs.prerelease }}\` |"
+            echo "| Docker images | \`${{ inputs.publish_docker }}\` |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          echo "::notice::release plan: ${version} (previous: ${prev_tag}), then bump main to ${next}"
+
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "next_version=${next}" >> "${GITHUB_OUTPUT}"
+
   docker:
     name: docker
+    needs: validate
     if: ${{ inputs.publish_docker }}
     uses: ./.github/workflows/publish-docker.yml
     with:
-      tag: ${{ inputs.version }}
+      tag: ${{ needs.validate.outputs.version }}
     permissions:
       contents: read
       packages: write
@@ -46,13 +164,14 @@ jobs:
 
   packages:
     name: packages
+    needs: validate
     uses: ./.github/workflows/cmake_multi_platform.yml
     permissions:
       contents: read
 
   publish:
     name: tag and github release
-    needs: [docker, packages]
+    needs: [validate, docker, packages]
     if: >-
       !cancelled()
       && needs.packages.result == 'success'
@@ -63,20 +182,8 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      VERSION: ${{ inputs.version }}
+      VERSION: ${{ needs.validate.outputs.version }}
     steps:
-      - name: Validate version
-        run: |
-          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::version must look like v1.2.3 or v1.2.3-rc.1 (got '${VERSION}')"
-            exit 1
-          fi
-          if git ls-remote --tags --exit-code "https://github.com/${{ github.repository }}.git" \
-               "refs/tags/${VERSION}" >/dev/null; then
-            echo "::error::tag ${VERSION} already exists"
-            exit 1
-          fi
-
       - name: Download release assets
         uses: actions/download-artifact@v8
         with:
@@ -121,7 +228,7 @@ jobs:
 
   bump_cmake_version:
     name: bump cmake version via pr
-    needs: publish
+    needs: [validate, publish]
     if: >-
       !cancelled()
       && needs.publish.result == 'success'
@@ -135,8 +242,7 @@ jobs:
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      NEXT_VERSION: ${{ inputs.next_version }}
-      RELEASE_VERSION: ${{ inputs.version }}
+      NEXT_VERSION: ${{ needs.validate.outputs.next_version }}
     steps:
       - name: Checkout main
         uses: actions/checkout@v7
@@ -146,44 +252,21 @@ jobs:
       - name: Set up CMake
         uses: lukka/get-cmake@v4.4.2
 
-      - name: Validate versions
-        run: |
-          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            printf "::error::next_version must be plain semver, no v prefix (e.g. 1.0.1) — got '%s'\n" "${NEXT_VERSION}"
-            exit 1
-          fi
-
-          cmake -S . -B build/version-check -DBUILD_TESTING=OFF
-          current=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/version-check/CMakeCache.txt)
-          if [[ -z "${current}" ]]; then
-            echo "::error::CMake did not report CMAKE_PROJECT_VERSION"
-            exit 1
-          fi
-          if [[ "${RELEASE_VERSION}" != "v${current}" ]]; then
-            printf "::error::release version (%s) must match CMake project version (v%s)\n" \
-              "${RELEASE_VERSION}" "${current}"
-            exit 1
-          fi
-          if ! printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -C -V \
-            || [[ "${current}" == "${NEXT_VERSION}" ]]; then
-            printf "::error::next_version (%s) must be greater than current project version (%s)\n" \
-              "${NEXT_VERSION}" "${current}"
-            exit 1
-          fi
-          echo "CURRENT_VERSION=${current}" >> "${GITHUB_ENV}"
-
       - name: Bump project version
         run: |
-          cmake -DPROJECT_FILE=CMakeLists.txt -DVERSION="${NEXT_VERSION}" -P cmake/scripts/set_project_version.cmake
+          cmake -DPROJECT_FILE=CMakeLists.txt -DVERSION="${NEXT_VERSION}" \
+            -P cmake/scripts/set_project_version.cmake
 
       - name: Verify bumped project
+        shell: bash
         run: |
-          cmake -S . -B build/version-verify -DBUILD_TESTING=OFF
-          actual=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/version-verify/CMakeCache.txt)
-          test "${actual}" = "${NEXT_VERSION}" || {
-            printf "::error::expected CMake project version %s, got %s\n" "${NEXT_VERSION}" "${actual}"
+          actual=$(cmake -DPROJECT_FILE=CMakeLists.txt \
+            -P cmake/scripts/get_project_version.cmake \
+            | sed -n 's/^PROJECT_VERSION=//p')
+          if [[ "${actual}" != "${NEXT_VERSION}" ]]; then
+            printf '::error::expected CMake project version %s, got %s\n' "${NEXT_VERSION}" "${actual}"
             exit 1
-          }
+          fi
           git diff --check
           git diff --exit-code -- . ':!CMakeLists.txt'
 
@@ -193,33 +276,31 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           add-paths: CMakeLists.txt
-          commit-message: "chore: bump CMake project version to ${{ inputs.next_version }}"
+          commit-message: "chore: bump CMake project version to ${{ needs.validate.outputs.next_version }}"
           committer: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
           author: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
           branch: chore/bump-cmake-version
           delete-branch: true
           base: main
-          title: "chore: bump CMake project version to ${{ inputs.next_version }}"
+          title: "chore: bump CMake project version to ${{ needs.validate.outputs.next_version }}"
           body: |
-            Post-release version bump after `${{ inputs.version }}`.
+            Post-release version bump after `${{ needs.validate.outputs.version }}`.
 
-            - Previous project version: `${{ env.CURRENT_VERSION }}`
-            - Next project version: `${{ inputs.next_version }}`
+            - Next project version: `${{ needs.validate.outputs.next_version }}`
             - Changed file: `CMakeLists.txt`
 
             Generated and auto-merged by the release workflow.
 
       - name: Enable auto-merge
         if: steps.bump-pr.outputs.pull-request-number != ''
-        run: >-
-          gh pr merge
-          "${{ steps.bump-pr.outputs.pull-request-number }}"
-          --repo "${{ github.repository }}"
-          --squash
-          --auto
-          --delete-branch
-          --match-head-commit "${{ steps.bump-pr.outputs.pull-request-head-sha }}"
+        run: |
+          if ! gh pr merge "${{ steps.bump-pr.outputs.pull-request-number }}" \
+               --repo "${{ github.repository }}" \
+               --squash --auto --delete-branch \
+               --match-head-commit "${{ steps.bump-pr.outputs.pull-request-head-sha }}"; then
+            echo "::warning::could not enable auto-merge (is it allowed in repo settings?) — merge manually: ${{ steps.bump-pr.outputs.pull-request-url }}"
+          fi
 
       - name: Report version bump
         if: steps.bump-pr.outputs.pull-request-url != ''
-        run: echo "Opened and queued ${{ steps.bump-pr.outputs.pull-request-url }} for auto-merge" >> "${GITHUB_STEP_SUMMARY}"
+        run: echo "Opened ${{ steps.bump-pr.outputs.pull-request-url }} (auto-merge requested)" >> "${GITHUB_STEP_SUMMARY}"
