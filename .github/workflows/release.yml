@@ -87,8 +87,11 @@ jobs:
             echo "::error::no release packages found"
             exit 1
           fi
-          printf "## Release assets\n\n" >> "$GITHUB_STEP_SUMMARY"
-          printf -- "- `%s`\n" "${files[@]}" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## Release assets"
+            echo
+            printf -- '- `%s`\n' "${files[@]}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Attest release assets
         uses: actions/attest@v4
