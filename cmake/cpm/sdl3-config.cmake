@@ -15,6 +15,7 @@ set(sdl_libdecor OFF)
 set(sdl_opengles ON) # Apple uses desktop GL, not ES
 set(sdl_shared ON) # Emscripten has no dynamic linking: static-only
 set(sdl_static OFF)
+set(ct_sdl_render OFF)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     set(sdl_sensor ON)
@@ -63,7 +64,7 @@ cpmaddpackage(
     "SDL_AUDIO OFF"
     "SDL_VIDEO ON"
     "SDL_GPU OFF"
-    "SDL_RENDER OFF"
+    "SDL_RENDER ${ct_sdl_render}"
     "SDL_CAMERA OFF"
     "SDL_JOYSTICK OFF"
     "SDL_HAPTIC OFF"
