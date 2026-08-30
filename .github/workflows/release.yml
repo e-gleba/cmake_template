@@ -81,14 +81,14 @@ jobs:
 
       - name: Verify release assets
         run: |
-          find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.xz' \) -print0 | sort -z > /tmp/release-assets
-          mapfile -d '' files < /tmp/release-assets
+          find artifacts -type f \( -name "*.zip" -o -name "*.tar.gz" -o -name "*.tar.xz" \) -print0 | sort -z > /tmp/release-assets
+          mapfile -d "" files < /tmp/release-assets
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::error::no release packages found"
             exit 1
           fi
-          printf '## Release assets\n\n' >> "$GITHUB_STEP_SUMMARY"
-          printf -- '- `%s`\n' "${files[@]}" >> "$GITHUB_STEP_SUMMARY"
+          printf "## Release assets\n\n" >> "$GITHUB_STEP_SUMMARY"
+          printf -- "- `%s`\n" "${files[@]}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Attest release assets
         uses: actions/attest@v4
@@ -102,7 +102,7 @@ jobs:
         env:
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
-          mapfile -d '' files < /tmp/release-assets
+          mapfile -d "" files < /tmp/release-assets
           args=(
             "${VERSION}"
             --target "${{ github.sha }}"
