@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: cmake_presets_lint-${{ github.ref }}
+  group: cmake_presets_lint-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -23,9 +23,12 @@ jobs:
   validate:
     name: validate_cmake_presets
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Set up CMake
         uses: lukka/get-cmake@v4.4.2
       - name: Validate JSON syntax

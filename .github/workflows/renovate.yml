@@ -24,13 +24,16 @@ on:
       - ".github/workflows/renovate.yml"
 
 concurrency:
-  group: renovate-${{ github.ref }}
+  group: renovate
   cancel-in-progress: true
+
+permissions: {}
 
 jobs:
   renovate:
     name: linux_renovate_x86_64
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
@@ -39,6 +42,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Run Renovate
         uses: renovatebot/github-action@v46.2.2
         with:

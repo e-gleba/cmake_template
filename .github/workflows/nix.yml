@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: nix_ci-${{ github.ref }}
+  group: nix_ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install Nix
         uses: cachix/install-nix-action@v31
       - name: Check flake
