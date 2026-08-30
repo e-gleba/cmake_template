@@ -81,22 +81,22 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: release-assets
-          pattern: release-asset-*
+          pattern: release-assets-*
           merge-multiple: true
 
       - name: Verify release assets
         shell: bash
         run: |
           shopt -s nullglob
-          files=(release-assets/*)
-          if (( ${#files[@]} == 0 )); then
+          assets=(release-assets/*)
+          if (( ${#assets[@]} == 0 )); then
             echo "::error::no release assets were downloaded"
             exit 1
           fi
 
           {
-            echo "## Release assets (${#files[@]})"
-            printf -- '- %s\n' "${files[@]#release-assets/}"
+            echo "## Release assets (${#assets[@]})"
+            printf -- '- %s\n' "${assets[@]#release-assets/}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Create GitHub Release
@@ -104,7 +104,7 @@ jobs:
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
           shopt -s nullglob
-          files=(release-assets/*)
+          assets=(release-assets/*)
           args=(
             "${VERSION}"
             --repo "${{ github.repository }}"
@@ -115,7 +115,7 @@ jobs:
           if [ "${PRERELEASE}" = "true" ]; then
             args+=(--prerelease)
           fi
-          gh release create "${args[@]}" "${files[@]}"
+          gh release create "${args[@]}" "${assets[@]}"
           echo "Created ${{ github.server_url }}/${{ github.repository }}/releases/tag/${VERSION}" \
             >> "$GITHUB_STEP_SUMMARY"
 

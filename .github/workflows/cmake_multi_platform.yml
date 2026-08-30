@@ -110,19 +110,21 @@ jobs:
           path: build/linux_clang_x86_64/generated_docs/html/
           retention-days: 30
           if-no-files-found: error
-      - name: Upload zip package
+      - name: Stage release assets
+        shell: bash
+        env:
+          BUILD_DIR: build/${{ matrix.artifact_name }}
+        run: |
+          cmake \
+            -DBUILD_DIR="${BUILD_DIR}" \
+            -DSTAGING_DIR="${RUNNER_TEMP}/release-assets" \
+            -P cmake/scripts/stage_release_assets.cmake
+      - name: Upload release assets
         uses: actions/upload-artifact@v7
         with:
-          name: release-asset-${{ matrix.artifact_name }}-zip
-          path: build/${{ matrix.artifact_name }}/*.zip
-          if-no-files-found: ignore
-          compression-level: 0
-      - name: Upload tgz package
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-asset-${{ matrix.artifact_name }}-tgz
-          path: build/${{ matrix.artifact_name }}/*.tar.gz
-          if-no-files-found: ignore
+          name: release-assets-${{ matrix.artifact_name }}
+          path: ${{ runner.temp }}/release-assets/
+          if-no-files-found: error
           compression-level: 0
 
   windows_cross_build:
@@ -135,12 +137,15 @@ jobs:
           - compiler: llvm_mingw
             arch: x86_64
             preset: windows_llvm_mingw_x86_64_release_package
+            build_dir: windows_llvm_mingw_x86_64
           - compiler: llvm_mingw
             arch: i686
             preset: windows_llvm_mingw_x86_release_package
+            build_dir: windows_llvm_mingw_x86
           - compiler: llvm_mingw
             arch: aarch64
             preset: windows_llvm_mingw_aarch64_release_package
+            build_dir: windows_llvm_mingw_aarch64
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -159,12 +164,20 @@ jobs:
           restore-keys: cpm-windows_llvm_mingw_${{ matrix.arch }}-
       - name: Build and test
         run: cmake --workflow --preset ${{ matrix.preset }}
-      - name: Upload txz package
+      - name: Stage release assets
+        env:
+          BUILD_DIR: build/${{ matrix.build_dir }}
+        run: |
+          cmake \
+            -DBUILD_DIR="${BUILD_DIR}" \
+            -DSTAGING_DIR="${RUNNER_TEMP}/release-assets" \
+            -P cmake/scripts/stage_release_assets.cmake
+      - name: Upload release assets
         uses: actions/upload-artifact@v7
         with:
-          name: release-asset-windows-llvm-mingw-${{ matrix.arch }}-txz
-          path: build/windows_llvm_mingw_${{ matrix.arch }}/*.tar.xz
-          if-no-files-found: ignore
+          name: release-assets-windows-llvm-mingw-${{ matrix.arch }}
+          path: ${{ runner.temp }}/release-assets/
+          if-no-files-found: error
           compression-level: 0
 
   web_build:
@@ -188,13 +201,24 @@ jobs:
           restore-keys: cpm-web_emscripten_wasm32-
       - name: Build and test
         run: cmake --workflow --preset web_emscripten_wasm32_release_test
-      - name: Upload web bundle
+      - name: Package web application
+        shell: bash
+        run: |
+          mapfile -t web_files < <(find build/web_emscripten_wasm32 -type f \
+            \( -name '05_webassembly.html' -o -name '05_webassembly.js' -o -name '05_webassembly.wasm' \) \
+            -print | sort)
+          if (( ${#web_files[@]} != 3 )); then
+            printf '::error::expected html, JavaScript, and WebAssembly outputs; found %d\n' "${#web_files[@]}"
+            exit 1
+          fi
+          staging_dir="${RUNNER_TEMP}/release-assets"
+          mkdir -p "${staging_dir}"
+          cmake -E tar cf "${staging_dir}/cxx_project-Web_Emscripten_wasm32.zip" \
+            --format=zip -- "${web_files[@]}"
+      - name: Upload release assets
         uses: actions/upload-artifact@v7
         with:
-          name: web_emscripten_wasm32_bundle
-          path: |
-            build/web_emscripten_wasm32/**/05_webassembly.html
-            build/web_emscripten_wasm32/**/05_webassembly.js
-            build/web_emscripten_wasm32/**/05_webassembly.wasm
+          name: release-assets-web-emscripten-wasm32
+          path: ${{ runner.temp }}/release-assets/
           if-no-files-found: error
           compression-level: 0
