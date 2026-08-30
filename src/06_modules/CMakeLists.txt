@@ -3,45 +3,69 @@
 # compiler, dependency scanner, generator, and build tool - no version
 # matrix to maintain. Unsupported toolchains skip the target.
 #
-# Requirements: Ninja 1.11+ or VS 2022 17.4+ generator, MSVC 14.34 /
-# Clang 16 (with clang-scan-deps next to the compiler) / GCC 14.
-# Header units are unsupported by CMake; import std is still experimental
-# (CMAKE_EXPERIMENTAL_CXX_IMPORT_STD, Ninja only). The private module
-# fragment unit must be the only unit of its module (module.private.frag)
-# - hence the second module below.
+# Requirements: CMake 3.28+, Ninja 1.11+ or VS 2022 17.4+ generator,
+# MSVC 14.34 / Clang 16 (with clang-scan-deps next to the compiler) /
+# GCC 14. Header units are unsupported by CMake; import std is still
+# experimental (CMAKE_EXPERIMENTAL_CXX_IMPORT_STD, Ninja only). The
+# private module fragment unit must be the only unit of its module
+# (module.private.frag) - hence the second module below.
 
 message(CHECK_START "Checking for C++20 modules support")
+
+# CMake added C++20 module scanning in 3.28; older CMake cannot build
+# modules at all, so skip the probe (and the target) there. This also
+# keeps the probe free of signatures newer than the running CMake.
+if(CMAKE_VERSION VERSION_LESS 3.28)
+    message(CHECK_FAIL "CMake ${CMAKE_VERSION} < 3.28 - skipping 06_modules")
+    return()
+endif()
 
 # Cached like every Check* result: clear the CMake cache to re-probe
 # after a toolchain change.
 if(NOT DEFINED cxx_modules_supported)
-    # SOURCES_FROM_CONTENT (CMake 3.25+): probe sources live in bracket
-    # arguments, nothing written to disk. The SOURCE_DIR/PROJECT signature
-    # needs CMake 4.2, above the project floor of 3.28.
-    try_compile(
-        cxx_modules_supported
-        SOURCES_FROM_CONTENT probe.cppm
-                             [[
+    # try_compile whole-project signature (3.25+): probe sources are
+    # written into the binary dir as a tiny project, then built with the
+    # same generator, toolchain, and compiler as the real build.
+    set(cxx_modules_probe_dir
+        "${CMAKE_CURRENT_BINARY_DIR}/cxx_modules_probe")
+    file(
+        WRITE "${cxx_modules_probe_dir}/CMakeLists.txt"
+        [[
+cmake_minimum_required(VERSION 3.28)
+project(cxx_modules_probe LANGUAGES CXX)
+
+add_executable(probe main.cpp)
+target_compile_features(probe PRIVATE cxx_std_23)
+set_target_properties(probe PROPERTIES CXX_EXTENSIONS OFF
+                                       CXX_SCAN_FOR_MODULES ON)
+target_sources(probe PRIVATE FILE_SET CXX_MODULES FILES probe.cppm)
+]])
+    file(
+        WRITE "${cxx_modules_probe_dir}/probe.cppm"
+        [[
 export module cxx_modules_probe;
 
 export int probe()
 {
     return 0;
 }
-]]
-        SOURCES_FROM_CONTENT main.cpp
-                             [[
+]])
+    file(
+        WRITE "${cxx_modules_probe_dir}/main.cpp"
+        [[
 import cxx_modules_probe;
 
 int main()
 {
     return probe();
 }
-]]
-        CMAKE_FLAGS "-DCMAKE_CXX_STANDARD=23"
-                    "-DCMAKE_CXX_STANDARD_REQUIRED=ON"
-                    "-DCMAKE_CXX_EXTENSIONS=OFF"
-                    "-DCMAKE_CXX_SCAN_FOR_MODULES=ON"
+]])
+    try_compile(
+        cxx_modules_supported
+        SOURCES_TYPE PROJECT
+        SOURCE_DIR "${cxx_modules_probe_dir}"
+        PROJECT cxx_modules_probe
+        TARGET probe
         LOG_DESCRIPTION "compiling a minimal C++20 module")
     set(cxx_modules_supported
         "${cxx_modules_supported}"
