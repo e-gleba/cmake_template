@@ -11,11 +11,12 @@
   timezone: "UTC",
   schedule: ["before 8am on monday"],
 
-  // PR creation must not be hourly-limited: the self-hosted runner executes
-  // once per week, so a low prHourlyLimit defers the remaining PRs to the
-  // NEXT weekly run. Branch pushes are not capped, PR creation is — that is
-  // how renovate/* branches ended up existing with no PRs attached.
-  // 0 = unlimited per run; prConcurrentLimit still caps simultaneously open PRs.
+  // No hourly PR cap: the self-hosted runner executes once per week, so any
+  // hourly limit trickles PR creation across weekly runs. 0 = unlimited per
+  // run; prConcurrentLimit still caps simultaneously open PRs.
+  // NOTE: if renovate/* branches appear but NO pull requests ever do, the
+  // cause is token permission (403 on PR create), not this limit — see the
+  // token comment in .github/workflows/renovate.yml.
   prHourlyLimit: 0,
   prConcurrentLimit: 10,
 
