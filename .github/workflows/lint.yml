@@ -1,19 +1,13 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-#
-# Static checks for GitHub Actions YAML and Dockerfiles.
-# Official images only. Pin tags; Dependabot / Renovate bump them.
 name: lint
 
 on:
   pull_request:
-    paths:
+    paths: &paths
       - ".github/workflows/**"
-      - "docker/**"
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/**"
-      - "docker/**"
+    paths: *paths
   workflow_dispatch:
 
 concurrency:
@@ -29,35 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v7
-
-      - name: Lint workflows
+      - name: lint_workflows
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/repo:ro" \
             -w /repo \
             rhysd/actionlint:1.7.12 \
             -color
-
-  hadolint:
-    name: hadolint
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    strategy:
-      fail-fast: false
-      matrix:
-        file:
-          - docker/fedora.Dockerfile
-          - docker/manjaro.Dockerfile
-          - docker/steamos.Dockerfile
-          - docker/cachyos.Dockerfile
-          - docker/alt.Dockerfile
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Lint ${{ matrix.file }}
-        run: |
-          docker run --rm -i hadolint/hadolint:v2.15.1 \
-            < "${{ matrix.file }}"

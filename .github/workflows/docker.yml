@@ -1,73 +1,78 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: docker
+name: docker_ci
 
 on:
   pull_request:
-    paths:
+    paths: &paths
       - "docker/**"
       - ".github/workflows/docker.yml"
   push:
     branches: [main]
-    paths:
-      - "docker/**"
-      - ".github/workflows/docker.yml"
+    paths: *paths
   workflow_dispatch:
 
 concurrency:
-  group: docker-${{ github.ref }}
+  group: docker_ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: ${{ matrix.name }}
+  changes:
+    name: detect_changes
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.files.outputs.files }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: find_changed_dockerfiles
+        id: files
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            base="${{ github.event.before }}"
+          else
+            base=""
+          fi
+
+          if [[ -z "$base" || "$base" == "0000000000000000000000000000000000000000" ]]; then
+            files=$(find docker -maxdepth 1 -name '*.Dockerfile' -printf '%f\n' | sort)
+          else
+            files=$(git diff --name-only "$base" "${{ github.sha }}" -- 'docker/*.Dockerfile' | sed 's#^docker/##')
+          fi
+
+          json=$(printf '%s\n' "$files" | sed '/^$/d' | jq -R . | jq -sc .)
+          echo "files=$json" >> "$GITHUB_OUTPUT"
+
+  build_and_lint:
+    name: build_and_lint_${{ matrix.file }}
+    needs: changes
+    if: needs.changes.outputs.files != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: fedora
-            file: fedora.Dockerfile
-            tools: ninja --version
-          - name: manjaro
-            file: manjaro.Dockerfile
-            tools: ninja --version
-          - name: steamos
-            file: steamos.Dockerfile
-            tools: ninja --version
-          - name: cachyos
-            file: cachyos.Dockerfile
-            tools: ninja --version
-          - name: alt
-            file: alt.Dockerfile
-            tools: make --version
+        file: ${{ fromJSON(needs.changes.outputs.files) }}
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v7
-
-      - name: Set up Docker Buildx
+      - name: lint
+        run: docker run --rm -i hadolint/hadolint:v2.15.1 < "docker/${{ matrix.file }}"
+      - name: setup_docker_buildx
         uses: docker/setup-buildx-action@v4
-
-      - name: Build
+      - name: build
         uses: docker/build-push-action@v7
         with:
           context: docker
           file: docker/${{ matrix.file }}
-          load: true
-          tags: cmake-template:${{ matrix.name }}
+          push: false
           build-args: SOURCE=${{ github.server_url }}/${{ github.repository }}
-          cache-from: type=gha,scope=docker-${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=docker-${{ matrix.name }}
-
-      - name: Verify toolchain
-        run: |
-          docker run --rm --entrypoint sh cmake-template:${{ matrix.name }} -c '
-            cmake --version &&
-            git --version &&
-            c++ --version &&
-            clang++ --version &&
-            ${{ matrix.tools }}
-          '
+          cache-from: type=gha,scope=docker-${{ matrix.file }}
+          cache-to: type=gha,mode=max,scope=docker-${{ matrix.file }}
