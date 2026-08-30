@@ -17,7 +17,8 @@
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_COLOR_DIAGNOSTICS": "ON",
-                "FETCHCONTENT_QUIET": "OFF"
+                "FETCHCONTENT_QUIET": "OFF",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
             }
         },
         {
