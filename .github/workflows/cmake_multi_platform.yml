@@ -72,11 +72,11 @@ jobs:
             artifact_name: windows_msvc_x86_64
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@v4.4.2
+        uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # v4.4.2
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -87,7 +87,7 @@ jobs:
             libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev \
             libdbus-1-dev libudev-dev libasound2-dev
       - name: Cache CPM sources
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: .cpm_cache
           key: cpm-${{ matrix.artifact_name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
@@ -105,14 +105,14 @@ jobs:
           test -f "${index_path}" || { echo "::error::Documentation index not found at ${index_path}"; exit 1; }
       - name: Upload documentation
         if: matrix.compiler == 'clang'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: doxygen_html_${{ github.run_id }}
           path: build/linux_clang_x86_64/generated_docs/html/
           retention-days: 30
           if-no-files-found: error
       - name: Upload packages
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ matrix.artifact_name }}_package
           path: |
@@ -140,18 +140,18 @@ jobs:
             preset: windows_llvm_mingw_aarch64_release_package
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@v4.4.2
+        uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # v4.4.2
       - name: Cache LLVM MinGW
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: llvm_mingw
           key: llvm_mingw-${{ hashFiles('cmake/toolchains/llvm_mingw.cmake') }}
       - name: Cache CPM sources
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: .cpm_cache
           key: cpm-windows_llvm_mingw_${{ matrix.arch }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
@@ -159,7 +159,7 @@ jobs:
       - name: Build and test
         run: cmake --workflow --preset ${{ matrix.preset }}
       - name: Upload package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: windows_llvm_mingw_${{ matrix.arch }}_package
           path: build/**/*.tar.xz
@@ -172,18 +172,18 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@v4.4.2
+        uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # v4.4.2
       - name: Cache Emscripten SDK
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: .emsdk
           key: emsdk-${{ hashFiles('cmake/toolchains/emscripten.cmake') }}
       - name: Cache CPM sources
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: .cpm_cache
           key: cpm-web_emscripten_wasm32-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
@@ -191,7 +191,7 @@ jobs:
       - name: Build and test
         run: cmake --workflow --preset web_emscripten_wasm32_release_test
       - name: Upload web bundle
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: web_emscripten_wasm32_bundle
           path: |
