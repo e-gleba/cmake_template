@@ -6,10 +6,10 @@
 # All input validation happens in the validate job, so a bad release
 # request fails in seconds — before a single build minute is spent.
 #
-# Both version inputs are optional: empty `version` releases
-# v<CMake project() VERSION> from main, empty `next_version` patch-bumps
-# the release. The validate Step Summary always shows the previous tag
-# and the resolved plan — dispatch once with empty inputs to preview.
+# `version` is optional: empty releases v<CMake project() VERSION> from
+# main. `next_version` is required: it becomes the project() VERSION on
+# main right after the release. The validate Step Summary always shows
+# the previous tag and the resolved plan.
 name: release
 
 on:
@@ -21,10 +21,9 @@ on:
         type: string
         default: ""
       next_version:
-        description: "Post-release CMake project() VERSION (e.g. 1.2.4). Empty = patch bump of the release"
-        required: false
+        description: "Post-release CMake project() VERSION, no v prefix (e.g. 1.2.4) — bot opens and auto-merges a PR after the release"
+        required: true
         type: string
-        default: ""
       prerelease:
         description: "Mark as pre-release"
         required: false
@@ -74,8 +73,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Single source of truth: project() VERSION on main.
-          current=$(cmake -DPROJECT_FILE=CMakeLists.txt \
+          # Single source of truth: project() VERSION on main. Script mode
+          # (cmake -P): no configure, no network, milliseconds.
+          current=$(cmake -Dproject_file=CMakeLists.txt \
             -P cmake/scripts/get_project_version.cmake \
             | sed -n 's/^PROJECT_VERSION=//p')
           if [[ -z "${current}" ]]; then
@@ -116,12 +116,10 @@ jobs:
             exit 1
           fi
 
-          # Post-release bump: explicit input (v prefix stripped) or patch + 1.
+          # Post-release bump: required input, v prefix stripped.
           next=${IN_NEXT_VERSION#v}
-          if [[ -z "${next}" ]]; then
-            IFS=. read -r major minor patch <<< "${core}"
-            next="${major}.${minor}.$((patch + 1))"
-            echo "::notice::no next_version given — defaulting to patch bump '${next}'"
+          if [[ "${next}" != "${IN_NEXT_VERSION}" ]]; then
+            echo "::notice::stripped v prefix — next_version is '${next}'"
           fi
           if [[ ! "${next}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::next_version must be plain semver without v prefix (e.g. 1.2.4) — got '${IN_NEXT_VERSION}'"
@@ -252,21 +250,15 @@ jobs:
       - name: Set up CMake
         uses: lukka/get-cmake@v4.4.2
 
+      # The script rewrites project() VERSION and reads the file back to
+      # prove the bump took effect — no second CMake run needed here.
       - name: Bump project version
         run: |
-          cmake -DPROJECT_FILE=CMakeLists.txt -DVERSION="${NEXT_VERSION}" \
+          cmake -Dproject_file=CMakeLists.txt -Dversion="${NEXT_VERSION}" \
             -P cmake/scripts/set_project_version.cmake
 
       - name: Verify bumped project
-        shell: bash
         run: |
-          actual=$(cmake -DPROJECT_FILE=CMakeLists.txt \
-            -P cmake/scripts/get_project_version.cmake \
-            | sed -n 's/^PROJECT_VERSION=//p')
-          if [[ "${actual}" != "${NEXT_VERSION}" ]]; then
-            printf '::error::expected CMake project version %s, got %s\n' "${NEXT_VERSION}" "${actual}"
-            exit 1
-          fi
           git diff --check
           git diff --exit-code -- . ':!CMakeLists.txt'
 

@@ -1,13 +1,13 @@
-# Prints the project() VERSION declared in PROJECT_FILE to stdout as
+# Prints the project() VERSION declared in project_file to stdout as
 # "PROJECT_VERSION=<major.minor.patch>" for CI to scrape. Script mode only:
 # no configure, no network — runs in milliseconds.
-# Usage: cmake -DPROJECT_FILE=CMakeLists.txt -P cmake/scripts/get_project_version.cmake
+# Usage: cmake -Dproject_file=CMakeLists.txt -P cmake/scripts/get_project_version.cmake
 
-if(NOT DEFINED PROJECT_FILE OR PROJECT_FILE STREQUAL "")
-    message(FATAL_ERROR "PROJECT_FILE is required")
+if(NOT DEFINED project_file OR project_file STREQUAL "")
+    message(FATAL_ERROR "project_file is required")
 endif()
 
-file(READ "${PROJECT_FILE}" content)
+file(READ "${project_file}" content)
 string(
     REGEX MATCHALL
     "VERSION[ \t\r\n]+[0-9]+\.[0-9]+\.[0-9]+"
@@ -18,7 +18,7 @@ list(LENGTH version_declarations declaration_count)
 if(NOT declaration_count EQUAL 1)
     message(
         FATAL_ERROR
-        "expected exactly one project VERSION declaration in ${PROJECT_FILE}")
+        "expected exactly one project VERSION declaration in ${project_file}")
 endif()
 
 string(

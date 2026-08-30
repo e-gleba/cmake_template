@@ -11,7 +11,7 @@ This file helps AI assistants (Claude, Cursor, Copilot) understand the project c
 - **Package Manager**: CPM.cmake (CMake-based, no external package manager like Conan/vcpkg yet)
 - **Test Framework**: doctest + CTest presets
 - **CI**: GitHub Actions (`cmake_multi_platform.yml`, reusable)
-- **Release**: `release.yml` (dispatch: optional `version` + `next_version`, auto-derived when empty) gates on a validate job, pipes CI + optional `publish-docker.yml`, then a post-release PR bumps `project(VERSION)` on main
+- **Release**: `release.yml` (dispatch: `version` optional — empty derives `v<project(VERSION)>`; `next_version` required) gates on a validate job, pipes CI + optional `publish-docker.yml`, then a post-release PR bumps `project(VERSION)` on main
 - **Docker**: Official-base toolchain images in `docker/` (no source COPY)
 
 ## Directory Layout Rules
@@ -89,7 +89,7 @@ cmake --build build/gcc --target cpplint  # cppcheck/cpplint
 
 - Every workflow file starts with `# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json`.
 - Build matrix lives in `.github/workflows/cmake_multi_platform.yml` (`workflow_call` so `release.yml` can reuse it). Do not duplicate jobs.
-- Release is `.github/workflows/release.yml` (`workflow_dispatch`; `version`/`next_version` optional — empty derives the tag from `project(VERSION)` and patch-bumps). A `validate` job runs first (previous-tag hint, semver/tag-exists/version-match checks) and gates the build matrix via `needs:`; then it pipes `publish-docker.yml` + the multi-platform workflow, `gh release create`, and a PR that bumps `CMakeLists.txt` `project(VERSION)` and squash-merges it. Never rewrite the just-tagged version.
+- Release is `.github/workflows/release.yml` (`workflow_dispatch`; `version` optional — empty derives the tag from `project(VERSION)`; `next_version` required). A `validate` job runs first (previous-tag hint, semver/tag-exists/version-match checks) and gates the build matrix via `needs:`; then it pipes `publish-docker.yml` + the multi-platform workflow, `gh release create`, and a PR that bumps `CMakeLists.txt` `project(VERSION)` and squash-merges it. Never rewrite the just-tagged version.
 - Docker images: add a row to `publish-docker.yml` `jobs.publish.strategy.matrix.include`. No hardcoded image names — `ghcr.io/${{ github.repository }}/<name>`.
 - New matrix entries must use existing presets from `CMakePresets.json`.
 - Do NOT add platform-specific hack scripts in CI — encode logic in presets or Docker.
