@@ -1,0 +1,106 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# Build a reproducible vcpkg binary artifact for each published GitHub Release.
+name: vcpkg release artifact
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: vcpkg-release-${{ github.event.release.tag_name || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: vcpkg_${{ matrix.os }}_${{ matrix.triplet }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            triplet: x64-linux
+            artifact: vcpkg-x64-linux
+          - os: windows-2022
+            triplet: x64-windows
+            artifact: vcpkg-x64-windows
+          - os: macos-14
+            triplet: arm64-osx
+            artifact: vcpkg-arm64-osx
+    env:
+      VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up CMake and Ninja
+        uses: lukka/get-cmake@v4.4.2
+
+      - name: Restore vcpkg
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/vcpkg
+          path: vcpkg
+          ref: 2025.08.19
+          fetch-depth: 1
+
+      - name: Bootstrap vcpkg
+        working-directory: vcpkg
+        run: ./bootstrap-vcpkg.sh
+        shell: bash
+
+      - name: Configure
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+        run: >-
+          cmake -S . -B build
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+          -DVCPKG_MANIFEST_FEATURES=release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        working-directory: build
+        run: ctest --output-on-failure -C Release
+
+      - name: Package
+        working-directory: build
+        run: cpack -C Release
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            build/*.zip
+            build/*.tar.gz
+            build/*.tar.xz
+          if-no-files-found: error
+          compression-level: 0
+
+  publish:
+    name: attach packages to release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Attach packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" release-assets/* --repo "${{ github.repository }}"
