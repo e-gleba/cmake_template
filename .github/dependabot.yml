@@ -1,15 +1,14 @@
-# yaml-language-server: $schema=https://json.schemastore.org/dependabot-2.0.json
 version: 2
 
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: weekly
+      day: monday
       time: "06:00"
-      timezone: "UTC"
-    open-pull-requests-limit: 5
+      timezone: UTC
+    open-pull-requests-limit: 10
     labels: ["dependencies", "github-actions"]
     commit-message:
       prefix: "ci"
@@ -19,14 +18,14 @@ updates:
         patterns: ["*"]
         update-types: ["minor", "patch"]
 
-  - package-ecosystem: "docker"
-    directory: "/docker"
+  - package-ecosystem: docker
+    directory: /docker
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: weekly
+      day: monday
       time: "06:00"
-      timezone: "UTC"
-    open-pull-requests-limit: 5
+      timezone: UTC
+    open-pull-requests-limit: 10
     labels: ["dependencies", "docker"]
     commit-message:
       prefix: "build"
