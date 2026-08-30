@@ -5,7 +5,7 @@
 #
 #   docker build -t cmake-template:manjaro -f docker/manjaro.Dockerfile docker
 #   docker run --rm -v "$PWD:/app" -w /app cmake-template:manjaro \
-#     cmake --workflow --preset=gcc-full
+#     cmake --workflow --preset=linux_gcc_x86_64_release_package
 
 # latest is the point of a rolling validator. Dependabot still watches it.
 # hadolint ignore=DL3007
@@ -39,4 +39,4 @@ RUN --mount=type=cache,target=/var/cache/pacman/pkg,sharing=locked \
         mesa \
     && pacman -Scc --noconfirm
 
-ENTRYPOINT ["cmake", "--workflow", "--preset=gcc-full"]
+ENTRYPOINT ["cmake", "--workflow", "--preset=linux_gcc_x86_64_release_package"]

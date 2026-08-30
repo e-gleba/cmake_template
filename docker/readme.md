@@ -48,7 +48,7 @@ the interactive shell and OCI image, preventing package-list drift.
 ```bash
 # Development shell.
 nix develop ./nix
-nix develop ./nix --command cmake --workflow --preset=gcc-full
+nix develop ./nix --command cmake --workflow --preset=linux_gcc_x86_64_release_package
 
 # Build and load the OCI image.
 nix build ./nix#docker
@@ -65,6 +65,6 @@ nixpkgs branch on each build instead of claiming a fixed dependency snapshot.
 - Toolchain images only: no source snapshot and no runtime packaging.
 - One image per distribution; compiler selection remains a CMake preset choice.
 - BuildKit cache mounts persist package downloads.
-- Default entrypoint: `cmake --workflow --preset=gcc-full`.
+- Default entrypoint: `cmake --workflow --preset=linux_gcc_x86_64_release_package`.
 - GHCR publication includes provenance and SBOM attestations.
 - Docker and Nix jobs run only when their respective files change.

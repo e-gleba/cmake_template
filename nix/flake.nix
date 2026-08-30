@@ -39,7 +39,7 @@
             contents = packagesFor pkgs;
             config = {
               WorkingDir = "/app";
-              Entrypoint = [ "cmake" "--workflow" "--preset=gcc-full" ];
+              Entrypoint = [ "cmake" "--workflow" "--preset=linux_gcc_x86_64_release_package" ];
             };
           };
           default = self.packages.${system}.docker;

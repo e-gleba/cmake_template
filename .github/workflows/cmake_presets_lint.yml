@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: cmake_presets_lint
+
+on:
+  pull_request:
+    paths: &preset_paths
+      - "CMakePresets.json"
+      - "cmake/presets/**"
+      - ".github/workflows/cmake_presets_lint.yml"
+  push:
+    branches: [main]
+    paths: *preset_paths
+  workflow_dispatch:
+
+concurrency:
+  group: cmake_presets_lint-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate_cmake_presets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up CMake
+        uses: lukka/get-cmake@v4.4.2
+      - name: Validate JSON syntax
+        run: find cmake/presets -name '*.json' -print0 | sort -z | xargs -0 -n1 jq empty && jq empty CMakePresets.json
+      - name: Validate CMake preset schema and includes
+        run: cmake --list-presets=all

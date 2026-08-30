@@ -30,4 +30,4 @@ RUN mkdir -p /var/cache/apt/archives/partial /var/lib/apt/lists/partial \
         pkgconf \
     && rm -rf /var/cache/apt /var/lib/apt/lists
 
-ENTRYPOINT ["cmake", "--workflow", "--preset=gcc-full"]
+ENTRYPOINT ["cmake", "--workflow", "--preset=linux_gcc_x86_64_release_package"]

@@ -5,7 +5,7 @@
 #
 #   docker build -t cmake-template:fedora -f docker/fedora.Dockerfile docker
 #   docker run --rm -v "$PWD:/app" -w /app cmake-template:fedora \
-#     cmake --workflow --preset=gcc-full
+#     cmake --workflow --preset=linux_gcc_x86_64_release_package
 
 # Pin the current stable. Dependabot / Renovate bump this tag.
 FROM fedora:44
@@ -41,4 +41,4 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     && dnf clean all
 
 # Override: docker run --entrypoint bash … for a shell.
-ENTRYPOINT ["cmake", "--workflow", "--preset=gcc-full"]
+ENTRYPOINT ["cmake", "--workflow", "--preset=linux_gcc_x86_64_release_package"]

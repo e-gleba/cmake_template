@@ -34,4 +34,4 @@ RUN --mount=type=cache,target=/var/cache/pacman/pkg,sharing=locked \
         mesa \
     && pacman -Scc --noconfirm
 
-ENTRYPOINT ["cmake", "--workflow", "--preset=gcc-full"]
+ENTRYPOINT ["cmake", "--workflow", "--preset=linux_gcc_x86_64_release_package"]
