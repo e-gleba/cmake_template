@@ -42,7 +42,7 @@ cmake --workflow --preset=android_clang_aarch64_release_build
 cmake --workflow --preset=windows_llvm_mingw_aarch64_release_package
 ```
 
-**Release:** click [▶ run release](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml), type the next CMake version (`1.2.4`); the tag input is optional (empty = `v<project version>`). A validate gate prints the previous tag and resolved release plan before any build starts; then it builds every platform, optionally pushes GHCR images, tags, attaches CPack/APK artifacts, and opens+merges a PR bumping `project(VERSION)` on main.
+**Release:** click [▶ run release](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml), type the tag (`v1.2.3`) and next CMake version (`1.2.4`) — validated before any build starts. Builds every platform, optionally pushes GHCR images, tags, attaches CPack/APK artifacts, then opens a PR bumping `project(VERSION)` on main (auto-merges unless disabled).
 
 ---
 
