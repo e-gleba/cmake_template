@@ -61,19 +61,14 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       VERSION: ${{ inputs.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
       - name: Validate release tag
         run: |
           if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::version must look like v1.2.3 or v1.2.3-rc.1 (got '${VERSION}')"
             exit 1
           fi
-          if git rev-parse "refs/tags/${VERSION}" >/dev/null 2>&1; then
-            echo "::error::tag ${VERSION} already exists"
+          if gh release view "${VERSION}" >/dev/null 2>&1; then
+            echo "::error::release ${VERSION} already exists"
             exit 1
           fi
 
@@ -113,10 +108,7 @@ jobs:
             --target "${{ github.sha }}"
             --title "${VERSION}"
             --generate-notes
-            --verify-tag
           )
-          git tag "${VERSION}" "${{ github.sha }}"
-          git push origin "${VERSION}"
           if [ "${PRERELEASE}" = "true" ]; then
             args+=(--prerelease)
           fi

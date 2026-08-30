@@ -14,17 +14,20 @@ concurrency:
   group: workflow_lint-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   actionlint:
     name: actionlint
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Lint workflows
         uses: raven-actions/actionlint@v2
 
@@ -41,4 +44,4 @@ jobs:
         with:
           persist-credentials: false
       - name: Audit workflow security
-        uses: zizmorcore/zizmor-action@v0.3.2
+        uses: zizmorcore/zizmor-action@v0.6.2
