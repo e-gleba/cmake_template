@@ -1,11 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 #
-# Publish toolchain images to GHCR.
-#
-# Adapt: add a row to jobs.publish.strategy.matrix.include.
-#   name — image suffix (ghcr.io/<owner>/<repo>/<name>)
-#   file — Dockerfile name inside docker/
-# Image names, tags, and labels come from github.repository + docker/metadata-action.
+# Publish toolchain images to GHCR after Docker changes reach main.
 name: publish-docker
 
 on:
@@ -41,14 +36,13 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  # Empty on push; set on dispatch / reusable call.
   EXTRA_TAG: ${{ inputs.tag || '' }}
 
 jobs:
   publish:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -57,6 +51,12 @@ jobs:
             file: fedora.Dockerfile
           - name: manjaro
             file: manjaro.Dockerfile
+          - name: steamos
+            file: steamos.Dockerfile
+          - name: cachyos
+            file: cachyos.Dockerfile
+          - name: alt
+            file: alt.Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -92,8 +92,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
           sbom: true
-          build-args: |
-            SOURCE=${{ github.server_url }}/${{ github.repository }}
+          build-args: SOURCE=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
