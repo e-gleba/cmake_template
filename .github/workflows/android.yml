@@ -48,6 +48,8 @@ jobs:
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4
         with:
           packages: ""
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Cache CPM sources
@@ -87,6 +89,8 @@ jobs:
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4
         with:
           packages: ""
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Cache CPM sources
@@ -116,5 +120,5 @@ jobs:
           path: |
             ${{ env.ANDROID_PROJECT_DIR }}/app/build/outputs/androidTest-results/
             ${{ env.ANDROID_PROJECT_DIR }}/app/build/reports/androidTests/
-          if-no-files-found: warn
+          if-no-files-found: error
           compression-level: 0
