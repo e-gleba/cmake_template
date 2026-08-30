@@ -149,6 +149,7 @@ cmake --workflow --preset=emscripten-full
 | Feature | **cmake_template** | [cpp-best-practices](https://github.com/cpp-best-practices/cmake_template) | [modern-cpp-template](https://github.com/filipdutescu/modern-cpp-template) | [cmake-init](https://github.com/cginternals/cmake-init) |
 | --- | --- | --- | --- | --- |
 | **C++ Standard** | **23 / 26** | 17 / 20 | 17 | 11+ |
+| **C++20 modules** | ✅ opt-in (`src/06_modules`, MSVC/Clang/GCC) | ❌ | ❌ | ❌ |
 | **CMake Presets** | ✅ 10+ with workflows | ❌ | ❌ | ❌ |
 | **Android NDK** | ✅ 4 ABI | ❌ | ❌ | ❌ |
 | **Android instrumented tests** | ✅ GMD + doctest JNI | ❌ | ❌ | ❌ |

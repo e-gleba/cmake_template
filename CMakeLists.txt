@@ -7,8 +7,16 @@ project(
     HOMEPAGE_URL "https://github.com/e-gleba/cmake_template"
     LANGUAGES C CXX)
 
-# No C++20 modules in use — do not pay for the module dependency scan.
+# No C++20 modules in use by default — do not pay for the module
+# dependency scan. src/06_modules opts scanning back in on its own
+# target when the option below is ON.
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
+# Opt-in C++20 named modules demo (src/06_modules), off by default.
+# Needs Ninja 1.11+ or VS 2022 17.4+, and MSVC 14.34+, Clang 16+, or
+# GCC 14+. The name is verbatim from issue #5 — note that CMake reserves
+# the CMAKE_ prefix for its own variables.
+option(CMAKE_CXX_USE_MODULES "Build the src/06_modules C++20 modules demo" OFF)
 
 # Project modules, loaded by name via include(). CMAKE_CURRENT_LIST_DIR
 # (not CMAKE_SOURCE_DIR) keeps this correct when the project is consumed
