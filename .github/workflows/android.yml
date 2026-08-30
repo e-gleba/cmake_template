@@ -48,7 +48,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Install Android NDK
-        run: yes | sdkmanager --licenses >/dev/null && sdkmanager "ndk;${NDK_VERSION}"
+        run: |
+          sdkmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${sdkmanager}" --licenses >/dev/null
+          "${sdkmanager}" "ndk;${NDK_VERSION}"
       - name: Cache CPM sources
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
@@ -85,7 +88,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Install Android NDK
-        run: yes | sdkmanager --licenses >/dev/null && sdkmanager "ndk;${NDK_VERSION}"
+        run: |
+          sdkmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${sdkmanager}" --licenses >/dev/null
+          "${sdkmanager}" "ndk;${NDK_VERSION}"
       - name: Cache CPM sources
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
