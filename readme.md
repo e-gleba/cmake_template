@@ -33,13 +33,13 @@ Production-ready C++ template for cross-platform projects. Targets C++23/26. Nin
 
 ```bash
 # Desktop — full pipeline in one command
-cmake --workflow --preset=gcc-full
+cmake --workflow --preset=linux_gcc_x86_64_release_package
 
 # Android — configure + build for arm64
-cmake --workflow --preset=android-arm64-full
+cmake --workflow --preset=android_clang_aarch64_release_build
 
 # Linux → Windows ARM64 — cross-compile + package
-cmake --workflow --preset=llvm-mingw-aarch64-full
+cmake --workflow --preset=windows_llvm_mingw_aarch64_release_package
 ```
 
 **Release:** click [▶ run release](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml), type `v1.2.3` and next CMake version (`1.2.4`). Builds every platform, optionally pushes GHCR images, tags, attaches CPack/APK artifacts, then opens+merges a PR bumping `project(VERSION)` on main.
@@ -82,26 +82,26 @@ cd YOUR_PROJECT
 
 ```bash
 # GCC — full pipeline
-cmake --workflow --preset=gcc-full
+cmake --workflow --preset=linux_gcc_x86_64_release_package
 
 # Or step by step:
-cmake --preset=gcc
-cmake --build --preset=gcc-release
-ctest --preset=gcc-release
+cmake --preset=linux_gcc_x86_64
+cmake --build --preset=linux_gcc_x86_64_release
+ctest --preset=linux_gcc_x86_64_release
 
 # Clang
-cmake --workflow --preset=clang-full
+cmake --workflow --preset=linux_clang_x86_64_release_package
 
 # MSVC (Windows only)
-cmake --workflow --preset=msvc-full
+cmake --workflow --preset=windows_msvc_x86_64_release_package
 ```
 
 ### 3. Cross-compile for Android
 
 ```bash
 # Requires: ANDROID_NDK_HOME or ANDROID_HOME set
-cmake --preset=android-arm64
-cmake --build --preset=android-arm64
+cmake --preset=android_clang_aarch64
+cmake --build --preset=android_clang_aarch64_release
 
 # Run instrumented tests on device/emulator
 cd android-project
@@ -113,16 +113,16 @@ cd android-project
 
 ```bash
 # Requires: llvm-mingw installed
-cmake --workflow --preset=llvm-mingw-x86_64-full
-# → build/llvm-mingw-x86_64/package/cxx_project-*.zip
+cmake --workflow --preset=windows_llvm_mingw_x86_64_release_package
+# → build/windows_llvm_mingw_x86_64/package/cxx_project-*.zip
 ```
 
 ### 5. WebAssembly (zero setup)
 
 ```bash
 # No emsdk install needed — the toolchain bootstraps a pinned SDK into .emsdk/
-cmake --workflow --preset=emscripten-full
-# → build/emscripten/src/emscripten/Release/web_app.{html,js,wasm}
+cmake --workflow --preset=web_emscripten_wasm32_release_test
+# → build/web_emscripten_wasm32/src/emscripten/Release/web_app.{html,js,wasm}
 ```
 
 ---
@@ -131,16 +131,16 @@ cmake --workflow --preset=emscripten-full
 
 | Platform | Preset | Generator | Test runner | Package |
 | --- | --- | --- | --- | --- |
-| **Linux (native)** | `gcc`, `clang` | Ninja Multi-Config | `ctest` | `.tar.gz` |
-| **Windows (native)** | `msvc` | Visual Studio 17 2022 | `ctest` | `.zip` |
-| **Windows (cross)** | `llvm-mingw-x86_64`, `llvm-mingw-i686`, `llvm-mingw-aarch64` | Ninja Multi-Config | — (cross-compiled) | `.tar.xz` |
-| **Android arm64** | `android-arm64` | Ninja Multi-Config | `gradlew connectedCheck` | — |
-| **Android arm32** | `android-arm32` | Ninja Multi-Config | `gradlew connectedCheck` | — |
-| **Android x64** | `android-x64` | Ninja Multi-Config | `gradlew connectedCheck` | — |
-| **Android x86** | `android-x86` | Ninja Multi-Config | `gradlew connectedCheck` | — |
+| **Linux (native)** | `linux_gcc_x86_64`, `linux_clang_x86_64` | Ninja Multi-Config | `ctest` | `.tar.gz` |
+| **Windows (native)** | `windows_msvc_x86_64` | Visual Studio 17 2022 | `ctest` | `.zip` |
+| **Windows (cross)** | `windows_llvm_mingw_x86_64`, `windows_llvm_mingw_x86`, `windows_llvm_mingw_aarch64` | Ninja Multi-Config | — (cross-compiled) | `.tar.xz` |
+| **Android arm64** | `android_clang_aarch64` | Ninja Multi-Config | `gradlew connectedCheck` | — |
+| **Android arm32** | `android_clang_armv7` | Ninja Multi-Config | `gradlew connectedCheck` | — |
+| **Android x64** | `android_clang_x86_64` | Ninja Multi-Config | `gradlew connectedCheck` | — |
+| **Android x86** | `android_clang_x86` | Ninja Multi-Config | `gradlew connectedCheck` | — |
 | **macOS** | `clang` (native) | Ninja Multi-Config | `ctest` | `.tar.gz` |
 | **iOS / macOS Xcode** | [planned #20](https://github.com/e-gleba/cmake_template/issues/20) | Xcode | `xctest` / `xcodebuild test` | — |
-| **WebAssembly** | `emscripten` | Ninja Multi-Config | `ctest` via Node.js | `.html` + `.js` + `.wasm` |
+| **WebAssembly** | `web_emscripten_wasm32` | Ninja Multi-Config | `ctest` via Node.js | `.html` + `.js` + `.wasm` |
 
 ---
 
