@@ -1,35 +1,15 @@
 {
   description = "cmake_template reproducible C++ development shell and image";
-
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
   outputs = { self, nixpkgs }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
-      packagesFor = pkgs: with pkgs; [
-        gcc
-        clang
-        lld
-        cmake
-        ninja
-        git
-        doxygen
-        graphviz
-        pkg-config
-        wayland
-        libxkbcommon
-        libGL
-      ];
+      packagesFor = pkgs: with pkgs; [ gcc clang lld cmake ninja git doxygen graphviz pkg-config wayland libxkbcommon libGL ];
     in {
       devShells = forAllSystems (system:
         let pkgs = import nixpkgs { inherit system; };
-        in {
-          default = pkgs.mkShell {
-            packages = packagesFor pkgs;
-          };
-        });
-
+        in { default = pkgs.mkShell { packages = packagesFor pkgs; }; });
       packages = forAllSystems (system:
         let pkgs = import nixpkgs { inherit system; };
         in {
@@ -39,7 +19,7 @@
             contents = packagesFor pkgs;
             config = {
               WorkingDir = "/app";
-              Entrypoint = [ "cmake" "--workflow" "--preset=gcc-full" ];
+              Entrypoint = [ "cmake" "--workflow" "--preset=linux_gcc_x86_64_release" ];
             };
           };
           default = self.packages.${system}.docker;

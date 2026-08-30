@@ -1,0 +1,18 @@
+{
+    "version": 12,
+    "testPresets": [
+        {
+            "name": "test_base",
+            "hidden": true,
+            "output": { "outputOnFailure": true, "verbosity": "default" },
+            "execution": { "noTestsAction": "error", "stopOnFailure": false }
+        },
+        { "name": "windows_msvc_x86_64_release", "configurePreset": "windows_msvc_x86_64", "inherits": "test_base", "configuration": "Release" },
+        { "name": "windows_msvc_x86_64_debug", "configurePreset": "windows_msvc_x86_64", "inherits": "test_base", "configuration": "Debug" },
+        { "name": "linux_clang_x86_64_release", "configurePreset": "linux_clang_x86_64", "inherits": "test_base", "configuration": "Release" },
+        { "name": "linux_clang_x86_64_debug", "configurePreset": "linux_clang_x86_64", "inherits": "test_base", "configuration": "Debug" },
+        { "name": "linux_gcc_x86_64_release", "configurePreset": "linux_gcc_x86_64", "inherits": "test_base", "configuration": "Release" },
+        { "name": "linux_gcc_x86_64_debug", "configurePreset": "linux_gcc_x86_64", "inherits": "test_base", "configuration": "Debug" },
+        { "name": "wasm_emscripten_wasm32_release", "configurePreset": "wasm_emscripten_wasm32", "inherits": "test_base", "configuration": "Release" }
+    ]
+}

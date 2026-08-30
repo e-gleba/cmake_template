@@ -1,0 +1,85 @@
+{
+    "version": 12,
+    "workflowPresets": [
+        {
+            "name": "android_ndk_arm64_v8a_release",
+            "steps": [
+                { "type": "configure", "name": "android_ndk_arm64_v8a" },
+                { "type": "build", "name": "android_ndk_arm64_v8a_release" }
+            ]
+        },
+        {
+            "name": "android_ndk_armeabi_v7a_release",
+            "steps": [
+                { "type": "configure", "name": "android_ndk_armeabi_v7a" },
+                { "type": "build", "name": "android_ndk_armeabi_v7a_release" }
+            ]
+        },
+        {
+            "name": "android_ndk_x86_64_release",
+            "steps": [
+                { "type": "configure", "name": "android_ndk_x86_64" },
+                { "type": "build", "name": "android_ndk_x86_64_release" }
+            ]
+        },
+        {
+            "name": "windows_msvc_x86_64_release",
+            "steps": [
+                { "type": "configure", "name": "windows_msvc_x86_64" },
+                { "type": "build", "name": "windows_msvc_x86_64_release" },
+                { "type": "test", "name": "windows_msvc_x86_64_release" },
+                { "type": "package", "name": "windows_msvc_x86_64_release" }
+            ]
+        },
+        {
+            "name": "windows_llvm_mingw_i686_release",
+            "steps": [
+                { "type": "configure", "name": "windows_llvm_mingw_i686" },
+                { "type": "build", "name": "windows_llvm_mingw_i686_release" },
+                { "type": "package", "name": "windows_llvm_mingw_i686_release" }
+            ]
+        },
+        {
+            "name": "windows_llvm_mingw_x86_64_release",
+            "steps": [
+                { "type": "configure", "name": "windows_llvm_mingw_x86_64" },
+                { "type": "build", "name": "windows_llvm_mingw_x86_64_release" },
+                { "type": "package", "name": "windows_llvm_mingw_x86_64_release" }
+            ]
+        },
+        {
+            "name": "windows_llvm_mingw_aarch64_release",
+            "steps": [
+                { "type": "configure", "name": "windows_llvm_mingw_aarch64" },
+                { "type": "build", "name": "windows_llvm_mingw_aarch64_release" },
+                { "type": "package", "name": "windows_llvm_mingw_aarch64_release" }
+            ]
+        },
+        {
+            "name": "linux_clang_x86_64_release",
+            "steps": [
+                { "type": "configure", "name": "linux_clang_x86_64" },
+                { "type": "build", "name": "linux_clang_x86_64_release" },
+                { "type": "test", "name": "linux_clang_x86_64_release" },
+                { "type": "package", "name": "linux_clang_x86_64_release" }
+            ]
+        },
+        {
+            "name": "linux_gcc_x86_64_release",
+            "steps": [
+                { "type": "configure", "name": "linux_gcc_x86_64" },
+                { "type": "build", "name": "linux_gcc_x86_64_release" },
+                { "type": "test", "name": "linux_gcc_x86_64_release" },
+                { "type": "package", "name": "linux_gcc_x86_64_release" }
+            ]
+        },
+        {
+            "name": "wasm_emscripten_wasm32_release",
+            "steps": [
+                { "type": "configure", "name": "wasm_emscripten_wasm32" },
+                { "type": "build", "name": "wasm_emscripten_wasm32_release" },
+                { "type": "test", "name": "wasm_emscripten_wasm32_release" }
+            ]
+        }
+    ]
+}
