@@ -44,6 +44,11 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      # renovate/stability commit status (posted because minimumReleaseAge is
+      # set in renovate.json5). Without this the run pushes the branch, then
+      # the 403 on POST /statuses is mapped to REPOSITORY_CHANGED and the run
+      # aborts BEFORE creating any PR — branch appears, PR never does.
+      statuses: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -55,7 +60,9 @@ jobs:
           # Token pushes branches AND opens PRs. If branches appear but PRs
           # never do, check BOTH:
           # - RENOVATE_TOKEN (if set): PAT needs Contents: RW +
-          #   Pull requests: RW on this repo.
+          #   Pull requests: RW + Commit statuses: RW on this repo (the
+          #   statuses perm backs the renovate/stability check; a 403 there
+          #   aborts the run before PR creation).
           # - Fallback GITHUB_TOKEN: repo setting Settings → Actions →
           #   General → "Allow GitHub Actions to create and approve pull
           #   requests" must be checked. Its PRs don't trigger CI
@@ -67,6 +74,6 @@ jobs:
           # Tell Renovate which repository to process
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           # Free tier optimizations
-          RENOVATE_PLATFORM_COMMIT: true
+          RENOVATE_PLATFORM_COMMIT: enabled
           RENOVATE_AUTODISCOVER: false
           RENOVATE_ONBOARDING: false

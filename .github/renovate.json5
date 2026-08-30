@@ -15,8 +15,10 @@
   // hourly limit trickles PR creation across weekly runs. 0 = unlimited per
   // run; prConcurrentLimit still caps simultaneously open PRs.
   // NOTE: if renovate/* branches appear but NO pull requests ever do, the
-  // cause is token permission (403 on PR create), not this limit — see the
-  // token comment in .github/workflows/renovate.yml.
+  // cause is token permissions, not this limit — see the token comment in
+  // .github/workflows/renovate.yml. Seen so far: 403 on PR create, and 403
+  // on the renovate/stability commit status (minimumReleaseAge below) which
+  // aborts the run pre-PR with "Repository has changed during renovation".
   prHourlyLimit: 0,
   prConcurrentLimit: 10,
 
