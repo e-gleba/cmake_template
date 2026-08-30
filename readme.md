@@ -113,7 +113,7 @@ cd android-project
 
 ```bash
 # Requires: llvm-mingw installed
-cmake --workflow --preset=windows_llvm_mingw_aarch64_release_package
+cmake --workflow --preset=windows_llvm_mingw_x86_64_release_package
 # → build/windows_llvm_mingw_x86_64/package/cxx_project-*.zip
 ```
 
@@ -157,7 +157,7 @@ cmake --workflow --preset=web_emscripten_wasm32_release_test
 | **Docker / CI** | ✅ + Actions matrix | ✅ Docker + Actions | ✅ GitHub Actions | ✅ |
 | **CPack packaging** | ✅ tar.gz / zip / txz | ❌ | ❌ | ❌ |
 | **Sanitizers** | ❌ [#9](https://github.com/e-gleba/cmake_template/issues/9) | ✅ ASan/UBSan | ✅ | ❌ |
-| **Fuzz testing** | ❌ | ✅ libFuzzer | ✅ | ❌ |
+| **Fuzz testing** | ❌ | ✅ libFuzzer | ❌ | ❌ |
 | **Code coverage** | ❌ [#10](https://github.com/e-gleba/cmake_template/issues/10) | ✅ codecov | ✅ codecov | ❌ |
 | **macOS/iOS (Xcode)** | ❌ [#20](https://github.com/e-gleba/cmake_template/issues/20) | Limited | ❌ | ❌ |
 | **vcpkg** | ❌ [#3](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ |
