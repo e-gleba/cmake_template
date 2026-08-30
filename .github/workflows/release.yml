@@ -83,42 +83,34 @@ jobs:
             exit 1
           fi
 
-      - name: Download package artifacts
+      - name: Download release assets
         uses: actions/download-artifact@v8
         with:
-          path: artifacts
+          path: release-assets
+          pattern: release-asset-*
+          merge-multiple: true
 
-      - name: Collect release assets
+      - name: Verify release assets
+        shell: bash
         run: |
-          find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.xz' -o -name '*.apk' \) -print0 | sort -z > /tmp/release-assets
-          mapfile -d '' files < /tmp/release-assets
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "::error::no package artifacts (zip / tar.gz / tar.xz / apk)"
+          shopt -s nullglob
+          files=(release-assets/*)
+          if (( ${#files[@]} == 0 )); then
+            echo "::error::no release assets were downloaded"
             exit 1
           fi
 
-          declare -A asset_names=()
-          for file in "${files[@]}"; do
-            name=${file##*/}
-            if [[ -n "${asset_names[${name}]:-}" ]]; then
-              echo "::error::duplicate release asset name '${name}'"
-              echo "::error::${asset_names[${name}]}"
-              echo "::error::${file}"
-              exit 1
-            fi
-            asset_names[${name}]=${file}
-          done
-
           {
             echo "## Release assets (${#files[@]})"
-            printf -- '- %s\n' "${files[@]}"
-          } >> "$GITHUB_STEP_SUMMARY"
+            printf -- '- %s\n' "${files[@]#release-assets/}"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Create GitHub Release
         env:
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
-          mapfile -d '' files < /tmp/release-assets
+          shopt -s nullglob
+          files=(release-assets/*)
           args=(
             "${VERSION}"
             --repo "${{ github.repository }}"
