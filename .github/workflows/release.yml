@@ -11,11 +11,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release tag (e.g. v1.0.0)"
+        description: "Release tag (e.g. v1.0.0, or v1.0.0-rc.1 for a prerelease) — core must match project() VERSION in CMakeLists.txt"
         required: true
         type: string
       next_version:
-        description: "Next CMake project() VERSION, no v prefix (e.g. 1.0.1) — bot opens and auto-merges a PR after the release"
+        description: "Next project() VERSION, no v prefix (e.g. 1.0.1) — must exceed the current one in CMakeLists.txt; bot opens and auto-merges the bump PR"
         required: true
         type: string
       prerelease:
@@ -74,12 +74,7 @@ jobs:
 
       - name: Check versions against project()
         run: |
-          cmake -S . -B build/version-check -DBUILD_TESTING=OFF
-          current=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/version-check/CMakeCache.txt)
-          if [[ -z "${current}" ]]; then
-            echo "::error::CMake did not report CMAKE_PROJECT_VERSION"
-            exit 1
-          fi
+          current=$(cmake -DPROJECT_FILE=CMakeLists.txt -P cmake/scripts/get_project_version.cmake | sed -n 's/^-- //p')
           # VERSION passed the format check above, so the numeric core
           # (the tag without any prerelease suffix) always matches.
           [[ "${VERSION}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+) ]]
@@ -183,12 +178,7 @@ jobs:
       - name: Guard against version regression
         id: version_guard
         run: |
-          cmake -S . -B build/version-guard -DBUILD_TESTING=OFF
-          current=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/version-guard/CMakeCache.txt)
-          if [[ -z "${current}" ]]; then
-            echo "::error::CMake did not report CMAKE_PROJECT_VERSION"
-            exit 1
-          fi
+          current=$(cmake -DPROJECT_FILE=CMakeLists.txt -P cmake/scripts/get_project_version.cmake | sed -n 's/^-- //p')
           if ! printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -C -V \
             || [[ "${current}" == "${NEXT_VERSION}" ]]; then
             printf "::error::next_version (%s) must be greater than the version now on main (%s) — main moved during this release\n" \
@@ -204,10 +194,11 @@ jobs:
           -DVERSION="${NEXT_VERSION}"
           -P cmake/scripts/set_project_version.cmake
 
+      # Getter re-read proves the rewrite; buildability of the bumped
+      # project is gated by the bump PR's own CI before auto-merge.
       - name: Verify bumped project
         run: |
-          cmake -S . -B build/version-verify -DBUILD_TESTING=OFF
-          actual=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/version-verify/CMakeCache.txt)
+          actual=$(cmake -DPROJECT_FILE=CMakeLists.txt -P cmake/scripts/get_project_version.cmake | sed -n 's/^-- //p')
           test "${actual}" = "${NEXT_VERSION}" || {
             printf "::error::expected CMake project version %s, got %s\n" "${NEXT_VERSION}" "${actual}"
             exit 1
