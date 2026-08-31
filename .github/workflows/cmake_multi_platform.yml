@@ -334,9 +334,25 @@ jobs:
           target: default
           disable-animations: true
           script: cd ${{ env.ANDROID_PROJECT_DIR }} && ./gradlew --stacktrace :app:connectedDebugAndroidTest --info
-      # Runs under `if: always()`: when the emulator step fails before AGP
-      # produces reports (build error, boot failure) nothing exists to upload,
-      # so warn instead of erroring — the test step already decides the job.
+      # Diagnostics for the upload below: when the test step fails before AGP
+      # writes reports (build error, emulator boot failure) the upload errors
+      # with a bare "no files found" — this step shows what actually exists.
+      - name: Locate test reports
+        if: always()
+        shell: bash
+        run: |
+          build_dir="${{ env.ANDROID_PROJECT_DIR }}/app/build"
+          for dir in outputs/androidTest-results reports/androidTests; do
+            path="${build_dir}/${dir}"
+            if [ -d "${path}" ]; then
+              echo "== ${dir} =="
+              find "${path}" -type f | sort
+            else
+              echo "::warning::${dir} not found under app/build"
+            fi
+          done
+      # Strict on purpose: a completed test run must produce reports. If this
+      # errors, the step above shows where AGP actually wrote them.
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
@@ -345,5 +361,5 @@ jobs:
           path: |
             ${{ env.ANDROID_PROJECT_DIR }}/app/build/outputs/androidTest-results/
             ${{ env.ANDROID_PROJECT_DIR }}/app/build/reports/androidTests/
-          if-no-files-found: warn
+          if-no-files-found: error
           compression-level: 0
