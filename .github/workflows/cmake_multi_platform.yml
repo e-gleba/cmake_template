@@ -35,6 +35,12 @@ on:
     types: [published]
   workflow_dispatch:
   workflow_call:
+    inputs:
+      skip_emulator_tests:
+        description: "Skip the slow Android emulator instrumented tests"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: cmake_ci-${{ github.workflow }}-${{ github.ref }}
@@ -269,10 +275,6 @@ jobs:
           distribution: temurin
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.3.0
-        with:
-          build-scan-publish: true
-          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
-          build-scan-terms-of-use-agree: "yes"
       # AGP passes -DCPM_SOURCE_CACHE=~/.cache/cpm-cmake (see app/build.gradle),
       # which overrides the workflow-level env var — cache that directory.
       - name: Cache CPM sources
@@ -305,9 +307,9 @@ jobs:
   android_instrumented_test:
     name: android_emulator_x86_64
     runs-on: ubuntu-latest
-    # Slow and less hermetic than plain builds — skip when release.yml reuses
-    # this workflow so a flaky emulator cannot block a release.
-    if: github.event_name != 'workflow_call'
+    # Slow and less hermetic than plain builds — release.yml opts out via the
+    # skip_emulator_tests input so a flaky emulator cannot block a release.
+    if: ${{ !inputs.skip_emulator_tests }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -320,10 +322,6 @@ jobs:
           distribution: temurin
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.3.0
-        with:
-          build-scan-publish: true
-          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
-          build-scan-terms-of-use-agree: "yes"
       - name: Cache CPM sources
         uses: actions/cache@v6
         with:
