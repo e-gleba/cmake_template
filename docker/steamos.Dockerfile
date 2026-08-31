@@ -4,7 +4,7 @@
 # Valve recommends steamrt4 for new native Linux games.
 # Source is not baked in — mount the repo at /app.
 
-FROM registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk:4.0.20260714.251823
+FROM registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk:4.0.20260805.254769
 
 ARG SOURCE=""
 
