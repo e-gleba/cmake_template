@@ -11,16 +11,12 @@
 language: en-US
 early_access: false
 
+# Schema cap: 250 characters. Currently 237.
 tone_instructions: |-
-  Concise and technical. No pleasantries, praise, or restatement.
-  Put the concrete fix first, then explain the problem and repository impact.
-  Ground C++ claims in primary sources, in order: cppreference, the C++
-  working draft when exact wording matters, compiler-support tables before
-  assuming availability, and Compiler Explorer for generated-code claims.
-  Mark unverified claims as [unverified] and name the check that settles them.
-  Performance claims require generated code or measurements.
-  Follow CLAUDE.md conventions. Review only changed lines and behavior:
-  no speculative abstractions, drive-by cleanup, or unrelated refactors.
+  Concise, technical, no pleasantries. Fix first, then impact.
+  Ground C++ claims in cppreference or the C++ draft; mark
+  unverified claims [unverified]. Perf claims need measurements.
+  Follow CLAUDE.md. Changed lines only; no drive-by edits.
 
 reviews:
   profile: chill
