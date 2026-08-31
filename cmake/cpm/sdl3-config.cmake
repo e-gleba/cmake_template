@@ -89,6 +89,15 @@ cpmaddpackage(
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     set(ct_sdl3_gen
         "${CMAKE_SOURCE_DIR}/android_project/app/build/generated/sdl3")
+    # AGP runs one CMake configure per ABI concurrently — every configure
+    # exports into this same directory. Concurrent file(COPY) into a shared
+    # destination fails intermittently with "file COPY cannot set permissions
+    # on ...: No such file or directory", so serialize the export across
+    # configure processes. GUARD PROCESS releases the lock when this
+    # configure ends, even on error; without RESULT_VARIABLE a timeout is a
+    # hard error instead of silent corruption.
+    file(MAKE_DIRECTORY "${ct_sdl3_gen}")
+    file(LOCK "${ct_sdl3_gen}" DIRECTORY GUARD PROCESS TIMEOUT 600)
     file(
         COPY "${SDL3_SOURCE_DIR}/android-project/app/src/main/java/org/"
         DESTINATION "${ct_sdl3_gen}/java/org"
