@@ -15,6 +15,9 @@
 #         [-DFORBIDDEN="a.dll;..."] -P check_pe_imports.cmake
 # Exit: 0 = clean; non-zero = forbidden import, inspection failure, or
 # usage error.
+#
+# Note: CMake regexes have no \t/\r escapes (a literal 't'/'r' is matched
+# instead) — normalize whitespace with string(STRIP) before matching.
 # ---------------------------------------------------------------------
 
 if(NOT DEFINED TARGETS OR TARGETS STREQUAL "")
@@ -87,6 +90,9 @@ endforeach()
 
 set(binaries)
 foreach(pe IN LISTS pe_files)
+    if(NOT EXISTS "${pe}") # broken symlink — file(READ) would be fatal
+        continue()
+    endif()
     file(READ "${pe}" magic OFFSET 0 LIMIT 2 HEX)
     if(magic STREQUAL "4d5a")
         list(APPEND binaries "${pe}")
@@ -120,9 +126,10 @@ foreach(pe IN LISTS binaries)
     set(imports)
     string(REPLACE "\n" ";" lines "${inspect_out}")
     foreach(line IN LISTS lines)
-        if(line MATCHES [==[DLL Name:[ \t]*([^ \t\r]+)]==])
+        string(STRIP "${line}" line)
+        if(line MATCHES [==[DLL Name:[ ]+([^ ]+)$]==])
             list(APPEND imports "${CMAKE_MATCH_1}")
-        elseif(line MATCHES [==[^[ \t]+([A-Za-z0-9_+.-]+\.[Dd][Ll][Ll])[ \t\r]*$]==])
+        elseif(line MATCHES [==[^([A-Za-z0-9_.+-]+\.[Dd][Ll][Ll])$]==])
             list(APPEND imports "${CMAKE_MATCH_1}")
         endif()
     endforeach()

@@ -16,6 +16,9 @@
 #
 # Usage: cmake -DTARGETS="elf-file-or-dir;..." -P check_elf_abi.cmake
 # Exit:  0 = all compatible; non-zero = violation or usage error
+#
+# Note: CMake regexes have no \t/\r escapes (a literal 't'/'r' is matched
+# instead) — normalize whitespace with string(STRIP) before matching.
 # ---------------------------------------------------------------------
 
 if(NOT DEFINED TARGETS OR TARGETS STREQUAL "")
@@ -45,6 +48,9 @@ endforeach()
 
 set(binaries)
 foreach(candidate IN LISTS candidates)
+    if(NOT EXISTS "${candidate}") # broken symlink — file(READ) would be fatal
+        continue()
+    endif()
     file(READ "${candidate}" magic OFFSET 0 LIMIT 4 HEX)
     if(NOT magic STREQUAL "7f454c46")
         continue()
@@ -155,11 +161,18 @@ foreach(bin IN LISTS binaries)
             "file=${bin}::unresolved NEEDED libraries ('not found' above)")
         continue()
     endif()
-    # soname -> resolved path, keyed as variables (CMake has no dicts)
+    # soname -> resolved path, keyed as variables (CMake has no dicts).
+    # The map is per-binary — clear the previous binary's keys first.
+    foreach(key IN LISTS resolved_keys)
+        unset("resolved_${key}")
+    endforeach()
+    set(resolved_keys)
     foreach(line IN LISTS ldd_lines)
-        if(line MATCHES [==[^[ \t]*([^ \t]+)[ \t]+=>[ \t]+(/[^ \t]+)]==])
+        string(STRIP "${line}" line) # ldd indents with a tab
+        if(line MATCHES [==[^([^ ]+)[ ]+=>[ ]+(/[^ ]+)]==])
             string(MAKE_C_IDENTIFIER "${CMAKE_MATCH_1}" soname_key)
             set(resolved_${soname_key} "${CMAKE_MATCH_2}")
+            list(APPEND resolved_keys "${soname_key}")
         endif()
     endforeach()
 
