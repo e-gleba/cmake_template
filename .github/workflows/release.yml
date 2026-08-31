@@ -47,8 +47,6 @@ jobs:
   packages:
     name: packages
     uses: ./.github/workflows/cmake_multi_platform.yml
-    with:
-      skip_emulator_tests: true
     permissions:
       contents: read
 

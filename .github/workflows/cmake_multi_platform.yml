@@ -35,12 +35,6 @@ on:
     types: [published]
   workflow_dispatch:
   workflow_call:
-    inputs:
-      skip_emulator_tests:
-        description: "Skip the slow Android emulator instrumented tests"
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: cmake_ci-${{ github.workflow }}-${{ github.ref }}
@@ -307,9 +301,6 @@ jobs:
   android_instrumented_test:
     name: android_emulator_x86_64
     runs-on: ubuntu-latest
-    # Slow and less hermetic than plain builds — release.yml opts out via the
-    # skip_emulator_tests input so a flaky emulator cannot block a release.
-    if: ${{ !inputs.skip_emulator_tests }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
