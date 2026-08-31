@@ -135,7 +135,3 @@ wrapper.log*
 # Project strange dirs:
 OFF/
 cmake_system_information__/
-
-# ─── Steam ────────────────────────────────────────────────────────────────────
-# Never commit a real App ID — copy deploy/steam_appid.txt.example instead
-deploy/steam_appid.txt

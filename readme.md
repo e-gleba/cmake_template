@@ -181,7 +181,7 @@ cmake --workflow --preset=web_emscripten_wasm32_release_test
 | [Docker Guide](docs/docker.md) | Docker images, GHCR publish, one-click release |
 | [Contributing](docs/contributing.md) | How to contribute, code style, pre-commit setup |
 | [References](docs/references.md) | Curated external links (do NOT bloat README) |
-| [Steam & Steam Deck](deploy/readme.md) | steamrt4 presets, ABI verification, SteamPipe upload, Deck Verified checklist |
+| [Steam & Steam Deck](cmake/steampipe) | steamrt4 presets, ABI/PE/loader gates, CMake-generated SteamPipe VDFs |
 | [Issue: Android native testing strategy](https://github.com/e-gleba/cmake_template/issues/23) | GTest vs doctest, Activity lifecycle, XCTest, CI/CD — research-backed |
 
 ---

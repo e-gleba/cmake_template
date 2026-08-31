@@ -6,34 +6,37 @@
         {
             "name": "linux_steamrt4_x86_64",
             "displayName": "Linux Steam Runtime 4 (steamrt4) x86_64",
-            "description": "Native Linux x86_64 build for Steam Linux Runtime 4.0. Run inside the steamrt4 SDK container (registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk) so the ABI is capped at the runtime baseline. IPO/LTO enabled for smaller depots.",
+            "description": "Native Linux x86_64 build for Steam Linux Runtime 4.0. Run inside the steamrt4 SDK container (registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk) so the ABI is capped at the runtime baseline. IPO/LTO enabled for smaller depots. SteamPipe deploy scripts are generated into the build tree (CT_STEAMPIPE).",
             "inherits": "base",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "gcc",
                 "CMAKE_CXX_COMPILER": "g++",
-                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON"
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+                "CT_STEAMPIPE": "ON"
             },
             "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
         },
         {
             "name": "windows_msvc_steam_x86_64",
             "displayName": "Windows MSVC x86_64 (Steam, static CRT)",
-            "description": "Windows x86_64 build with MSVC and static CRT (/MT) — no VC++ redistributable dependency in the SteamPipe depot.",
+            "description": "Windows x86_64 build with MSVC and static CRT (/MT) — no VC++ redistributable dependency in the SteamPipe depot. SteamPipe deploy scripts are generated into the build tree (CT_STEAMPIPE).",
             "inherits": "windows_msvc_x86_64",
             "cacheVariables": {
                 "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
-                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON"
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+                "CT_STEAMPIPE": "ON"
             }
         },
         {
             "name": "windows_llvm_mingw_steam_x86_64",
             "displayName": "Windows LLVM-MinGW x86_64 (Steam, static CRT)",
-            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW, statically linking the C/C++ runtime — the .exe imports only Windows system DLLs.",
+            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW, statically linking the C/C++ runtime — the .exe imports only Windows system DLLs. SteamPipe deploy scripts are generated into the build tree (CT_STEAMPIPE).",
             "inherits": "windows_llvm_mingw_x86_64",
             "cacheVariables": {
                 "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld -static-libgcc -static-libstdc++ -static",
                 "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -static-libgcc -static-libstdc++ -static",
-                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON"
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+                "CT_STEAMPIPE": "ON"
             }
         }
     ],

@@ -12,6 +12,9 @@ name: steam_runtime_ci
 #      library is taken from, then the binaries execute for real.
 #   3. windows_*_steam         — static-CRT Windows builds; a PE import gate
 #      proves no VC++ redistributable / MinGW runtime DLL is required.
+#
+# All gates are cmake -P scripts under cmake/steampipe/ — one language, no
+# shell quoting, locally runnable with the exact same command lines.
 on:
   push:
     branches: [main]
@@ -19,8 +22,6 @@ on:
       - "src/**"
       - "tests/**"
       - "cmake/**"
-      - "scripts/steam/**"
-      - "deploy/**"
       - "CMakeLists.txt"
       - "CMakePresets.json"
       - ".github/workflows/steam_runtime.yml"
@@ -102,11 +103,7 @@ jobs:
       - name: Build, test, and package inside the steamrt4 SDK
         run: cmake --workflow --preset linux_steamrt4_x86_64_release_package
       - name: ABI gate — symbol versions vs runtime libraries
-        run: >-
-          bash scripts/steam/check_elf_abi.sh
-          build/linux_steamrt4_x86_64/src
-          build/linux_steamrt4_x86_64/tests
-          build/linux_steamrt4_x86_64/_deps/sdl3-build
+        run: cmake "-DTARGETS=build/linux_steamrt4_x86_64/src;build/linux_steamrt4_x86_64/tests;build/linux_steamrt4_x86_64/_deps/sdl3-build" -P cmake/steampipe/check_elf_abi.cmake
       # Stage what the platform smoke test needs: the shipped executables
       # plus libSDL3 (cp -L collapses the .so symlink chain — artifacts do
       # not preserve symlinks).
@@ -161,25 +158,7 @@ jobs:
       # 02_sdl3_app needs a display to execute but only the loader to
       # validate — this gate covers it.
       - name: Library resolution gate on the real runtime
-        run: |
-          failed=0
-          for bin in steam_binaries/bin/*; do
-              name=$(basename "${bin}")
-              echo "-- ${name}"
-              if ! out=$(docker run --rm \
-                  --entrypoint /lib64/ld-linux-x86-64.so.2 \
-                  -e LD_LIBRARY_PATH=/opt/app/lib \
-                  -v "${{ github.workspace }}/steam_binaries:/opt/app:ro" \
-                  "${STEAMRT4_PLATFORM_IMAGE}" --list "/opt/app/bin/${name}" 2>&1); then
-                  failed=1
-              fi
-              echo "${out}"
-              if grep -q 'not found' <<< "${out}"; then
-                  echo "::error file=${name}::unresolved libraries on the steamrt4 platform runtime"
-                  failed=1
-              fi
-          done
-          exit "${failed}"
+        run: cmake "-DROOT=${{ github.workspace }}/steam_binaries" -P cmake/steampipe/check_steamrt_loader.cmake
       - name: Smoke test — hello world on the real runtime
         run: >-
           docker run --rm --entrypoint ""
@@ -213,19 +192,12 @@ jobs:
           restore-keys: cpm-windows_msvc_steam_x86_64-
       - name: Build, test, and package with static CRT (/MT)
         run: cmake --workflow --preset windows_msvc_steam_x86_64_release_package
+      # dumpbin comes from the MSVC environment; the gate script falls
+      # back to objdump/llvm-objdump where dumpbin is absent.
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
-      # One folded line on purpose: YAML keeps line breaks around
-      # more-indented continuation lines, which previously split this call
-      # mid-array — PowerShell bound -Path but never saw -Forbidden. The
-      # denylist default lives in the script.
       - name: Static CRT gate — no VC++ redist imports
-        shell: pwsh
-        run: >-
-          & scripts/steam/check_pe_imports.ps1 -Path
-          "build/windows_msvc_steam_x86_64/src",
-          "build/windows_msvc_steam_x86_64/tests",
-          "build/windows_msvc_steam_x86_64/_deps/sdl3-build"
+        run: cmake "-DTARGETS=build/windows_msvc_steam_x86_64/src;build/windows_msvc_steam_x86_64/tests;build/windows_msvc_steam_x86_64/_deps/sdl3-build" -P cmake/steampipe/check_pe_imports.cmake
       - name: Stage release assets
         shell: bash
         run: |
@@ -267,12 +239,7 @@ jobs:
         run: cmake --workflow --preset windows_llvm_mingw_steam_x86_64_release_package
       # The denylist default (VC++ redist + MinGW runtime DLLs) lives in the script.
       - name: Static CRT gate — no runtime DLL imports
-        run: >-
-          OBJDUMP=llvm_mingw/bin/llvm-objdump
-          bash scripts/steam/check_pe_imports.sh
-          build/windows_llvm_mingw_steam_x86_64/src
-          build/windows_llvm_mingw_steam_x86_64/tests
-          build/windows_llvm_mingw_steam_x86_64/_deps/sdl3-build
+        run: cmake -DOBJDUMP=llvm_mingw/bin/llvm-objdump "-DTARGETS=build/windows_llvm_mingw_steam_x86_64/src;build/windows_llvm_mingw_steam_x86_64/tests;build/windows_llvm_mingw_steam_x86_64/_deps/sdl3-build" -P cmake/steampipe/check_pe_imports.cmake
       - name: Stage release assets
         run: |
           cmake \
