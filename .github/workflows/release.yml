@@ -47,8 +47,6 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       VERSION: ${{ inputs.version }}
       NEXT_VERSION: ${{ inputs.next_version }}
-    outputs:
-      current_version: ${{ steps.project_version.outputs.current }}
     steps:
       - name: Validate input formats
         run: |
@@ -75,7 +73,6 @@ jobs:
         uses: lukka/get-cmake@v4.4.2
 
       - name: Check versions against project()
-        id: project_version
         run: |
           cmake -S . -B build/version-check -DBUILD_TESTING=OFF
           current=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/version-check/CMakeCache.txt)
@@ -83,9 +80,13 @@ jobs:
             echo "::error::CMake did not report CMAKE_PROJECT_VERSION"
             exit 1
           fi
-          if [[ "${VERSION}" != "v${current}" ]]; then
-            printf "::error::release version (%s) must match CMake project version (v%s)\n" \
-              "${VERSION}" "${current}"
+          # VERSION passed the format check above, so the numeric core
+          # (the tag without any prerelease suffix) always matches.
+          [[ "${VERSION}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+) ]]
+          version_core="${BASH_REMATCH[1]}"
+          if [[ "${version_core}" != "${current}" ]]; then
+            printf "::error::release version core (%s) must match CMake project version (%s)\n" \
+              "${version_core}" "${current}"
             exit 1
           fi
           if ! printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -C -V \
@@ -94,7 +95,6 @@ jobs:
               "${NEXT_VERSION}" "${current}"
             exit 1
           fi
-          echo "current=${current}" >> "${GITHUB_OUTPUT}"
 
   docker:
     name: docker
@@ -153,7 +153,7 @@ jobs:
 
   bump_cmake_version:
     name: bump cmake version via pr
-    needs: [validate, publish]
+    needs: publish
     if: >-
       !cancelled()
       && needs.publish.result == 'success'
@@ -176,6 +176,26 @@ jobs:
 
       - name: Set up CMake
         uses: lukka/get-cmake@v4.4.2
+
+      # main may have moved since validate ran (builds take ~45 min), so
+      # re-read the version from this fresh checkout: an auto-merged PR
+      # must never lower project(VERSION).
+      - name: Guard against version regression
+        id: version_guard
+        run: |
+          cmake -S . -B build/version-guard -DBUILD_TESTING=OFF
+          current=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/version-guard/CMakeCache.txt)
+          if [[ -z "${current}" ]]; then
+            echo "::error::CMake did not report CMAKE_PROJECT_VERSION"
+            exit 1
+          fi
+          if ! printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -C -V \
+            || [[ "${current}" == "${NEXT_VERSION}" ]]; then
+            printf "::error::next_version (%s) must be greater than the version now on main (%s) — main moved during this release\n" \
+              "${NEXT_VERSION}" "${current}"
+            exit 1
+          fi
+          echo "current_version=${current}" >> "${GITHUB_OUTPUT}"
 
       - name: Bump project version
         run: >-
@@ -211,7 +231,7 @@ jobs:
           body: |
             Post-release version bump after `${{ inputs.version }}`.
 
-            - Previous project version: `${{ needs.validate.outputs.current_version }}`
+            - Previous project version: `${{ steps.version_guard.outputs.current_version }}`
             - Next project version: `${{ inputs.next_version }}`
             - Changed file: `CMakeLists.txt`
 
