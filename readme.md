@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://github.com/e-gleba/cmake_template/blob/main/license.md"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
   <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&label=ci" alt="ci"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/steam_runtime.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/steam_runtime.yml?branch=main&label=steam" alt="steam"/></a>
   <a href="https://github.com/e-gleba/cmake_template/releases"><img src="https://img.shields.io/github/v/release/e-gleba/cmake_template" alt="release"/></a>
   <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-23%2F26-00599C?logo=cplusplus&logoColor=white" alt="C++ Standard"/></a>
   <a href="https://cmake.org"><img src="https://img.shields.io/badge/CMake-4.4%2B-064F8C?logo=cmake" alt="CMake"/></a>
@@ -54,6 +55,7 @@ cmake --workflow --preset=windows_llvm_mingw_aarch64_release_package
 | **Android instrumentation tests** | ❌ | ✅ `AndroidJUnitRunner`, Gradle Managed Devices (Pixel 6 ATD), doctest JNI bridge, [#23 native GTest strategy](https://github.com/e-gleba/cmake_template/issues/23) |
 | **Linux → Windows cross-compile** | ❌ | ✅ llvm-mingw toolchain: x86_64, i686, aarch64 |
 | **WebAssembly** | ❌ | ✅ Emscripten preset with zero-setup SDK bootstrap, SDL3 + ImGui + OpenGL web demo, doctest under Node.js |
+| **Steam / Steam Deck** | ❌ Not even mentioned | ✅ steamrt4 SDK preset, ABI gate, platform smoke test, static-CRT Windows builds, SteamPipe deploy templates |
 | **CMake Presets** | Basic or none | ✅ 10+ configure presets, 15+ build presets, workflow presets, schema v12 |
 | **Packaging** | ❌ | ✅ CPack: tar.gz, zip, txz per platform |
 | **Reproducible CI** | Manual Docker | ✅ Docker images + GitHub Actions matrix |
@@ -141,6 +143,8 @@ cmake --workflow --preset=web_emscripten_wasm32_release_test
 | **macOS** | `clang` (native) | Ninja Multi-Config | `ctest` | `.tar.gz` |
 | **iOS / macOS Xcode** | [planned #20](https://github.com/e-gleba/cmake_template/issues/20) | Xcode | `xctest` / `xcodebuild test` | — |
 | **WebAssembly** | `web_emscripten_wasm32` | Ninja Multi-Config | `ctest` via Node.js | `.html` + `.js` + `.wasm` |
+| **Steam Runtime 4** | `linux_steamrt4_x86_64` | Ninja Multi-Config | `ctest` + ABI gate + platform smoke test | `.zip` (SteamPipe-ready) |
+| **Windows (Steam, static CRT)** | `windows_msvc_steam_x86_64`, `windows_llvm_mingw_steam_x86_64` | VS 17 2022 / Ninja Multi-Config | `ctest` + PE import gate | `.zip` (SteamPipe-ready) |
 
 ---
 
@@ -154,6 +158,7 @@ cmake --workflow --preset=web_emscripten_wasm32_release_test
 | **Android instrumented tests** | ✅ GMD + doctest JNI | ❌ | ❌ | ❌ |
 | **Linux → Windows cross** | ✅ llvm-mingw (3 arch) | ❌ | ❌ | ❌ |
 | **WebAssembly** | ✅ Emscripten (SDL3 + ImGui + OpenGL demo) | ✅ + Pages deploy | ❌ | ❌ |
+| **Steam Runtime / Deck** | ✅ steamrt4 + static CRT + ABI CI | ❌ | ❌ | ❌ |
 | **Docker / CI** | ✅ + Actions matrix | ✅ Docker + Actions | ✅ GitHub Actions | ✅ |
 | **CPack packaging** | ✅ tar.gz / zip / txz | ❌ | ❌ | ❌ |
 | **Sanitizers** | ❌ [#9](https://github.com/e-gleba/cmake_template/issues/9) | ✅ ASan/UBSan | ✅ | ❌ |
@@ -176,6 +181,7 @@ cmake --workflow --preset=web_emscripten_wasm32_release_test
 | [Docker Guide](docs/docker.md) | Docker images, GHCR publish, one-click release |
 | [Contributing](docs/contributing.md) | How to contribute, code style, pre-commit setup |
 | [References](docs/references.md) | Curated external links (do NOT bloat README) |
+| [Steam & Steam Deck](cmake/steampipe) | steamrt4 presets, ABI/PE/loader gates, CMake-generated SteamPipe VDFs |
 | [Issue: Android native testing strategy](https://github.com/e-gleba/cmake_template/issues/23) | GTest vs doctest, Activity lifecycle, XCTest, CI/CD — research-backed |
 
 ---

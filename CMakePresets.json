@@ -11,6 +11,7 @@
         "cmake/presets/linux.json",
         "cmake/presets/windows.json",
         "cmake/presets/android.json",
-        "cmake/presets/web.json"
+        "cmake/presets/web.json",
+        "cmake/presets/steam.json"
     ]
 }
