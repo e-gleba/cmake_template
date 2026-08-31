@@ -10,10 +10,13 @@ if(NOT IS_DIRECTORY "${BUILD_DIR}")
     message(FATAL_ERROR "build directory does not exist: ${BUILD_DIR}")
 endif()
 
+# Bracket argument: the regex engine sees \. as an escaped dot. A quoted
+# argument would need "\\." — the previous "\\\\." matched a literal
+# backslash plus any character, so no package ever matched.
 file(GLOB package_candidates LIST_DIRECTORIES FALSE "${BUILD_DIR}/*")
 set(package_files)
 foreach(candidate IN LISTS package_candidates)
-    if(candidate MATCHES "\\.(zip|tar\\.gz|tar\\.xz|apk)$")
+    if(candidate MATCHES [==[\.(zip|tar\.gz|tar\.xz|apk)$]==])
         list(APPEND package_files "${candidate}")
     endif()
 endforeach()
