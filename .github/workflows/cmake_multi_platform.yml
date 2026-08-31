@@ -48,7 +48,6 @@ env:
   ANDROID_PROJECT_DIR: ${{ github.workspace }}/android_project
   GRADLE_OPTS: >-
     -Dorg.gradle.daemon=false
-    -Dorg.gradle.parallel=true
     -Dorg.gradle.configureondemand=true
 
 jobs:
