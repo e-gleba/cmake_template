@@ -80,7 +80,9 @@ for pe in "${pefiles[@]}"; do
     echo "-- ${pe}"
     # A failed inspection must fail the gate — an empty import list read
     # from dead output would misreport the binary as fully static.
-    if ! dump=$("$objdump" -p -- "$pe"); then
+    # No '--' end-of-options separator: llvm-objdump rejects it as an unknown
+    # argument, and find-rooted paths never begin with '-'.
+    if ! dump=$("$objdump" -p "$pe"); then
         echo "::error file=${pe}::${objdump} failed to inspect this file"
         failures=$((failures + 1))
         continue
