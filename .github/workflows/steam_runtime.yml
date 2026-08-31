@@ -60,6 +60,14 @@ jobs:
       image: registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk:4.0.20260805.254769
       options: --user root
     steps:
+      # The base SDK image ships neither git nor CA certificates (see
+      # docker/steamos.Dockerfile, which installs both) — actions/checkout
+      # and lukka/get-cmake need them, so install before anything else.
+      - name: Install git and CA certificates
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends git ca-certificates
       - name: Checkout
         uses: actions/checkout@v7
       - name: Set up CMake and Ninja
