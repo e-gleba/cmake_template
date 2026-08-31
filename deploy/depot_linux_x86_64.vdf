@@ -3,9 +3,9 @@
 // artifact) into the contentroot below before running app_build.vdf.
 "DepotBuild"
 {
-    // Replace with your real Linux depot ID.
+    // Replace with your real Linux depot ID (here AND in app_build.vdf).
     "DepotID"       "4802"
-    "contentroot"   "../build_steam/content/linux_x86_64/"
+    "contentroot"   "../build/steam/content/linux_x86_64/"
 
     "FileMapping"
     {

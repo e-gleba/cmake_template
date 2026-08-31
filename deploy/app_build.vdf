@@ -12,17 +12,18 @@
     // 1 = dry run: validates the script without uploading anything.
     // Set to "0" for a real upload.
     "preview"       "1"
-    // steamcmd chunk cache + logs (gitignored).
-    "buildoutput"   "../build_steam/output/"
-    // Staged depot content root (gitignored).
-    "contentroot"   "../build_steam/content/"
+    // steamcmd chunk cache + logs (under the gitignored build/ root).
+    "buildoutput"   "../build/steam/output/"
+    // Staged depot content root (under the gitignored build/ root).
+    "contentroot"   "../build/steam/content/"
     // Branch to set live after upload ("" = none).
     "setlive"       ""
 
     "depots"
     {
         // Depot IDs are created in Steamworks (App Admin -> Depots).
-        // Replace with your real depot IDs.
+        // Replace with your real depot IDs — here AND in the depot_*.vdf
+        // files; both must match.
         "4801"      "depot_windows_x86_64.vdf"
         "4802"      "depot_linux_x86_64.vdf"
     }

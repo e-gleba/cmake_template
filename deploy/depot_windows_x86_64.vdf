@@ -3,9 +3,9 @@
 // contentroot below before running app_build.vdf.
 "DepotBuild"
 {
-    // Replace with your real Windows depot ID.
+    // Replace with your real Windows depot ID (here AND in app_build.vdf).
     "DepotID"       "4801"
-    "contentroot"   "../build_steam/content/windows_x86_64/"
+    "contentroot"   "../build/steam/content/windows_x86_64/"
 
     "FileMapping"
     {

@@ -5,9 +5,11 @@ name: steam_runtime_ci
 #   1. steamrt4_build          — build + test + package INSIDE Valve's Steam
 #      Linux Runtime 4 SDK container, then gate ELF symbol versions
 #      (GLIBC/GLIBCXX/CXXABI/GCC) against the runtime's own libraries.
-#   2. steamrt4_platform_smoke — execute the produced binaries in the
-#      steamrt4 PLATFORM image: the minimal client-identical runtime that
-#      ships to Steam Deck and desktop users (also the Proton 11+ base).
+#   2. steamrt4_platform_smoke — validate the produced binaries in the
+#      steamrt4 PLATFORM image (the minimal client-identical runtime that
+#      ships to Steam Deck and desktop users, also the Proton 11+ base):
+#      a loader resolution gate shows which runtime path every NEEDED
+#      library is taken from, then the binaries execute for real.
 #   3. windows_*_steam         — static-CRT Windows builds; a PE import gate
 #      proves no VC++ redistributable / MinGW runtime DLL is required.
 on:
@@ -70,6 +72,8 @@ jobs:
           apt-get install -y --no-install-recommends git ca-certificates
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Set up CMake and Ninja
         uses: lukka/get-cmake@v4.4.2
       - name: Install SDL3 system dependencies
@@ -80,11 +84,15 @@ jobs:
             libwayland-dev libxkbcommon-dev \
             libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev \
             libdbus-1-dev libudev-dev libasound2-dev
+      # Key on the files that define the dependency set — precise
+      # invalidation, and a shallow glob: hashFiles('**/...') walks the
+      # whole workspace and is unreliable in root-run container jobs once
+      # build/ and .cpm_cache/ exist (actions/runner#449).
       - name: Cache CPM sources
         uses: actions/cache@v6
         with:
           path: .cpm_cache
-          key: cpm-linux_steamrt4_x86_64-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+          key: cpm-linux_steamrt4_x86_64-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
           restore-keys: cpm-linux_steamrt4_x86_64-
       - name: Show runtime identity
         run: |
@@ -99,13 +107,25 @@ jobs:
           build/linux_steamrt4_x86_64/src
           build/linux_steamrt4_x86_64/tests
           build/linux_steamrt4_x86_64/_deps/sdl3-build
+      # Stage what the platform smoke test needs: the shipped executables
+      # plus libSDL3 (cp -L collapses the .so symlink chain — artifacts do
+      # not preserve symlinks).
+      - name: Stage binaries for the platform smoke test
+        run: |
+          b=build/linux_steamrt4_x86_64
+          s=${RUNNER_TEMP}/steam_binaries
+          mkdir -p "${s}/bin" "${s}/lib"
+          cp "${b}/src/01_hello_world/Release/01_hello_world" "${s}/bin/"
+          cp "${b}/src/02_sdl3_app/Release/02_sdl3_app" "${s}/bin/"
+          cp "${b}/tests/Release/tests" "${s}/bin/"
+          sdl_soname=$(find "${b}/_deps/sdl3-build" -name 'libSDL3.so.0' -print -quit)
+          test -n "${sdl_soname}" || { echo "::error::libSDL3.so.0 not found under ${b}/_deps/sdl3-build"; exit 1; }
+          cp -L "${sdl_soname}" "${s}/lib/libSDL3.so.0"
       - name: Upload binaries for the platform smoke test
         uses: actions/upload-artifact@v7
         with:
           name: steamrt4-binaries-${{ github.run_id }}
-          path: |
-            build/linux_steamrt4_x86_64/src/01_hello_world/Release/01_hello_world
-            build/linux_steamrt4_x86_64/tests/Release/tests
+          path: ${{ runner.temp }}/steam_binaries/
           if-no-files-found: error
       - name: Stage release assets
         run: |
@@ -133,26 +153,46 @@ jobs:
           path: steam_binaries
       - name: Restore executable bits
         run: chmod -R +x steam_binaries
-      - name: Pull the steamrt4 platform image
-        run: docker pull "$STEAMRT4_PLATFORM_IMAGE"
       # The platform image is the minimal runtime that ships to users — no
-      # shell, no build tools. Executing the binaries directly proves every
-      # NEEDED library resolves from the runtime itself: a missing library
-      # fails the loader and fails the job. LD_DEBUG=libs makes the loader
-      # print which runtime path each library is taken from.
+      # shell, no build tools, so the dynamic loader itself is the gate:
+      # --list prints which runtime path every NEEDED library is taken
+      # from, and any "not found" fails the job. LD_LIBRARY_PATH provides
+      # the staged libSDL3 (the build-tree RPATH is meaningless here).
+      # 02_sdl3_app needs a display to execute but only the loader to
+      # validate — this gate covers it.
+      - name: Library resolution gate on the real runtime
+        run: |
+          failed=0
+          for bin in steam_binaries/bin/*; do
+              name=$(basename "${bin}")
+              echo "-- ${name}"
+              if ! out=$(docker run --rm \
+                  --entrypoint /lib64/ld-linux-x86-64.so.2 \
+                  -e LD_LIBRARY_PATH=/opt/app/lib \
+                  -v "${{ github.workspace }}/steam_binaries:/opt/app:ro" \
+                  "${STEAMRT4_PLATFORM_IMAGE}" --list "/opt/app/bin/${name}" 2>&1); then
+                  failed=1
+              fi
+              echo "${out}"
+              if grep -q 'not found' <<< "${out}"; then
+                  echo "::error file=${name}::unresolved libraries on the steamrt4 platform runtime"
+                  failed=1
+              fi
+          done
+          exit "${failed}"
       - name: Smoke test — hello world on the real runtime
         run: >-
           docker run --rm --entrypoint ""
           -e LD_DEBUG=libs
           -v "${{ github.workspace }}/steam_binaries:/opt/app:ro"
           "$STEAMRT4_PLATFORM_IMAGE"
-          /opt/app/src/01_hello_world/Release/01_hello_world
+          /opt/app/bin/01_hello_world
       - name: Smoke test — full test suite on the real runtime
         run: >-
           docker run --rm --entrypoint ""
           -v "${{ github.workspace }}/steam_binaries:/opt/app:ro"
           "$STEAMRT4_PLATFORM_IMAGE"
-          /opt/app/tests/Release/tests
+          /opt/app/bin/tests
 
   windows_msvc_steam:
     name: windows_msvc_steam_x86_64
@@ -160,28 +200,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Set up CMake and Ninja
         uses: lukka/get-cmake@v4.4.2
+      # Key on the files that define the dependency set — precise invalidation.
       - name: Cache CPM sources
         uses: actions/cache@v6
         with:
           path: .cpm_cache
-          key: cpm-windows_msvc_steam_x86_64-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+          key: cpm-windows_msvc_steam_x86_64-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
           restore-keys: cpm-windows_msvc_steam_x86_64-
       - name: Build, test, and package with static CRT (/MT)
         run: cmake --workflow --preset windows_msvc_steam_x86_64_release_package
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
+      # One folded line on purpose: YAML keeps line breaks around
+      # more-indented continuation lines, which previously split this call
+      # mid-array — PowerShell bound -Path but never saw -Forbidden. The
+      # denylist default lives in the script.
       - name: Static CRT gate — no VC++ redist imports
         shell: pwsh
         run: >-
-          & scripts/steam/check_pe_imports.ps1
-          -Path "build/windows_msvc_steam_x86_64/src",
-                "build/windows_msvc_steam_x86_64/tests",
-                "build/windows_msvc_steam_x86_64/_deps/sdl3-build"
-          -Forbidden "vcruntime140.dll", "vcruntime140_1.dll",
-                     "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll",
-                     "concrt140.dll", "vccorlib140.dll"
+          & scripts/steam/check_pe_imports.ps1 -Path
+          "build/windows_msvc_steam_x86_64/src",
+          "build/windows_msvc_steam_x86_64/tests",
+          "build/windows_msvc_steam_x86_64/_deps/sdl3-build"
       - name: Stage release assets
         shell: bash
         run: |
@@ -203,6 +247,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Set up CMake and Ninja
         uses: lukka/get-cmake@v4.4.2
       - name: Cache LLVM MinGW
@@ -210,14 +256,16 @@ jobs:
         with:
           path: llvm_mingw
           key: llvm_mingw-${{ hashFiles('cmake/toolchains/llvm_mingw.cmake') }}
+      # Key on the files that define the dependency set — precise invalidation.
       - name: Cache CPM sources
         uses: actions/cache@v6
         with:
           path: .cpm_cache
-          key: cpm-windows_llvm_mingw_steam_x86_64-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+          key: cpm-windows_llvm_mingw_steam_x86_64-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
           restore-keys: cpm-windows_llvm_mingw_steam_x86_64-
       - name: Build and package with static CRT
         run: cmake --workflow --preset windows_llvm_mingw_steam_x86_64_release_package
+      # The denylist default (VC++ redist + MinGW runtime DLLs) lives in the script.
       - name: Static CRT gate — no runtime DLL imports
         run: >-
           OBJDUMP=llvm_mingw/bin/llvm-objdump
@@ -225,11 +273,6 @@ jobs:
           build/windows_llvm_mingw_steam_x86_64/src
           build/windows_llvm_mingw_steam_x86_64/tests
           build/windows_llvm_mingw_steam_x86_64/_deps/sdl3-build
-          --
-          vcruntime140.dll vcruntime140_1.dll
-          msvcp140.dll msvcp140_1.dll msvcp140_2.dll
-          libstdc++-6.dll libgcc_s_seh-1.dll libgcc_s_sjlj-1.dll
-          libwinpthread-1.dll libc++.dll libunwind.dll
       - name: Stage release assets
         run: |
           cmake \

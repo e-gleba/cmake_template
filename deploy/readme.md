@@ -48,12 +48,17 @@ For every produced ELF binary:
 ### 3. Platform smoke test
 
 The SDK image ships extra dev libraries that can mask a missing runtime
-dependency — so the produced binaries are then **executed** inside
+dependency — so the produced binaries are also validated inside
 `registry.gitlab.steamos.cloud/steamrt/steamrt4/platform`, the minimal
-client-identical runtime that actually ships to users. If a library were
-missing, the dynamic loader would fail and the job would go red.
-`LD_DEBUG=libs` is enabled on the hello-world run, so the loader itself
-prints which runtime path each library is taken from.
+client-identical runtime that actually ships to users:
+
+- **Resolution gate** — the dynamic loader itself (`ld-linux --list`)
+  prints which runtime path every `NEEDED` library of every shipped
+  binary is taken from; any `not found` fails the job. This also covers
+  `02_sdl3_app`: it needs a display to execute, but only the loader to
+  validate. The staged `libSDL3.so.0` is provided via `LD_LIBRARY_PATH`.
+- **Execution** — `01_hello_world` (with `LD_DEBUG=libs`, so the loader
+  traces its own resolution) and the full doctest suite run for real.
 
 This is the same container technology Steam Deck uses: SLR 4.0 runs native
 Linux games, and Proton 11+ runs Windows games inside steamrt4.
@@ -66,6 +71,9 @@ Linux games, and Proton 11+ runs Windows games inside steamrt4.
 - LLVM-MinGW: `scripts/steam/check_pe_imports.sh` fails on any MinGW
   runtime DLL (`libstdc++-6.dll`, `libc++.dll`, `libgcc_s_*.dll`,
   `libwinpthread-1.dll`, `libunwind.dll`) and on the MSVC redist names.
+
+Both scripts carry their denylist as a default — pass `-Forbidden` / a
+`--` argument list to override.
 
 `ucrtbase.dll` is fine: it is a Windows 10+ system component, not a
 redistributable.
@@ -120,9 +128,11 @@ deploy/
    (Spacewar, Valve's test app) with your real App ID.
    `deploy/steam_appid.txt` is gitignored — never commit a real ID.
 2. Create depots in Steamworks (App Admin → Depots) and put their IDs into
-   the `depot_*.vdf` files.
+   the `depot_*.vdf` files AND the `depots` block of `app_build.vdf` — the
+   app manifest maps depot IDs to depot scripts, so both must match.
 3. Stage depot content: unzip the CI `steam-depot-*` artifacts (or local
-   `*_release_package` ZIPs) into `build_steam/content/<platform>/`.
+   `*_release_package` ZIPs) into `build/steam/content/<platform>/` (the
+   `build/` root is gitignored).
 4. Upload:
 
 ```bash
