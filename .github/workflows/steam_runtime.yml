@@ -1,0 +1,237 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: steam_runtime_ci
+
+# Steam / Steam Deck compliance pipeline:
+#   1. steamrt4_build          — build + test + package INSIDE Valve's Steam
+#      Linux Runtime 4 SDK container, then gate ELF symbol versions
+#      (GLIBC/GLIBCXX/CXXABI/GCC) against the runtime's own libraries.
+#   2. steamrt4_platform_smoke — execute the produced binaries in the
+#      steamrt4 PLATFORM image: the minimal client-identical runtime that
+#      ships to Steam Deck and desktop users (also the Proton 11+ base).
+#   3. windows_*_steam         — static-CRT Windows builds; a PE import gate
+#      proves no VC++ redistributable / MinGW runtime DLL is required.
+on:
+  push:
+    branches: [main]
+    paths: &steam_paths
+      - "src/**"
+      - "tests/**"
+      - "cmake/**"
+      - "scripts/steam/**"
+      - "deploy/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - ".github/workflows/steam_runtime.yml"
+      - "**/*.cmake"
+      - "**/CMakeLists.txt"
+      - "**/*.c"
+      - "**/*.cc"
+      - "**/*.cpp"
+      - "**/*.cxx"
+      - "**/*.h"
+      - "**/*.hh"
+      - "**/*.hpp"
+      - "**/*.hxx"
+  pull_request:
+    branches: [main]
+    paths: *steam_paths
+  workflow_dispatch:
+
+concurrency:
+  group: steam_runtime_ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CPM_SOURCE_CACHE: ${{ github.workspace }}/.cpm_cache
+  # Keep the tag in sync with docker/steamos.Dockerfile.
+  STEAMRT4_PLATFORM_IMAGE: registry.gitlab.steamos.cloud/steamrt/steamrt4/platform:4.0.20260805.254769
+
+jobs:
+  steamrt4_build:
+    name: linux_steamrt4_x86_64_sdk_build
+    runs-on: ubuntu-latest
+    container:
+      # Valve's SDK = compilers + headers constrained to the runtime ABI.
+      # --user root: apt and checkout need it (the SDK image defaults to a
+      # named unprivileged user).
+      image: registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk:4.0.20260805.254769
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up CMake and Ninja
+        uses: lukka/get-cmake@v4.4.2
+      - name: Install SDL3 system dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            libwayland-dev libxkbcommon-dev \
+            libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev \
+            libdbus-1-dev libudev-dev libasound2-dev
+      - name: Cache CPM sources
+        uses: actions/cache@v6
+        with:
+          path: .cpm_cache
+          key: cpm-linux_steamrt4_x86_64-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+          restore-keys: cpm-linux_steamrt4_x86_64-
+      - name: Show runtime identity
+        run: |
+          cat /etc/os-release
+          gcc --version | head -n 1
+          ldd --version | head -n 1
+      - name: Build, test, and package inside the steamrt4 SDK
+        run: cmake --workflow --preset linux_steamrt4_x86_64_release_package
+      - name: ABI gate — symbol versions vs runtime libraries
+        run: >-
+          bash scripts/steam/check_elf_abi.sh
+          build/linux_steamrt4_x86_64/src
+          build/linux_steamrt4_x86_64/tests
+          build/linux_steamrt4_x86_64/_deps/sdl3-build
+      - name: Upload binaries for the platform smoke test
+        uses: actions/upload-artifact@v7
+        with:
+          name: steamrt4-binaries-${{ github.run_id }}
+          path: |
+            build/linux_steamrt4_x86_64/src/01_hello_world/Release/01_hello_world
+            build/linux_steamrt4_x86_64/tests/Release/tests
+          if-no-files-found: error
+      - name: Stage release assets
+        run: |
+          cmake \
+            -DBUILD_DIR="build/linux_steamrt4_x86_64" \
+            -DSTAGING_DIR="${RUNNER_TEMP}/release-assets" \
+            -P cmake/scripts/stage_release_assets.cmake
+      - name: Upload SteamPipe-ready depot archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: steam-depot-linux_steamrt4_x86_64
+          path: ${{ runner.temp }}/release-assets/
+          if-no-files-found: error
+          compression-level: 0
+
+  steamrt4_platform_smoke:
+    name: linux_steamrt4_x86_64_platform_smoke
+    needs: steamrt4_build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download SDK-built binaries
+        uses: actions/download-artifact@v7
+        with:
+          name: steamrt4-binaries-${{ github.run_id }}
+          path: steam_binaries
+      - name: Restore executable bits
+        run: chmod -R +x steam_binaries
+      - name: Pull the steamrt4 platform image
+        run: docker pull "$STEAMRT4_PLATFORM_IMAGE"
+      # The platform image is the minimal runtime that ships to users — no
+      # shell, no build tools. Executing the binaries directly proves every
+      # NEEDED library resolves from the runtime itself: a missing library
+      # fails the loader and fails the job. LD_DEBUG=libs makes the loader
+      # print which runtime path each library is taken from.
+      - name: Smoke test — hello world on the real runtime
+        run: >-
+          docker run --rm --entrypoint ""
+          -e LD_DEBUG=libs
+          -v "${{ github.workspace }}/steam_binaries:/opt/app:ro"
+          "$STEAMRT4_PLATFORM_IMAGE"
+          /opt/app/src/01_hello_world/Release/01_hello_world
+      - name: Smoke test — full test suite on the real runtime
+        run: >-
+          docker run --rm --entrypoint ""
+          -v "${{ github.workspace }}/steam_binaries:/opt/app:ro"
+          "$STEAMRT4_PLATFORM_IMAGE"
+          /opt/app/tests/Release/tests
+
+  windows_msvc_steam:
+    name: windows_msvc_steam_x86_64
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up CMake and Ninja
+        uses: lukka/get-cmake@v4.4.2
+      - name: Cache CPM sources
+        uses: actions/cache@v6
+        with:
+          path: .cpm_cache
+          key: cpm-windows_msvc_steam_x86_64-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+          restore-keys: cpm-windows_msvc_steam_x86_64-
+      - name: Build, test, and package with static CRT (/MT)
+        run: cmake --workflow --preset windows_msvc_steam_x86_64_release_package
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Static CRT gate — no VC++ redist imports
+        shell: pwsh
+        run: >-
+          & scripts/steam/check_pe_imports.ps1
+          -Path "build/windows_msvc_steam_x86_64/src",
+                "build/windows_msvc_steam_x86_64/tests",
+                "build/windows_msvc_steam_x86_64/_deps/sdl3-build"
+          -Forbidden "vcruntime140.dll", "vcruntime140_1.dll",
+                     "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll",
+                     "concrt140.dll", "vccorlib140.dll"
+      - name: Stage release assets
+        shell: bash
+        run: |
+          cmake \
+            -DBUILD_DIR="build/windows_msvc_steam_x86_64" \
+            -DSTAGING_DIR="${RUNNER_TEMP}/release-assets" \
+            -P cmake/scripts/stage_release_assets.cmake
+      - name: Upload SteamPipe-ready depot archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: steam-depot-windows_msvc_steam_x86_64
+          path: ${{ runner.temp }}/release-assets/
+          if-no-files-found: error
+          compression-level: 0
+
+  windows_llvm_mingw_steam:
+    name: linux_llvm_mingw_steam_x86_64_to_windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up CMake and Ninja
+        uses: lukka/get-cmake@v4.4.2
+      - name: Cache LLVM MinGW
+        uses: actions/cache@v6
+        with:
+          path: llvm_mingw
+          key: llvm_mingw-${{ hashFiles('cmake/toolchains/llvm_mingw.cmake') }}
+      - name: Cache CPM sources
+        uses: actions/cache@v6
+        with:
+          path: .cpm_cache
+          key: cpm-windows_llvm_mingw_steam_x86_64-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+          restore-keys: cpm-windows_llvm_mingw_steam_x86_64-
+      - name: Build and package with static CRT
+        run: cmake --workflow --preset windows_llvm_mingw_steam_x86_64_release_package
+      - name: Static CRT gate — no runtime DLL imports
+        run: >-
+          OBJDUMP=llvm_mingw/bin/llvm-objdump
+          bash scripts/steam/check_pe_imports.sh
+          build/windows_llvm_mingw_steam_x86_64/src
+          build/windows_llvm_mingw_steam_x86_64/tests
+          build/windows_llvm_mingw_steam_x86_64/_deps/sdl3-build
+          --
+          vcruntime140.dll vcruntime140_1.dll
+          msvcp140.dll msvcp140_1.dll msvcp140_2.dll
+          libstdc++-6.dll libgcc_s_seh-1.dll libgcc_s_sjlj-1.dll
+          libwinpthread-1.dll libc++.dll libunwind.dll
+      - name: Stage release assets
+        run: |
+          cmake \
+            -DBUILD_DIR="build/windows_llvm_mingw_steam_x86_64" \
+            -DSTAGING_DIR="${RUNNER_TEMP}/release-assets" \
+            -P cmake/scripts/stage_release_assets.cmake
+      - name: Upload SteamPipe-ready depot archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: steam-depot-windows_llvm_mingw_steam_x86_64
+          path: ${{ runner.temp }}/release-assets/
+          if-no-files-found: error
+          compression-level: 0

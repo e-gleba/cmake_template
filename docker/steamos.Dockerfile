@@ -35,4 +35,4 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 USER 1000
 
-ENTRYPOINT ["cmake", "--workflow", "--preset=linux_gcc_x86_64_release_package"]
+ENTRYPOINT ["cmake", "--workflow", "--preset=linux_steamrt4_x86_64_release_package"]

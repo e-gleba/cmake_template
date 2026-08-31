@@ -1,0 +1,88 @@
+{
+    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+    "version": 12,
+    "include": ["base.json"],
+    "configurePresets": [
+        {
+            "name": "linux_steamrt4_x86_64",
+            "displayName": "Linux Steam Runtime 4 (steamrt4) x86_64",
+            "description": "Native Linux x86_64 build for Steam Linux Runtime 4.0. Run inside the steamrt4 SDK container (registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk) so the ABI is capped at the runtime baseline. IPO/LTO enabled for smaller depots.",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON"
+            },
+            "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
+        },
+        {
+            "name": "windows_msvc_steam_x86_64",
+            "displayName": "Windows MSVC x86_64 (Steam, static CRT)",
+            "description": "Windows x86_64 build with MSVC and static CRT (/MT) — no VC++ redistributable dependency in the SteamPipe depot.",
+            "inherits": "windows_msvc_x86_64",
+            "cacheVariables": {
+                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON"
+            }
+        },
+        {
+            "name": "windows_llvm_mingw_steam_x86_64",
+            "displayName": "Windows LLVM-MinGW x86_64 (Steam, static CRT)",
+            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW, statically linking the C/C++ runtime — the .exe imports only Windows system DLLs.",
+            "inherits": "windows_llvm_mingw_x86_64",
+            "cacheVariables": {
+                "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld -static-libgcc -static-libstdc++ -static",
+                "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -static-libgcc -static-libstdc++ -static",
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {"name": "linux_steamrt4_x86_64_release", "configurePreset": "linux_steamrt4_x86_64", "inherits": "build_release"},
+        {"name": "windows_msvc_steam_x86_64_release", "configurePreset": "windows_msvc_steam_x86_64", "inherits": "build_release"},
+        {"name": "windows_llvm_mingw_steam_x86_64_release", "configurePreset": "windows_llvm_mingw_steam_x86_64", "inherits": "build_release"}
+    ],
+    "testPresets": [
+        {"name": "linux_steamrt4_x86_64_release", "configurePreset": "linux_steamrt4_x86_64", "inherits": "test_base", "configuration": "Release"},
+        {"name": "windows_msvc_steam_x86_64_release", "configurePreset": "windows_msvc_steam_x86_64", "inherits": "test_base", "configuration": "Release"}
+    ],
+    "packagePresets": [
+        {"name": "linux_steamrt4_x86_64_release_zip", "configurePreset": "linux_steamrt4_x86_64", "configurations": ["Release"], "generators": ["ZIP"]},
+        {"name": "windows_msvc_steam_x86_64_release_zip", "configurePreset": "windows_msvc_steam_x86_64", "configurations": ["Release"], "generators": ["ZIP"]},
+        {"name": "windows_llvm_mingw_steam_x86_64_release_zip", "configurePreset": "windows_llvm_mingw_steam_x86_64", "configurations": ["Release"], "generators": ["ZIP"]}
+    ],
+    "workflowPresets": [
+        {
+            "name": "linux_steamrt4_x86_64_release_package",
+            "displayName": "Linux steamrt4 x86_64 release package",
+            "description": "Configure, build, test, and package a Steam Linux Runtime 4.0 release (ZIP, SteamPipe-ready)",
+            "steps": [
+                {"type": "configure", "name": "linux_steamrt4_x86_64"},
+                {"type": "build", "name": "linux_steamrt4_x86_64_release"},
+                {"type": "test", "name": "linux_steamrt4_x86_64_release"},
+                {"type": "package", "name": "linux_steamrt4_x86_64_release_zip"}
+            ]
+        },
+        {
+            "name": "windows_msvc_steam_x86_64_release_package",
+            "displayName": "Windows MSVC x86_64 Steam release package",
+            "description": "Configure, build, test, and package a Windows x86_64 Steam release with static CRT (ZIP, SteamPipe-ready)",
+            "steps": [
+                {"type": "configure", "name": "windows_msvc_steam_x86_64"},
+                {"type": "build", "name": "windows_msvc_steam_x86_64_release"},
+                {"type": "test", "name": "windows_msvc_steam_x86_64_release"},
+                {"type": "package", "name": "windows_msvc_steam_x86_64_release_zip"}
+            ]
+        },
+        {
+            "name": "windows_llvm_mingw_steam_x86_64_release_package",
+            "displayName": "Windows LLVM-MinGW x86_64 Steam release package",
+            "description": "Configure, build, and package a Windows x86_64 Steam release with static CRT; cross-compiled binaries are not tested on Linux",
+            "steps": [
+                {"type": "configure", "name": "windows_llvm_mingw_steam_x86_64"},
+                {"type": "build", "name": "windows_llvm_mingw_steam_x86_64_release"},
+                {"type": "package", "name": "windows_llvm_mingw_steam_x86_64_release_zip"}
+            ]
+        }
+    ]
+}

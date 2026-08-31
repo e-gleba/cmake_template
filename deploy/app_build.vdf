@@ -1,0 +1,29 @@
+// app_build.vdf — SteamPipe build script template.
+// Docs: https://partner.steamgames.com/doc/sdk/uploading
+//
+// Usage:
+//   steamcmd +login <steam_user> +run_app_build <path>/app_build.vdf +quit
+"appbuild"
+{
+    // Replace with your real App ID (480 = Spacewar, Valve's test app).
+    "appid"         "480"
+    // Build description shown in Steamworks — set per build/release.
+    "desc"          "cmake_template build"
+    // 1 = dry run: validates the script without uploading anything.
+    // Set to "0" for a real upload.
+    "preview"       "1"
+    // steamcmd chunk cache + logs (gitignored).
+    "buildoutput"   "../build_steam/output/"
+    // Staged depot content root (gitignored).
+    "contentroot"   "../build_steam/content/"
+    // Branch to set live after upload ("" = none).
+    "setlive"       ""
+
+    "depots"
+    {
+        // Depot IDs are created in Steamworks (App Admin -> Depots).
+        // Replace with your real depot IDs.
+        "4801"      "depot_windows_x86_64.vdf"
+        "4802"      "depot_linux_x86_64.vdf"
+    }
+}
