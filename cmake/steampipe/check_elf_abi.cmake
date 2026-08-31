@@ -27,8 +27,8 @@ if(NOT DEFINED TARGETS OR TARGETS STREQUAL "")
         "TARGETS is required (semicolon list of ELF files or directories)")
 endif()
 
-find_program(OBJDUMP_EXE NAMES objdump REQUIRED)
-find_program(LDD_EXE NAMES ldd REQUIRED)
+find_program(objdump_exe NAMES objdump REQUIRED)
+find_program(ldd_exe NAMES ldd REQUIRED)
 
 # --- Collect ELF binaries ----------------------------------------------
 # ELF magic + e_type at offset 16 (little-endian): 2 = executable,
@@ -82,7 +82,7 @@ endfunction()
 # version tags on the binary's UNDEFINED (imported) dynamic symbols
 function(required_versions bin out)
     execute_process(
-        COMMAND "${OBJDUMP_EXE}" -T "${bin}"
+        COMMAND "${objdump_exe}" -T "${bin}"
         RESULT_VARIABLE rv
         OUTPUT_VARIABLE dump
         ERROR_QUIET)
@@ -106,7 +106,7 @@ endfunction()
 # all version tags a library defines, minus private nodes
 function(provided_versions lib out)
     execute_process(
-        COMMAND "${OBJDUMP_EXE}" -T "${lib}"
+        COMMAND "${objdump_exe}" -T "${lib}"
         RESULT_VARIABLE rv
         OUTPUT_VARIABLE dump
         ERROR_QUIET)
@@ -129,7 +129,7 @@ foreach(bin IN LISTS binaries)
     gate_echo("-- ${bin}")
 
     execute_process(
-        COMMAND "${OBJDUMP_EXE}" -p "${bin}"
+        COMMAND "${objdump_exe}" -p "${bin}"
         RESULT_VARIABLE rv
         OUTPUT_VARIABLE private_headers
         ERROR_QUIET)
@@ -144,7 +144,7 @@ foreach(bin IN LISTS binaries)
 
     # -- Check 1: resolution map (where the libs are taken from) --------
     execute_process(
-        COMMAND "${LDD_EXE}" "${bin}"
+        COMMAND "${ldd_exe}" "${bin}"
         RESULT_VARIABLE ldd_rv
         OUTPUT_VARIABLE ldd_out
         ERROR_VARIABLE ldd_err)

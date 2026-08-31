@@ -143,6 +143,15 @@ jobs:
     needs: steamrt4_build
     runs-on: ubuntu-latest
     steps:
+      # The loader gate is a cmake -P script from this repo — checkout first.
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # Pin the same CMake the other jobs use; the gate needs 3.20+
+      # (cmake_path) and runner images drift.
+      - name: Set up CMake
+        uses: lukka/get-cmake@v4.4.2
       - name: Download SDK-built binaries
         uses: actions/download-artifact@v7
         with:

@@ -39,7 +39,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/gate_log.cmake")
 set(failures 0)
 
 foreach(bin IN LISTS bins)
-    get_filename_component(name "${bin}" NAME)
+    cmake_path(GET bin FILENAME name)
     gate_echo("-- ${name}")
     execute_process(
         COMMAND
