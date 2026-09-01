@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 4.4)
 
 project(
     cmake_template
-    VERSION 1.0.0
+    VERSION 1.0.1
     DESCRIPTION "Production-ready cross-platform C++ project template"
     HOMEPAGE_URL "https://github.com/e-gleba/cmake_template"
     LANGUAGES C CXX)
