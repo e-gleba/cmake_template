@@ -171,14 +171,24 @@ jobs:
     concurrency:
       group: post-release-cmake-version-bump
       cancel-in-progress: false
+    # secrets.* is not allowed in step if expressions — check both App
+    # credentials through env. Minting with only the App ID set would fail
+    # on the empty required private-key before the fallback path runs.
+    env:
+      HAS_RENOVATE_APP: ${{ vars.RENOVATE_APP_ID != '' && secrets.RENOVATE_APP_PRIVATE_KEY != '' }}
     steps:
+      # The bump only creates a PR and merges it — scope the App token to
+      # contents + pull-requests instead of inheriting the shared Renovate
+      # App's full installation (issues, statuses, workflows).
       - name: Mint GitHub App token
         id: app_token
-        if: vars.RENOVATE_APP_ID != ''
+        if: env.HAS_RENOVATE_APP == 'true'
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.RENOVATE_APP_ID }}
           private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout main
         uses: actions/checkout@v7
