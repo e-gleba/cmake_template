@@ -18,7 +18,7 @@ target_link_libraries(02_sdl3_app PRIVATE SDL3::SDL3-shared Microsoft.GSL::GSL
 # MSVC and shared libs never match.
 target_link_options(
     02_sdl3_app PRIVATE
-    "$<$<AND:$<CXX_COMPILER_ID:Clang>,$<C_COMPILER_FRONTEND_VARIANT:GNU>>:LINK_ONLY:-static>")
+    "$<$<AND:$<CXX_COMPILER_ID:Clang>,$<C_COMPILER_FRONTEND_VARIANT:GNU>>:$<LINK_ONLY:-static>>")
 
 if(CMAKE_SYSTEM_NAME MATCHES "Android|Emscripten")
     return()
