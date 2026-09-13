@@ -9,7 +9,6 @@
 #   LLVM_MINGW_HOST_OS        package OS suffix (default: ubuntu-22.04)
 #   LLVM_MINGW_AUTO_DOWNLOAD  fetch if absent (default: ON)
 #   LLVM_MINGW_TARBALL_SHA256 optional integrity pin for the tarball
-#   CT_STATIC_RUNTIME         statically link libgcc/libstdc++ (default: OFF)
 
 include_guard(GLOBAL)
 
@@ -30,7 +29,6 @@ set(LLVM_MINGW_TARBALL_SHA256
     ""
     CACHE STRING "optional SHA256 pin for the llvm-mingw tarball")
 mark_as_advanced(LLVM_MINGW_TARBALL_SHA256)
-option(CT_STATIC_RUNTIME "Statically link libgcc/libstdc++ (Steam depot builds)" OFF)
 
 if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
     set(llvm_mingw_host_arch aarch64)
@@ -152,21 +150,16 @@ set(CMAKE_LINKER
 
 set(CMAKE_SYSROOT "${llvm_mingw_sysroot}")
 
+# The C/C++ runtime is always linked statically: executables import only
+# Windows system DLLs (Steam depot requirement), and shared links use the
+# DLL-safe -static-libgcc / -static-libstdc++ form, never -static. Keeps
+# --sysroot in the same *_INIT value so a preset-level
+# CMAKE_EXE_LINKER_FLAGS cannot silently drop it.
 set(CMAKE_C_FLAGS_INIT "--sysroot=${llvm_mingw_sysroot}")
 set(CMAKE_CXX_FLAGS_INIT "--sysroot=${llvm_mingw_sysroot}")
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld --sysroot=${llvm_mingw_sysroot}")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld --sysroot=${llvm_mingw_sysroot} -static")
 set(CMAKE_SHARED_LINKER_FLAGS_INIT
-    "-fuse-ld=lld --sysroot=${llvm_mingw_sysroot}")
-
-# Steam depots must not depend on MinGW runtime DLLs. The flags live here
-# rather than in a preset: a preset-level CMAKE_EXE_LINKER_FLAGS would replace
-# the *_INIT value above and silently drop --sysroot, and -static must never
-# leak into shared-library links (the DLL form is -static-libgcc /
-# -static-libstdc++). Enabled by the Steam depot preset via CT_STATIC_RUNTIME.
-if(CT_STATIC_RUNTIME)
-    string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " -static")
-    string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " -static-libgcc -static-libstdc++")
-endif()
+    "-fuse-ld=lld --sysroot=${llvm_mingw_sysroot} -static-libgcc -static-libstdc++")
 
 set(CMAKE_FIND_ROOT_PATH "${llvm_mingw_sysroot}")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
