@@ -10,10 +10,6 @@ cpmaddpackage(
     DOWNLOAD_ONLY
     TRUE)
 
-# Idempotent: find_package(imgui) may be reached from several directory
-# scopes, but the libraries below may only be defined once.
-include_guard(GLOBAL)
-
 # Canonical reusable ImGui target. This is the portable upstream core plus
 # imgui_stdlib; consumers can copy this config without inheriting this
 # template's renderer choices.
@@ -25,11 +21,27 @@ add_library(
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp)
-add_library(imgui::imgui ALIAS imgui)
+
+set_target_properties(
+    imgui
+    PROPERTIES C_CLANG_TIDY ""
+               CXX_CLANG_TIDY ""
+               C_CPPCHECK ""
+               CXX_CPPCHECK ""
+               COMPILE_WARNING_AS_ERROR OFF
+               EXCLUDE_FROM_ALL TRUE)
+
+target_compile_options(
+    imgui PRIVATE $<$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>:/W0>
+                  $<$<NOT:$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>>:-w>)
+
 target_include_directories(
     imgui SYSTEM PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}>
                         $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/misc/cpp>)
+
 target_compile_features(imgui PUBLIC cxx_std_23)
+
+add_library(imgui::imgui ALIAS imgui)
 
 # FreeType extends canonical ImGui core rather than creating a project wrapper.
 if(CT_IMGUI_FREETYPE)
@@ -47,8 +59,8 @@ endif()
 # and platform libraries, so they live under the ct:: namespace.
 if(CT_IMGUI_SDL3_OPENGL3)
     if(NOT TARGET SDL3::SDL3)
-        message(FATAL_ERROR
-                "CT_IMGUI_SDL3_OPENGL3 requires the SDL3::SDL3 target")
+        message(
+            FATAL_ERROR "CT_IMGUI_SDL3_OPENGL3 requires the SDL3::SDL3 target")
     endif()
     if(NOT EMSCRIPTEN)
         find_package(OpenGL REQUIRED)
@@ -70,15 +82,28 @@ if(CT_IMGUI_SDL3_OPENGL3)
     if(TARGET OpenGL::GL)
         target_link_libraries(ct_imgui_sdl3_opengl3 PUBLIC OpenGL::GL)
     endif()
+
+    set_target_properties(
+        ct_imgui_sdl3_opengl3
+        PROPERTIES C_CLANG_TIDY ""
+                   CXX_CLANG_TIDY ""
+                   C_CPPCHECK ""
+                   CXX_CPPCHECK ""
+                   COMPILE_WARNING_AS_ERROR OFF
+                   EXCLUDE_FROM_ALL TRUE)
+
+    target_compile_options(
+        ct_imgui_sdl3_opengl3
+        PRIVATE $<$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>:/W0>
+                $<$<NOT:$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>>:-w>)
 endif()
 
 if(CT_IMGUI_SDL3_RENDERER)
     if(NOT CT_SDL_RENDER)
-        message(FATAL_ERROR
-                "CT_IMGUI_SDL3_RENDERER requires CT_SDL_RENDER=ON")
+        message(FATAL_ERROR "CT_IMGUI_SDL3_RENDERER requires CT_SDL_RENDER=ON")
     endif()
 
-    add_library(ct_imgui_sdl3_renderer STATIC EXCLUDE_FROM_ALL)
+    add_library(ct_imgui_sdl3_renderer STATIC EXCLUDE_FROM_ALL )
     add_library(ct::imgui_sdl3_renderer ALIAS ct_imgui_sdl3_renderer)
     target_sources(
         ct_imgui_sdl3_renderer
@@ -89,4 +114,18 @@ if(CT_IMGUI_SDL3_RENDERER)
         PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR}/backends>)
     target_link_libraries(ct_imgui_sdl3_renderer PUBLIC imgui::imgui SDL3::SDL3)
     target_compile_features(ct_imgui_sdl3_renderer PUBLIC cxx_std_23)
+
+    set_target_properties(
+        ct_imgui_sdl3_renderer
+        PROPERTIES C_CLANG_TIDY ""
+                   CXX_CLANG_TIDY ""
+                   C_CPPCHECK ""
+                   CXX_CPPCHECK ""
+                   COMPILE_WARNING_AS_ERROR OFF
+                   EXCLUDE_FROM_ALL TRUE)
+
+    target_compile_options(
+        ct_imgui_sdl3_renderer
+        PRIVATE $<$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>:/W0>
+                $<$<NOT:$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>>:-w>)
 endif()

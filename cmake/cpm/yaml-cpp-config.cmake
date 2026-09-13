@@ -1,5 +1,3 @@
-include_guard(GLOBAL)
-
 cpmaddpackage(
     NAME
     yaml-cpp

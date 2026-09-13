@@ -19,13 +19,7 @@ cpmaddpackage(
     "DOCTEST_NO_INSTALL ON"
     "DOCTEST_USE_STD_HEADERS ON")
 
-if(doctest_ADDED)
-    set(doctest_modroot "${doctest_SOURCE_DIR}/scripts/cmake")
-    set(doctest_label "fetch")
-else()
-    set(doctest_modroot "${doctest_DIR}")
-    set(doctest_label "system")
-endif()
+set(doctest_modroot "${doctest_SOURCE_DIR}/scripts/cmake")
 
 list(APPEND CMAKE_MODULE_PATH "${doctest_modroot}")
-message(STATUS "doctest [${doctest_label}] ${doctest_modroot}")
+message(STATUS "added to 'CMAKE_MODULE_PATH': ${doctest_modroot}")

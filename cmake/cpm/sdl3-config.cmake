@@ -1,9 +1,3 @@
-# SDL3 package config — find_package(sdl3 CONFIG) lands here via
-# CMAKE_PREFIX_PATH. Exposes SDL's own targets unchanged:
-#   SDL3::SDL3, SDL3::SDL3-shared, SDL3::SDL3-static
-
-include_guard(GLOBAL)
-
 option(CT_SDL_RENDER "Build SDL3 renderer subsystem" OFF)
 option(CT_IMGUI_FREETYPE "Build Dear ImGui FreeType rasterizer" OFF)
 option(CT_IMGUI_SDL3_OPENGL3 "Build Dear ImGui SDL3 + OpenGL3 backend" OFF)
@@ -37,14 +31,22 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 endif()
 
 cpmaddpackage(
-    NAME SDL3
-    GITHUB_REPOSITORY libsdl-org/SDL
-    VERSION 3.4.14
-    GIT_TAG release-3.4.14
-    GIT_SHALLOW ON
-    GIT_PROGRESS ON
-    EXCLUDE_FROM_ALL TRUE
-    SYSTEM TRUE
+    NAME
+    SDL3
+    GITHUB_REPOSITORY
+    libsdl-org/SDL
+    VERSION
+    3.4.14
+    GIT_TAG
+    release-3.4.14
+    GIT_SHALLOW
+    ON
+    GIT_PROGRESS
+    ON
+    EXCLUDE_FROM_ALL
+    TRUE
+    SYSTEM
+    TRUE
     OPTIONS
     "SDL_CCACHE ON"
     "SDL_WERROR OFF"
@@ -85,6 +87,24 @@ cpmaddpackage(
     "SDL_INSTALL OFF"
     "SDL_INSTALL_TESTS OFF"
     "SDL_DISABLE_INSTALL_DOCS ON")
+
+foreach(ct_tgt IN ITEMS SDL3-shared SDL3-static SDL3)
+    if(TARGET ${ct_tgt})
+        set_target_properties(
+            ${ct_tgt}
+            PROPERTIES C_CLANG_TIDY ""
+                       CXX_CLANG_TIDY ""
+                       C_CPPCHECK ""
+                       CXX_CPPCHECK ""
+                       COMPILE_WARNING_AS_ERROR OFF
+                       EXCLUDE_FROM_ALL TRUE)
+
+        target_compile_options(
+            ${ct_tgt}
+            PRIVATE $<$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>:/W0>
+                    $<$<NOT:$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>>:-w>)
+    endif()
+endforeach()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     set(ct_sdl3_gen

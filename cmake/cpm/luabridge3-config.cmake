@@ -1,6 +1,4 @@
 # LuaBridge3 — lightweight C++ Lua binding
-# https://github.com/kunitoki/LuaBridge3
-
 cpmaddpackage(
     NAME
     LuaBridge3
