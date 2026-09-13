@@ -22,7 +22,7 @@ target_link_libraries(tests PRIVATE doctest::doctest
 # MSVC and shared libs never match.
 target_link_options(
     tests PRIVATE
-    "$<$<AND:$<CXX_COMPILER_ID:Clang>,$<C_COMPILER_FRONTEND_VARIANT:GNU>>:LINK_ONLY:-static>")
+    "$<$<AND:$<CXX_COMPILER_ID:Clang>,$<C_COMPILER_FRONTEND_VARIANT:GNU>>:$<LINK_ONLY:-static>>")
 
 target_compile_definitions(
     tests
