@@ -34,7 +34,7 @@
         {
             "name": "windows_llvm_mingw_steam_x86_64",
             "displayName": "Windows LLVM-MinGW x86_64 (Steam, static CRT)",
-            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW. The C/C++ runtime is always linked statically by the toolchain (executables import only Windows system DLLs), so this preset adds nothing beyond the Steam base.",
+            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW. Depot executables link the non-system runtimes (libc++/libunwind) statically via a per-target genex — UCRT stays a dynamic Windows system import. This preset adds nothing beyond the Steam base.",
             "inherits": ["steam_base", "release_ipo", "windows_llvm_mingw_x86_64"]
         }
     ],
