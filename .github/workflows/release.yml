@@ -115,10 +115,13 @@ jobs:
       id-token: write
       attestations: write
 
+  # build_v3 ships the x86-64-v3 (AVX2) + LTO packages alongside baseline.
   packages:
     name: packages
     needs: validate
     uses: ./.github/workflows/cmake_multi_platform.yml
+    with:
+      build_v3: true
     permissions:
       contents: read
 
