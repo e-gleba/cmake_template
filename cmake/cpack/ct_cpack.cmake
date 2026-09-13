@@ -17,6 +17,8 @@
 # Ref: Professional CMake §8.3 "Project-relative Variables"
 # ───────────────────────────────────────────────────────────────────
 
+include_guard(GLOBAL)
+
 # ─── Project metadata (no project() slot for these) ───────────────
 set(PROJECT_VENDOR "e-gleba")
 set(PROJECT_CONTACT "i@egleba.ru")
