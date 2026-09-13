@@ -4,7 +4,8 @@
   // config:best-practices = config:recommended + docker:pinDigests +
   // helpers:pinGitHubActionDigests + :configMigration + :pinDevDependencies +
   // abandonments:recommended + security:minimumReleaseAgeNpm +
-  // :maintainLockFilesWeekly
+  // :maintainLockFilesWeekly. Digest pinning for actions and images comes
+  // from here, which is what makes dependabot.yml redundant (see below).
   extends: ["config:best-practices"],
 
   // ─── General ──────────────────────────────────────────────────────────────
@@ -24,9 +25,6 @@
 
   labels: ["dependencies"],
   commitMessagePrefix: "chore(deps):",
-  commitMessageAction: "update",
-  commitMessageTopic: "{{depName}}",
-  commitMessageExtra: "to {{newValue}}",
 
   // Never ship zero-day releases: wait 3 days so yanked/broken upstream
   // releases are filtered out before a PR is even created.
@@ -50,23 +48,23 @@
     minimumReleaseAge: null,
   },
 
-  // Dependabot owns github-actions + docker updates (see .github/dependabot.yml) —
-  // disable here so the two bots never open duplicate PRs.
+  // Renovate owns github-actions + docker updates (dependabot.yml is gone —
+  // one bot, no duplicate PRs). config:best-practices already pins action
+  // SHAs and image digests, which Dependabot never did.
   // Gradle/AGP updates stay enabled — including majors.
-  "github-actions": {
-    enabled: false,
-  },
-  dockerfile: {
-    enabled: false,
-  },
 
   packageRules: [
     {
-      description: "Auto-merge patch and pin updates after CI passes",
-      matchUpdateTypes: ["patch", "pin"],
+      description: "Auto-merge patch, pin and digest updates after CI passes",
+      matchUpdateTypes: ["patch", "pin", "digest"],
       automerge: true,
       automergeStrategy: "squash",
       platformAutomerge: true,
+    },
+    {
+      description: "Roll GitHub Actions updates into one PR",
+      matchManagers: ["github-actions"],
+      groupName: "GitHub Actions",
     },
     {
       description:
@@ -74,7 +72,11 @@
       matchFileNames: ["cmake/cpm/**", "cmake/cpm-config.cmake"],
       matchUpdateTypes: ["minor"],
       groupName: "CPM dependencies (minor)",
-      groupSlug: "cpm-minor",
+    },
+    {
+      description: "Roll toolchain releases into one PR",
+      matchDepNames: ["mstorsjo/llvm-mingw"],
+      groupName: "toolchains",
     },
   ],
 
