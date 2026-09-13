@@ -150,16 +150,11 @@ set(CMAKE_LINKER
 
 set(CMAKE_SYSROOT "${llvm_mingw_sysroot}")
 
-# The C/C++ runtime is always linked statically: executables import only
-# Windows system DLLs (Steam depot requirement), and shared links use the
-# DLL-safe -static-libgcc / -static-libstdc++ form, never -static. Keeps
-# --sysroot in the same *_INIT value so a preset-level
-# CMAKE_EXE_LINKER_FLAGS cannot silently drop it.
 set(CMAKE_C_FLAGS_INIT "--sysroot=${llvm_mingw_sysroot}")
 set(CMAKE_CXX_FLAGS_INIT "--sysroot=${llvm_mingw_sysroot}")
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld --sysroot=${llvm_mingw_sysroot} -static")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld --sysroot=${llvm_mingw_sysroot}")
 set(CMAKE_SHARED_LINKER_FLAGS_INIT
-    "-fuse-ld=lld --sysroot=${llvm_mingw_sysroot} -static-libgcc -static-libstdc++")
+    "-fuse-ld=lld --sysroot=${llvm_mingw_sysroot}")
 
 set(CMAKE_FIND_ROOT_PATH "${llvm_mingw_sysroot}")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
