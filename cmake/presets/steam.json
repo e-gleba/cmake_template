@@ -4,39 +4,42 @@
     "include": ["base.json", "windows.json"],
     "configurePresets": [
         {
+            "name": "steam_base",
+            "hidden": true,
+            "description": "Shared Steam depot settings. SteamPipe deploy scripts are generated into the build tree (CT_STEAMPIPE), and IPO/LTO is enabled for the shipping configurations only — the generic CMAKE_INTERPROCEDURAL_OPTIMIZATION would also LTO Debug, which only slows the link. Earlier entries in an 'inherits' list win, so this preset is always listed first.",
+            "cacheVariables": {
+                "CT_STEAMPIPE": "ON",
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE": "ON",
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO": "ON"
+            }
+        },
+        {
             "name": "linux_steamrt4_x86_64",
             "displayName": "Linux Steam Runtime 4 (steamrt4) x86_64",
-            "description": "Native Linux x86_64 build for Steam Linux Runtime 4.0. Run inside the steamrt4 SDK container (registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk) so the ABI is capped at the runtime baseline. IPO/LTO enabled for smaller depots. SteamPipe deploy scripts are generated into the build tree (CT_STEAMPIPE).",
-            "inherits": "base",
+            "description": "Native Linux x86_64 build for Steam Linux Runtime 4.0. Run inside the steamrt4 SDK container (registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk) so the ABI is capped at the runtime baseline.",
+            "inherits": ["steam_base", "base"],
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "gcc",
-                "CMAKE_CXX_COMPILER": "g++",
-                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-                "CT_STEAMPIPE": "ON"
+                "CMAKE_CXX_COMPILER": "g++"
             },
             "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
         },
         {
             "name": "windows_msvc_steam_x86_64",
             "displayName": "Windows MSVC x86_64 (Steam, static CRT)",
-            "description": "Windows x86_64 build with MSVC and static CRT (/MT) — no VC++ redistributable dependency in the SteamPipe depot. SteamPipe deploy scripts are generated into the build tree (CT_STEAMPIPE).",
-            "inherits": "windows_msvc_x86_64",
+            "description": "Windows x86_64 build with MSVC and static CRT (/MT) — no VC++ redistributable dependency in the SteamPipe depot.",
+            "inherits": ["steam_base", "windows_msvc_x86_64"],
             "cacheVariables": {
-                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
-                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-                "CT_STEAMPIPE": "ON"
+                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>"
             }
         },
         {
             "name": "windows_llvm_mingw_steam_x86_64",
             "displayName": "Windows LLVM-MinGW x86_64 (Steam, static CRT)",
-            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW, statically linking the C/C++ runtime — the .exe imports only Windows system DLLs. SteamPipe deploy scripts are generated into the build tree (CT_STEAMPIPE).",
-            "inherits": "windows_llvm_mingw_x86_64",
+            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW, statically linking the C/C++ runtime — the .exe imports only Windows system DLLs. The link flags live in cmake/toolchains/llvm_mingw.cmake behind CT_STATIC_RUNTIME; setting CMAKE_EXE_LINKER_FLAGS here would replace the toolchain's *_FLAGS_INIT and drop --sysroot.",
+            "inherits": ["steam_base", "windows_llvm_mingw_x86_64"],
             "cacheVariables": {
-                "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld -static-libgcc -static-libstdc++ -static",
-                "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -static-libgcc -static-libstdc++ -static",
-                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-                "CT_STEAMPIPE": "ON"
+                "CT_STATIC_RUNTIME": "ON"
             }
         }
     ],
