@@ -17,6 +17,7 @@ target_compile_features(tests PRIVATE cxx_std_23)
 
 target_link_libraries(tests PRIVATE doctest::doctest
                                     $<$<PLATFORM_ID:Android>:log>)
+ct_target_static_runtime(tests)
 
 target_compile_definitions(
     tests
