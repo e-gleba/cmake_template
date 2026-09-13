@@ -13,7 +13,12 @@ target_sources(03_unity_build PRIVATE greet.cpp main.cpp)
 target_link_libraries(03_unity_build PRIVATE SDL3::SDL3-shared
                                              Microsoft.GSL::GSL warnings)
 target_compile_features(03_unity_build PRIVATE cxx_std_23)
-ct_target_static_runtime(03_unity_build)
+
+# Steam depot: no shipped libc++.dll / libunwind.dll. MinGW-Clang exes only —
+# MSVC and shared libs never match.
+target_link_options(
+    03_unity_build PRIVATE
+    "$<$<AND:$<CXX_COMPILER_ID:Clang>,$<C_COMPILER_FRONTEND_VARIANT:GNU>>:LINK_ONLY:-static>")
 
 # ── Unity build: the whole point of this project ─────────────────────
 # Batch size 0 = merge ALL sources into one translation unit.
