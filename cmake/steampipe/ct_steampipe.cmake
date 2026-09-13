@@ -12,6 +12,11 @@
 #
 # The app manifest's depot keys and each depot script's DepotID come
 # from the SAME variable — the two cannot drift apart.
+#
+# Static MinGW runtime for depots (no shipped libc++.dll / libunwind.dll)
+# lives on the `warnings` INTERFACE target as a LINK_ONLY genex
+# (cmake/code_quality/ct_warnings.cmake): executables only, MSVC never
+# matches, toolchain stays policy-free.
 # ───────────────────────────────────────────────────────────────────
 
 option(CT_STEAMPIPE "Generate SteamPipe deploy scripts" OFF)
@@ -43,16 +48,3 @@ foreach(template IN LISTS ct_steampipe_templates)
 endforeach()
 
 message(STATUS "SteamPipe scripts: ${PROJECT_BINARY_DIR}/steam")
-
-# --- Static C/C++ runtime for MinGW executables -------------------------
-# Steam depots must not ship libc++.dll / libunwind.dll. CMAKE_EXE_LINKER_FLAGS
-# touches executables only, so shared libraries (SDL3.dll) keep building as
-# DLLs — a bare -static on shared links would fail the link. MSVC depots are
-# excluded: they already use static CRT (/MT) and link.exe rejects -static.
-# Deliberately NOT in the toolchain file: this is a depot packaging policy,
-# and the toolchain stays usable for non-Steam builds.
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows"
-   AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
-   AND CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-endif()
