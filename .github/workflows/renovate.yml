@@ -57,17 +57,27 @@ jobs:
       pull-requests: write
       issues: write
       statuses: write
+    # secrets.* is not an allowed context in step if expressions — expose the
+    # presence check through env instead (actionlint: secrets context rejected).
+    env:
+      HAS_RENOVATE_APP: ${{ vars.RENOVATE_APP_ID != '' && secrets.RENOVATE_APP_PRIVATE_KEY != '' }}
+      HAS_RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN != '' }}
     steps:
       - name: Mint GitHub App token
         id: app_token
-        if: vars.RENOVATE_APP_ID != ''
+        if: env.HAS_RENOVATE_APP == 'true'
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.RENOVATE_APP_ID }}
           private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-statuses: write
+          permission-workflows: write
 
       - name: Warn about the degraded token
-        if: steps.app_token.outputs.token == '' && secrets.RENOVATE_TOKEN == ''
+        if: steps.app_token.outputs.token == '' && env.HAS_RENOVATE_TOKEN != 'true'
         run: >-
           echo "::warning::running with GITHUB_TOKEN — Renovate can push
           branches but pull requests need the repository setting 'Allow GitHub
