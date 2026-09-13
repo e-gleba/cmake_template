@@ -13,6 +13,7 @@ target_sources(02_sdl3_app PRIVATE main.cpp)
 target_compile_features(02_sdl3_app PRIVATE cxx_std_23)
 target_link_libraries(02_sdl3_app PRIVATE SDL3::SDL3-shared Microsoft.GSL::GSL
                                           warnings)
+ct_target_static_runtime(02_sdl3_app)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Android|Emscripten")
     return()
