@@ -222,7 +222,9 @@ jobs:
       # is why this resolves at gate time, not setup time.
       - name: Set up MSVC environment
         if: matrix.msvc == 'true'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: TheMrMilchmann/setup-msvc-dev@v4.1.0
+        with:
+          arch: x64
       - name: Static CRT gate — no redistributable / runtime DLL imports
         shell: bash
         run: |
