@@ -4,7 +4,6 @@ name: cmake_ci
 # Denylist, not allowlist: a new source extension can no longer silently skip
 # CI because nobody added it to a 20-line paths list. Only files that cannot
 # change a build, test, or package output are ignored — everything else runs.
-# x86-64-v3 (AVX2) packages live in cmake_v3.yml, called by release.yml only.
 on:
   push:
     branches: [main]
