@@ -4,8 +4,7 @@
   // config:best-practices = config:recommended + docker:pinDigests +
   // helpers:pinGitHubActionDigests + :configMigration + :pinDevDependencies +
   // abandonments:recommended + security:minimumReleaseAgeNpm +
-  // :maintainLockFilesWeekly. Digest pinning for actions and images comes
-  // from here, which is what makes dependabot.yml redundant (see below).
+  // :maintainLockFilesWeekly
   extends: ["config:best-practices"],
 
   // ─── General ──────────────────────────────────────────────────────────────
@@ -48,23 +47,23 @@
     minimumReleaseAge: null,
   },
 
-  // Renovate owns github-actions + docker updates (dependabot.yml is gone —
-  // one bot, no duplicate PRs). config:best-practices already pins action
-  // SHAs and image digests, which Dependabot never did.
+  // Dependabot owns github-actions + docker updates (see .github/dependabot.yml) —
+  // disable here so the two bots never open duplicate PRs.
   // Gradle/AGP updates stay enabled — including majors.
+  "github-actions": {
+    enabled: false,
+  },
+  dockerfile: {
+    enabled: false,
+  },
 
   packageRules: [
     {
-      description: "Auto-merge patch, pin and digest updates after CI passes",
-      matchUpdateTypes: ["patch", "pin", "digest"],
+      description: "Auto-merge patch and pin updates after CI passes",
+      matchUpdateTypes: ["patch", "pin"],
       automerge: true,
       automergeStrategy: "squash",
       platformAutomerge: true,
-    },
-    {
-      description: "Roll GitHub Actions updates into one PR",
-      matchManagers: ["github-actions"],
-      groupName: "GitHub Actions",
     },
     {
       description:
