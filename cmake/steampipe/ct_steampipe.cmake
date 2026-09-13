@@ -12,6 +12,11 @@
 #
 # The app manifest's depot keys and each depot script's DepotID come
 # from the SAME variable — the two cannot drift apart.
+#
+# Static MinGW runtime (no shipped libc++.dll / libunwind.dll) is a
+# one-line target_link_options genex in each depot executable — see
+# src/*/CMakeLists.txt and tests/CMakeLists.txt. Per-target on purpose:
+# no helper function, no global flags, no toolchain policy.
 # ───────────────────────────────────────────────────────────────────
 
 option(CT_STEAMPIPE "Generate SteamPipe deploy scripts" OFF)
@@ -43,15 +48,3 @@ foreach(template IN LISTS ct_steampipe_templates)
 endforeach()
 
 message(STATUS "SteamPipe scripts: ${PROJECT_BINARY_DIR}/steam")
-
-# --- Static MinGW runtime for depot executables --------------------------
-# Steam depots must not ship libc++.dll / libunwind.dll. Per-target genex:
-# MinGW-Clang executables link -static, everything else (MSVC exes, shared
-# libs like SDL3.dll) matches nothing and links unchanged. Call it right
-# after add_executable() in each depot target.
-function(ct_target_static_runtime target)
-    target_link_options(
-        ${target}
-        PRIVATE
-            "$<$<AND:$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>,$<CXX_COMPILER_ID:Clang>,$<C_COMPILER_FRONTEND_VARIANT:GNU>>:LINK_ONLY:-static>")
-endfunction()
