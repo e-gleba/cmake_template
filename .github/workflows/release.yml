@@ -2,9 +2,9 @@
 #
 # One-click GitHub Release.
 #
-# Flow: validate inputs -> build packages (baseline + x86-64-v3) ->
-# (+ optional docker images) -> create the GitHub Release -> open an
-# auto-merged PR that bumps the project() VERSION to next_version.
+# Flow: validate inputs -> build packages (+ optional docker images) ->
+# create the GitHub Release -> open an auto-merged PR that bumps the
+# project() VERSION to next_version.
 #
 # The bump PR needs a token whose events start workflow runs — GITHUB_TOKEN
 # opens the PR fine but its CI never runs, so --auto waits forever. When
@@ -60,7 +60,7 @@ jobs:
             echo "::error::version must look like v1.2.3 or v1.2.3-rc.1 (got '${VERSION}')"
             exit 1
           fi
-          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\\.[0-9]+$ ]]; then
             echo "::error::next_version must be plain semver, no v prefix (e.g. 1.0.1) — got '${NEXT_VERSION}'"
             exit 1
           fi
@@ -122,22 +122,13 @@ jobs:
     permissions:
       contents: read
 
-  # x86-64-v3 (AVX2) + LTO packages, shipped alongside baseline.
-  packages_v3:
-    name: packages_v3
-    needs: validate
-    uses: ./.github/workflows/cmake_v3.yml
-    permissions:
-      contents: read
-
   publish:
     name: github release
-    needs: [validate, docker, packages, packages_v3]
+    needs: [validate, docker, packages]
     if: >-
       !cancelled()
       && needs.validate.result == 'success'
       && needs.packages.result == 'success'
-      && needs.packages_v3.result == 'success'
       && (needs.docker.result == 'success' || needs.docker.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 15
