@@ -14,6 +14,16 @@
                 "CMAKE_COLOR_DIAGNOSTICS": "ON",
                 "FETCHCONTENT_QUIET": "OFF"
             }
+        },
+        {
+            "name": "release_ipo",
+            "displayName": "Release with LTO",
+            "description": "Inherit alongside a platform preset for shipping builds: link-time optimization for Release and RelWithDebInfo only. Debug never LTOs — it only slows the link and breaks hot iteration. CMake verifies compiler support at configure time (CheckIPOSupported); unsupported toolchains error early instead of shipping unoptimized binaries silently.",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE": "ON",
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO": "ON"
+            }
         }
     ],
     "buildPresets": [
