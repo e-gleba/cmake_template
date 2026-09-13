@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+name: setup cmake build
+description: Pin CMake and Ninja, install Linux deps, restore CPM cache.
+inputs:
+  cache-key:
+    description: Cache key discriminator, usually the build name.
+    required: true
+  cpm-cache-path:
+    description: Directory CPM_SOURCE_CACHE points at.
+    required: false
+    default: .cpm_cache
+  cache-cpm:
+    description: Restore the CPM source cache.
+    required: false
+    default: "true"
+  sdl3-deps:
+    description: Install the SDL3 build dependencies via apt (Linux only).
+    required: false
+    default: "false"
+  apt-packages:
+    description: Extra apt packages, space separated (Linux only).
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Set up CMake and Ninja
+      uses: lukka/get-cmake@v4.4.2
+    - name: Install system dependencies
+      if: runner.os == 'Linux' && (inputs.sdl3-deps == 'true' || inputs.apt-packages != '')
+      shell: bash
+      env:
+        SDL3_DEPS: ${{ inputs.sdl3-deps == 'true' && 'libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev libdbus-1-dev libudev-dev libasound2-dev' || '' }}
+        EXTRA_DEPS: ${{ inputs.apt-packages }}
+      run: |
+        sudo_cmd=$(command -v sudo || true)
+        export DEBIAN_FRONTEND=noninteractive
+        ${sudo_cmd} apt-get update -qq
+        ${sudo_cmd} apt-get install -y --no-install-recommends ${SDL3_DEPS} ${EXTRA_DEPS}
+    - name: Cache CPM sources
+      if: inputs.cache-cpm == 'true'
+      uses: actions/cache@v6
+      with:
+        path: ${{ inputs.cpm-cache-path }}
+        key: cpm-${{ inputs.cache-key }}-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
+        restore-keys: cpm-${{ inputs.cache-key }}-

@@ -14,6 +14,12 @@ target_compile_features(02_sdl3_app PRIVATE cxx_std_23)
 target_link_libraries(02_sdl3_app PRIVATE SDL3::SDL3-shared Microsoft.GSL::GSL
                                           warnings)
 
+# Steam depot: no shipped libc++.dll / libunwind.dll. Windows GNU-frontend
+# exes only — MSVC / clang-cl (MSVC frontend) and non-Windows never match.
+target_link_options(
+    02_sdl3_app PRIVATE
+    "$<$<AND:$<PLATFORM_ID:Windows>,$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>,$<C_COMPILER_FRONTEND_VARIANT:GNU>>:$<LINK_ONLY:-static>>")
+
 if(CMAKE_SYSTEM_NAME MATCHES "Android|Emscripten")
     return()
 endif()

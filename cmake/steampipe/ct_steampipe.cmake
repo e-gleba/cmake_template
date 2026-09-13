@@ -12,6 +12,11 @@
 #
 # The app manifest's depot keys and each depot script's DepotID come
 # from the SAME variable — the two cannot drift apart.
+#
+# Static MinGW runtime (no shipped libc++.dll / libunwind.dll) is a
+# one-line target_link_options genex in each depot executable — see
+# src/*/CMakeLists.txt and tests/CMakeLists.txt. Per-target on purpose:
+# no helper function, no global flags, no toolchain policy.
 # ───────────────────────────────────────────────────────────────────
 
 option(CT_STEAMPIPE "Generate SteamPipe deploy scripts" OFF)

@@ -5,6 +5,7 @@ on:
   pull_request:
     paths: &nix_paths
       - "nix/**"
+      - "!nix/**/*.md"
       - ".github/workflows/nix.yml"
   push:
     branches: [main]
@@ -26,6 +27,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install Nix
         uses: cachix/install-nix-action@v31
       - name: Check flake

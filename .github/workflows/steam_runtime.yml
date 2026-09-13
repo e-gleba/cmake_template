@@ -10,52 +10,77 @@ name: steam_runtime_ci
 #      ships to Steam Deck and desktop users, also the Proton 11+ base):
 #      a loader resolution gate shows which runtime path every NEEDED
 #      library is taken from, then the binaries execute for real.
-#   3. windows_*_steam         — static-CRT Windows builds; a PE import gate
+#   3. windows_steam            — matrix of the two static-CRT Windows depot
+#      builds (native MSVC, cross-compiled LLVM-MinGW); a PE import gate
 #      proves no VC++ redistributable / MinGW runtime DLL is required.
 #
 # All gates are cmake -P scripts under cmake/steampipe/ — one language, no
 # shell quoting, locally runnable with the exact same command lines.
+#
+# Denylist, not allowlist: a new source extension can no longer silently
+# skip this pipeline because nobody added it to a paths list. Only files
+# that cannot change depot output — plus the domains owned by other
+# pipelines — are ignored.
 on:
   push:
     branches: [main]
-    paths: &steam_paths
-      - "src/**"
-      - "tests/**"
-      - "cmake/**"
-      - "CMakeLists.txt"
-      - "CMakePresets.json"
-      - ".github/workflows/steam_runtime.yml"
-      - "**/*.cmake"
-      - "**/CMakeLists.txt"
-      - "**/*.c"
-      - "**/*.cc"
-      - "**/*.cpp"
-      - "**/*.cxx"
-      - "**/*.h"
-      - "**/*.hh"
-      - "**/*.hpp"
-      - "**/*.hxx"
+    paths-ignore: &steam_ignore
+      - "**/*.md"
+      - "**/*.rst"
+      - "**/*.txt"
+      - "docs/**"
+      - "assets/**"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.jpeg"
+      - "**/*.svg"
+      - "**/*.ico"
+      - "tools/**"
+      - "scripts/**"
+      - "android_project/**"
+      - "nix/**"
+      - "license.md"
+      - "AGENTS.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/*.md"
+      - ".coderabbit.yaml"
+      - ".cursor/**"
+      - ".cursorignore"
+      - ".editorconfig"
+      - ".gitignore"
+      - ".gitattributes"
+      - "docker/**"
+      - ".github/workflows/cmake_multi_platform.yml"
+      - ".github/workflows/docker.yml"
+      - ".github/workflows/lint.yml"
+      - ".github/workflows/nix.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/publish-docker.yml"
+      - ".github/workflows/cmake_presets_lint.yml"
   pull_request:
     branches: [main]
-    paths: *steam_paths
+    paths-ignore: *steam_ignore
   workflow_dispatch:
 
 concurrency:
-  group: steam_runtime_ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 env:
   CPM_SOURCE_CACHE: ${{ github.workspace }}/.cpm_cache
-  # Keep the tag in sync with docker/steamos.Dockerfile.
+  # container.image cannot read env (only github/strategy/matrix/vars/inputs),
+  # so the tag is repeated in the steamrt4_build container below — keep both
+  # in sync with docker/steamos.Dockerfile.
   STEAMRT4_PLATFORM_IMAGE: registry.gitlab.steamos.cloud/steamrt/steamrt4/platform:4.0.20260805.254769
 
 jobs:
   steamrt4_build:
     name: linux_steamrt4_x86_64_sdk_build
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     container:
       # Valve's SDK = compilers + headers constrained to the runtime ABI.
       # --user root: apt and checkout need it (the SDK image defaults to a
@@ -63,38 +88,18 @@ jobs:
       image: registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk:4.0.20260805.254769
       options: --user root
     steps:
-      # The base SDK image ships neither git nor CA certificates (see
-      # docker/steamos.Dockerfile, which installs both) — actions/checkout
-      # and lukka/get-cmake need them, so install before anything else.
-      - name: Install git and CA certificates
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          apt-get update -qq
-          apt-get install -y --no-install-recommends git ca-certificates
       - name: Checkout
         uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@v4.4.2
-      - name: Install SDL3 system dependencies
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          apt-get update -qq
-          apt-get install -y --no-install-recommends \
-            libwayland-dev libxkbcommon-dev \
-            libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev \
-            libdbus-1-dev libudev-dev libasound2-dev
-      # Key on the files that define the dependency set — precise
-      # invalidation, and a shallow glob: hashFiles('**/...') walks the
-      # whole workspace and is unreliable in root-run container jobs once
-      # build/ and .cpm_cache/ exist (actions/runner#449).
-      - name: Cache CPM sources
-        uses: actions/cache@v6
+      # The SDK image ships no git/CA certs (see docker/steamos.Dockerfile)
+      # and no sudo (it runs as root) — the composite handles both.
+      - name: Set up build
+        uses: ./.github/actions/setup-cmake
         with:
-          path: .cpm_cache
-          key: cpm-linux_steamrt4_x86_64-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
-          restore-keys: cpm-linux_steamrt4_x86_64-
+          cache-key: linux_steamrt4_x86_64
+          sdl3-deps: "true"
+          apt-packages: git ca-certificates
       - name: Show runtime identity
         run: |
           cat /etc/os-release
@@ -124,34 +129,30 @@ jobs:
           name: steamrt4-binaries-${{ github.run_id }}
           path: ${{ runner.temp }}/steam_binaries/
           if-no-files-found: error
-      - name: Stage release assets
-        run: |
-          cmake \
-            -DBUILD_DIR="build/linux_steamrt4_x86_64" \
-            -DSTAGING_DIR="${RUNNER_TEMP}/release-assets" \
-            -P cmake/scripts/stage_release_assets.cmake
-      - name: Upload SteamPipe-ready depot archive
-        uses: actions/upload-artifact@v7
+      - name: Stage and upload SteamPipe-ready depot archive
+        uses: ./.github/actions/stage-and-upload
         with:
-          name: steam-depot-linux_steamrt4_x86_64
-          path: ${{ runner.temp }}/release-assets/
-          if-no-files-found: error
-          compression-level: 0
+          build-dir: build/linux_steamrt4_x86_64
+          artifact-name: steam-depot-linux_steamrt4_x86_64
 
   steamrt4_platform_smoke:
     name: linux_steamrt4_x86_64_platform_smoke
     needs: steamrt4_build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       # The loader gate is a cmake -P script from this repo — checkout first.
       - name: Checkout
         uses: actions/checkout@v7
         with:
           persist-credentials: false
-      # Pin the same CMake the other jobs use; the gate needs 3.20+
-      # (cmake_path) and runner images drift.
-      - name: Set up CMake
-        uses: lukka/get-cmake@v4.4.2
+      # No configure happens here, so skip the CPM cache; the gate script
+      # needs CMake 3.20+ (cmake_path) and runner images drift.
+      - name: Set up build
+        uses: ./.github/actions/setup-cmake
+        with:
+          cache-key: unused
+          cache-cpm: "false"
       - name: Download SDK-built binaries
         uses: actions/download-artifact@v8
         with:
@@ -182,83 +183,58 @@ jobs:
           "$STEAMRT4_PLATFORM_IMAGE"
           /opt/app/bin/tests
 
-  windows_msvc_steam:
-    name: windows_msvc_steam_x86_64
-    runs-on: windows-2022
+  windows_steam:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows_msvc_steam_x86_64
+            os: windows-2022
+            build_dir: windows_msvc_steam_x86_64
+            msvc: "true"
+          - name: linux_llvm_mingw_steam_x86_64_to_windows
+            os: ubuntu-latest
+            build_dir: windows_llvm_mingw_steam_x86_64
+            msvc: "false"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@v4.4.2
-      # Key on the files that define the dependency set — precise invalidation.
-      - name: Cache CPM sources
-        uses: actions/cache@v6
+      - name: Set up build
+        uses: ./.github/actions/setup-cmake
         with:
-          path: .cpm_cache
-          key: cpm-windows_msvc_steam_x86_64-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
-          restore-keys: cpm-windows_msvc_steam_x86_64-
-      - name: Build, test, and package with static CRT (/MT)
-        run: cmake --workflow --preset windows_msvc_steam_x86_64_release_package
-      # dumpbin comes from the MSVC environment; the gate script falls
-      # back to objdump/llvm-objdump where dumpbin is absent.
-      - name: Set up MSVC environment
-        uses: ilammy/msvc-dev-cmd@v1
-      - name: Static CRT gate — no VC++ redist imports
-        run: cmake "-DTARGETS=build/windows_msvc_steam_x86_64/src;build/windows_msvc_steam_x86_64/tests;build/windows_msvc_steam_x86_64/_deps/sdl3-build" -P cmake/steampipe/check_pe_imports.cmake
-      - name: Stage release assets
-        shell: bash
-        run: |
-          cmake \
-            -DBUILD_DIR="build/windows_msvc_steam_x86_64" \
-            -DSTAGING_DIR="${RUNNER_TEMP}/release-assets" \
-            -P cmake/scripts/stage_release_assets.cmake
-      - name: Upload SteamPipe-ready depot archive
-        uses: actions/upload-artifact@v7
-        with:
-          name: steam-depot-windows_msvc_steam_x86_64
-          path: ${{ runner.temp }}/release-assets/
-          if-no-files-found: error
-          compression-level: 0
-
-  windows_llvm_mingw_steam:
-    name: linux_llvm_mingw_steam_x86_64_to_windows
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Set up CMake and Ninja
-        uses: lukka/get-cmake@v4.4.2
+          cache-key: ${{ matrix.build_dir }}
       - name: Cache LLVM MinGW
+        if: matrix.msvc == 'false'
         uses: actions/cache@v6
         with:
           path: llvm_mingw
           key: llvm_mingw-${{ hashFiles('cmake/toolchains/llvm_mingw.cmake') }}
-      # Key on the files that define the dependency set — precise invalidation.
-      - name: Cache CPM sources
-        uses: actions/cache@v6
+      - name: Build, test, and package with static CRT
+        run: cmake --workflow --preset ${{ matrix.build_dir }}_release_package
+      # dumpbin comes from the MSVC environment; the gate script falls
+      # back to objdump/llvm-objdump where dumpbin is absent. llvm-objdump
+      # only exists after the build above downloaded the toolchain, which
+      # is why this resolves at gate time, not setup time.
+      - name: Set up MSVC environment
+        if: matrix.msvc == 'true'
+        uses: TheMrMilchmann/setup-msvc-dev@v4.1.0
         with:
-          path: .cpm_cache
-          key: cpm-windows_llvm_mingw_steam_x86_64-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
-          restore-keys: cpm-windows_llvm_mingw_steam_x86_64-
-      - name: Build and package with static CRT
-        run: cmake --workflow --preset windows_llvm_mingw_steam_x86_64_release_package
-      # The denylist default (VC++ redist + MinGW runtime DLLs) lives in the script.
-      - name: Static CRT gate — no runtime DLL imports
-        run: cmake -DOBJDUMP=llvm_mingw/bin/llvm-objdump "-DTARGETS=build/windows_llvm_mingw_steam_x86_64/src;build/windows_llvm_mingw_steam_x86_64/tests;build/windows_llvm_mingw_steam_x86_64/_deps/sdl3-build" -P cmake/steampipe/check_pe_imports.cmake
-      - name: Stage release assets
+          arch: x64
+      - name: Static CRT gate — no redistributable / runtime DLL imports
+        shell: bash
         run: |
-          cmake \
-            -DBUILD_DIR="build/windows_llvm_mingw_steam_x86_64" \
-            -DSTAGING_DIR="${RUNNER_TEMP}/release-assets" \
-            -P cmake/scripts/stage_release_assets.cmake
-      - name: Upload SteamPipe-ready depot archive
-        uses: actions/upload-artifact@v7
+          objdump_arg=""
+          if [ "${{ matrix.msvc }}" != "true" ]; then
+            objdump_arg="-DOBJDUMP=llvm_mingw/bin/llvm-objdump"
+          fi
+          cmake "${objdump_arg}" "-DTARGETS=build/${{ matrix.build_dir }}/src;build/${{ matrix.build_dir }}/tests;build/${{ matrix.build_dir }}/_deps/sdl3-build" -P cmake/steampipe/check_pe_imports.cmake
+      - name: Stage and upload SteamPipe-ready depot archive
+        uses: ./.github/actions/stage-and-upload
         with:
-          name: steam-depot-windows_llvm_mingw_steam_x86_64
-          path: ${{ runner.temp }}/release-assets/
-          if-no-files-found: error
-          compression-level: 0
+          build-dir: build/${{ matrix.build_dir }}
+          artifact-name: steam-depot-${{ matrix.build_dir }}

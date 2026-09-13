@@ -14,6 +14,12 @@ target_link_libraries(03_unity_build PRIVATE SDL3::SDL3-shared
                                              Microsoft.GSL::GSL warnings)
 target_compile_features(03_unity_build PRIVATE cxx_std_23)
 
+# Steam depot: no shipped libc++.dll / libunwind.dll. Windows GNU-frontend
+# exes only — MSVC / clang-cl (MSVC frontend) and non-Windows never match.
+target_link_options(
+    03_unity_build PRIVATE
+    "$<$<AND:$<PLATFORM_ID:Windows>,$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>,$<C_COMPILER_FRONTEND_VARIANT:GNU>>:$<LINK_ONLY:-static>>")
+
 # ── Unity build: the whole point of this project ─────────────────────
 # Batch size 0 = merge ALL sources into one translation unit.
 set_target_properties(03_unity_build PROPERTIES UNITY_BUILD ON

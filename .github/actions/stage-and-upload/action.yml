@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+name: stage and upload release assets
+description: >-
+  Collect the packages produced in a build directory with
+  cmake/scripts/stage_release_assets.cmake and upload them as one artifact.
+
+inputs:
+  build-dir:
+    description: Build directory holding the CPack output.
+    required: true
+  artifact-name:
+    description: Artifact name.
+    required: true
+  staging-dir:
+    description: Staging directory; defaults to a per-artifact directory under RUNNER_TEMP.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Stage release assets
+      id: stage
+      shell: bash
+      env:
+        BUILD_DIR: ${{ inputs.build-dir }}
+        STAGING_DIR: ${{ inputs.staging-dir }}
+      run: |
+        staging="${STAGING_DIR:-${RUNNER_TEMP}/release-assets/${{ inputs.artifact-name }}}"
+        cmake -DBUILD_DIR="${BUILD_DIR}" -DSTAGING_DIR="${staging}" \
+          -P cmake/scripts/stage_release_assets.cmake
+        echo "staging=${staging}" >> "${GITHUB_OUTPUT}"
+
+    # compression-level 0: the staged files are already compressed archives.
+    - name: Upload release assets
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.stage.outputs.staging }}/
+        if-no-files-found: error
+        compression-level: 0

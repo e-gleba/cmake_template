@@ -24,9 +24,6 @@
 
   labels: ["dependencies"],
   commitMessagePrefix: "chore(deps):",
-  commitMessageAction: "update",
-  commitMessageTopic: "{{depName}}",
-  commitMessageExtra: "to {{newValue}}",
 
   // Never ship zero-day releases: wait 3 days so yanked/broken upstream
   // releases are filtered out before a PR is even created.
@@ -74,7 +71,11 @@
       matchFileNames: ["cmake/cpm/**", "cmake/cpm-config.cmake"],
       matchUpdateTypes: ["minor"],
       groupName: "CPM dependencies (minor)",
-      groupSlug: "cpm-minor",
+    },
+    {
+      description: "Roll toolchain releases into one PR",
+      matchDepNames: ["mstorsjo/llvm-mingw"],
+      groupName: "toolchains",
     },
   ],
 
