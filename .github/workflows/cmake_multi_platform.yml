@@ -2,14 +2,32 @@
 name: cmake_ci
 
 # Denylist, not allowlist: a new source extension can no longer silently skip
-# CI because nobody added it to a 20-line paths list.
+# CI because nobody added it to a 20-line paths list. Only files that cannot
+# change a build, test, or package output are ignored — everything else runs.
 on:
   push:
     branches: [main]
     paths-ignore: &ci_ignore
       - "**/*.md"
+      - "**/*.rst"
+      - "**/*.txt"
       - "docs/**"
+      - "assets/**"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.jpeg"
+      - "**/*.svg"
+      - "**/*.ico"
       - ".github/ISSUE_TEMPLATE/**"
+      - ".github/*.md"
+      - ".coderabbit.yaml"
+      - ".cursor/**"
+      - ".cursorignore"
+      - ".editorconfig"
+      - ".gitignore"
+      - ".gitattributes"
+      - "license.md"
+      - "AGENTS.md"
   pull_request:
     branches: [main]
     paths-ignore: *ci_ignore
