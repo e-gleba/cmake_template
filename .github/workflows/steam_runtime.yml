@@ -56,7 +56,6 @@ on:
       - ".github/workflows/nix.yml"
       - ".github/workflows/release.yml"
       - ".github/workflows/publish-docker.yml"
-      - ".github/workflows/cmake_presets_lint.yml"
   pull_request:
     branches: [main]
     paths-ignore: *steam_ignore
