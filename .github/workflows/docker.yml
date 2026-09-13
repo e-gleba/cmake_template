@@ -1,10 +1,14 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: docker_ci
 
+# Builds only the Dockerfiles that changed; a workflow-file edit rebuilds
+# all. Docs and meta files never trigger this pipeline.
 on:
   pull_request:
     paths: &docker_paths
       - "docker/**"
+      - '!.github/workflows/docker.yml'
+      - "!docker/**/*.md"
       - ".github/workflows/docker.yml"
   push:
     branches: [main]
@@ -22,12 +26,14 @@ jobs:
   detect_changes:
     name: docker_detect_changes
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       matrix: ${{ steps.changes.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           fetch-depth: 0
       - name: Detect changed Dockerfiles
         id: changes
@@ -68,6 +74,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Lint Dockerfile
         run: docker run --rm -i hadolint/hadolint:v2.15.1 < "docker/${{ matrix.name }}.Dockerfile"
       - name: Set up Docker Buildx
