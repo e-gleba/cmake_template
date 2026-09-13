@@ -3,7 +3,7 @@
     "version": 12,
     "cmakeMinimumRequired": {
         "major": 4,
-        "minor": 4,
+        "minor": 3,
         "patch": 0
     },
     "include": [

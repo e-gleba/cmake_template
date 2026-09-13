@@ -28,21 +28,22 @@ endif()
 # Generate a complete probe project so its file-set base is self-contained.
 set(cxx_modules_probe_source_dir
     "${CMAKE_CURRENT_BINARY_DIR}/cxx_modules_probe")
-file(
-    WRITE "${cxx_modules_probe_source_dir}/CMakeLists.txt"
-    [[
-cmake_minimum_required(VERSION 4.4)
+set(cxx_modules_probe_cmakelists [[cmake_minimum_required(VERSION @CMAKE_MINIMUM_REQUIRED_VERSION@)
+
 project(cxx_modules_probe LANGUAGES CXX)
 
 add_executable(cxx_modules_probe main.cpp)
 target_sources(
-    cxx_modules_probe
-    PRIVATE
-        FILE_SET CXX_MODULES
-        FILES cxx_modules_probe.cppm)
+  cxx_modules_probe
+  PRIVATE
+    FILE_SET CXX_MODULES
+    FILES cxx_modules_probe.cppm)
 target_compile_features(cxx_modules_probe PRIVATE cxx_std_23)
 set_target_properties(cxx_modules_probe PROPERTIES CXX_EXTENSIONS OFF)
 ]])
+
+string(CONFIGURE "${cxx_modules_probe_cmakelists}" cxx_modules_probe_configured @ONLY)
+file(WRITE "${cxx_modules_probe_source_dir}/CMakeLists.txt" "${cxx_modules_probe_configured}")
 file(
     WRITE "${cxx_modules_probe_source_dir}/cxx_modules_probe.cppm"
     [[
