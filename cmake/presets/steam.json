@@ -36,11 +36,8 @@
         {
             "name": "windows_llvm_mingw_steam_x86_64",
             "displayName": "Windows LLVM-MinGW x86_64 (Steam, static CRT)",
-            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW, statically linking the C/C++ runtime — the .exe imports only Windows system DLLs. The link flags live in cmake/toolchains/llvm_mingw.cmake behind CT_STATIC_RUNTIME; setting CMAKE_EXE_LINKER_FLAGS here would replace the toolchain's *_FLAGS_INIT and drop --sysroot.",
-            "inherits": ["steam_base", "windows_llvm_mingw_x86_64"],
-            "cacheVariables": {
-                "CT_STATIC_RUNTIME": "ON"
-            }
+            "description": "Cross-compile Windows x86_64 binaries from Linux with LLVM-MinGW. The C/C++ runtime is always linked statically by the toolchain (executables import only Windows system DLLs), so this preset adds nothing beyond the Steam base.",
+            "inherits": ["steam_base", "windows_llvm_mingw_x86_64"]
         }
     ],
     "buildPresets": [
