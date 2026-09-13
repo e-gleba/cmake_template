@@ -24,28 +24,6 @@
                 "CMAKE_CXX_COMPILER": "g++"
             },
             "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
-        },
-        {
-            "name": "linux_clang_x86_64_v3",
-            "displayName": "Linux Clang x86_64_v3",
-            "description": "Native Linux x86-64-v3 build with Clang (AVX/AVX2/BMI — Sandy Bridge+, ~2013). Separate preset, not a flag: mixing -march=x86-64-v3 into the generic build would silently drop pre-2013 CPUs from every artifact. Packaged separately (TGZ) for the release matrix.",
-            "inherits": ["linux_clang_x86_64", "release_ipo"],
-            "cacheVariables": {
-                "CMAKE_C_FLAGS": "-march=x86-64-v3",
-                "CMAKE_CXX_FLAGS": "-march=x86-64-v3"
-            },
-            "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
-        },
-        {
-            "name": "linux_gcc_x86_64_v3",
-            "displayName": "Linux GCC x86_64_v3",
-            "description": "Native Linux x86-64-v3 build with GCC (AVX/AVX2/BMI — Sandy Bridge+, ~2013). Separate preset, not a flag: mixing -march=x86-64-v3 into the generic build would silently drop pre-2013 CPUs from every artifact. Packaged separately (TGZ) for the release matrix.",
-            "inherits": ["linux_gcc_x86_64", "release_ipo"],
-            "cacheVariables": {
-                "CMAKE_C_FLAGS": "-march=x86-64-v3",
-                "CMAKE_CXX_FLAGS": "-march=x86-64-v3"
-            },
-            "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
         }
     ],
     "buildPresets": [
@@ -53,23 +31,17 @@
         {"name": "linux_clang_x86_64_debug", "configurePreset": "linux_clang_x86_64", "inherits": "build_debug"},
         {"name": "linux_clang_x86_64_docs", "displayName": "Linux Clang x86_64 documentation", "configurePreset": "linux_clang_x86_64", "inherits": "build_release", "targets": ["docs"]},
         {"name": "linux_gcc_x86_64_release", "configurePreset": "linux_gcc_x86_64", "inherits": "build_release"},
-        {"name": "linux_gcc_x86_64_debug", "configurePreset": "linux_gcc_x86_64", "inherits": "build_debug"},
-        {"name": "linux_clang_x86_64_v3_release", "configurePreset": "linux_clang_x86_64_v3", "inherits": "build_release"},
-        {"name": "linux_gcc_x86_64_v3_release", "configurePreset": "linux_gcc_x86_64_v3", "inherits": "build_release"}
+        {"name": "linux_gcc_x86_64_debug", "configurePreset": "linux_gcc_x86_64", "inherits": "build_debug"}
     ],
     "testPresets": [
         {"name": "linux_clang_x86_64_release", "configurePreset": "linux_clang_x86_64", "inherits": "test_base", "configuration": "Release"},
         {"name": "linux_clang_x86_64_debug", "configurePreset": "linux_clang_x86_64", "inherits": "test_base", "configuration": "Debug"},
         {"name": "linux_gcc_x86_64_release", "configurePreset": "linux_gcc_x86_64", "inherits": "test_base", "configuration": "Release"},
-        {"name": "linux_gcc_x86_64_debug", "configurePreset": "linux_gcc_x86_64", "inherits": "test_base", "configuration": "Debug"},
-        {"name": "linux_clang_x86_64_v3_release", "configurePreset": "linux_clang_x86_64_v3", "inherits": "test_base", "configuration": "Release"},
-        {"name": "linux_gcc_x86_64_v3_release", "configurePreset": "linux_gcc_x86_64_v3", "inherits": "test_base", "configuration": "Release"}
+        {"name": "linux_gcc_x86_64_debug", "configurePreset": "linux_gcc_x86_64", "inherits": "test_base", "configuration": "Debug"}
     ],
     "packagePresets": [
         {"name": "linux_clang_x86_64_release_tgz", "configurePreset": "linux_clang_x86_64", "configurations": ["Release"], "generators": ["TGZ"]},
-        {"name": "linux_gcc_x86_64_release_tgz", "configurePreset": "linux_gcc_x86_64", "configurations": ["Release"], "generators": ["TGZ"]},
-        {"name": "linux_clang_x86_64_v3_release_tgz", "configurePreset": "linux_clang_x86_64_v3", "configurations": ["Release"], "generators": ["TGZ"]},
-        {"name": "linux_gcc_x86_64_v3_release_tgz", "configurePreset": "linux_gcc_x86_64_v3", "configurations": ["Release"], "generators": ["TGZ"]}
+        {"name": "linux_gcc_x86_64_release_tgz", "configurePreset": "linux_gcc_x86_64", "configurations": ["Release"], "generators": ["TGZ"]}
     ],
     "workflowPresets": [
         {
@@ -92,28 +64,6 @@
                 {"type": "build", "name": "linux_gcc_x86_64_release"},
                 {"type": "test", "name": "linux_gcc_x86_64_release"},
                 {"type": "package", "name": "linux_gcc_x86_64_release_tgz"}
-            ]
-        },
-        {
-            "name": "linux_clang_x86_64_v3_release_package",
-            "displayName": "Linux Clang x86_64_v3 release package",
-            "description": "Configure, build, test, and package an x86-64-v3 (AVX2) Linux release with Clang + LTO",
-            "steps": [
-                {"type": "configure", "name": "linux_clang_x86_64_v3"},
-                {"type": "build", "name": "linux_clang_x86_64_v3_release"},
-                {"type": "test", "name": "linux_clang_x86_64_v3_release"},
-                {"type": "package", "name": "linux_clang_x86_64_v3_release_tgz"}
-            ]
-        },
-        {
-            "name": "linux_gcc_x86_64_v3_release_package",
-            "displayName": "Linux GCC x86_64_v3 release package",
-            "description": "Configure, build, test, and package an x86-64-v3 (AVX2) Linux release with GCC + LTO",
-            "steps": [
-                {"type": "configure", "name": "linux_gcc_x86_64_v3"},
-                {"type": "build", "name": "linux_gcc_x86_64_v3_release"},
-                {"type": "test", "name": "linux_gcc_x86_64_v3_release"},
-                {"type": "package", "name": "linux_gcc_x86_64_v3_release_tgz"}
             ]
         }
     ]
