@@ -18,23 +18,45 @@ name: steam_runtime_ci
 # shell quoting, locally runnable with the exact same command lines.
 #
 # Denylist, not allowlist: a new source extension can no longer silently
-# skip this pipeline because nobody added it to a paths list.
+# skip this pipeline because nobody added it to a paths list. Only files
+# that cannot change depot output — plus the domains owned by other
+# pipelines — are ignored.
 on:
   push:
     branches: [main]
     paths-ignore: &steam_ignore
       - "**/*.md"
+      - "**/*.rst"
+      - "**/*.txt"
       - "docs/**"
+      - "assets/**"
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.jpeg"
+      - "**/*.svg"
+      - "**/*.ico"
       - "tools/**"
       - "scripts/**"
       - "android_project/**"
       - "nix/**"
+      - "license.md"
+      - "AGENTS.md"
       - ".github/ISSUE_TEMPLATE/**"
+      - ".github/*.md"
+      - ".coderabbit.yaml"
+      - ".cursor/**"
+      - ".cursorignore"
+      - ".editorconfig"
+      - ".gitignore"
+      - ".gitattributes"
+      - "docker/**"
       - ".github/workflows/cmake_multi_platform.yml"
       - ".github/workflows/docker.yml"
       - ".github/workflows/lint.yml"
       - ".github/workflows/nix.yml"
       - ".github/workflows/release.yml"
+      - ".github/workflows/publish-docker.yml"
+      - ".github/workflows/cmake_presets_lint.yml"
   pull_request:
     branches: [main]
     paths-ignore: *steam_ignore
