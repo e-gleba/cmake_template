@@ -17,7 +17,12 @@ target_compile_features(tests PRIVATE cxx_std_23)
 
 target_link_libraries(tests PRIVATE doctest::doctest
                                     $<$<PLATFORM_ID:Android>:log>)
-ct_target_static_runtime(tests)
+
+# Steam depot: no shipped libc++.dll / libunwind.dll. MinGW-Clang exes only —
+# MSVC and shared libs never match.
+target_link_options(
+    tests PRIVATE
+    "$<$<AND:$<CXX_COMPILER_ID:Clang>,$<C_COMPILER_FRONTEND_VARIANT:GNU>>:LINK_ONLY:-static>")
 
 target_compile_definitions(
     tests
