@@ -4,6 +4,7 @@ name: cmake_ci
 # Denylist, not allowlist: a new source extension can no longer silently skip
 # CI because nobody added it to a 20-line paths list. Only files that cannot
 # change a build, test, or package output are ignored — everything else runs.
+# x86-64-v3 (AVX2) packages live in cmake_v3.yml, called by release.yml only.
 on:
   push:
     branches: [main]
@@ -34,19 +35,7 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      build_v3:
-        description: "Also build the x86-64-v3 (AVX2) packages"
-        required: false
-        default: false
-        type: boolean
   workflow_call:
-    inputs:
-      build_v3:
-        description: "Also build the x86-64-v3 (AVX2) packages"
-        required: false
-        default: false
-        type: boolean
 
 # PRs cancel their own stale runs; push and release runs always finish —
 # cancelling a release-called build mid-matrix once cost a half-published release.
@@ -127,56 +116,6 @@ jobs:
           path: build/linux_clang_x86_64/generated_docs/html/
           retention-days: 30
           if-no-files-found: error
-      - name: Stage and upload release assets
-        uses: ./.github/actions/stage-and-upload
-        with:
-          build-dir: build/${{ matrix.artifact_name }}
-          artifact-name: release-assets-${{ matrix.artifact_name }}
-
-  # x86-64-v3 (AVX2) packages: same sources, -march=x86-64-v3 + LTO. Opt-in
-  # via the build_v3 input (release.yml passes true) — never on PRs: a v3
-  # binary SIGILLs pre-2013 CPUs, and the baseline matrix above is what
-  # validates pull requests.
-  native_v3_build:
-    name: ${{ matrix.name }}
-    if: inputs.build_v3 == true
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: linux_clang_x86_64_v3
-            os: ubuntu-latest
-            preset: linux_clang_x86_64_v3_release_package
-            artifact_name: linux_clang_x86_64_v3
-            sdl3_deps: "true"
-            apt: "clang doxygen graphviz"
-          - name: linux_gcc_x86_64_v3
-            os: ubuntu-latest
-            preset: linux_gcc_x86_64_v3_release_package
-            artifact_name: linux_gcc_x86_64_v3
-            sdl3_deps: "true"
-            apt: "clang doxygen graphviz"
-          - name: windows_msvc_x86_64_v3
-            os: windows-2022
-            preset: windows_msvc_x86_64_v3_release_package
-            artifact_name: windows_msvc_x86_64_v3
-            sdl3_deps: "false"
-            apt: ""
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Set up build
-        uses: ./.github/actions/setup-cmake
-        with:
-          cache-key: ${{ matrix.artifact_name }}
-          sdl3-deps: ${{ matrix.sdl3_deps }}
-          apt-packages: ${{ matrix.apt }}
-      - name: Build and test
-        run: cmake --workflow --preset ${{ matrix.preset }}
       - name: Stage and upload release assets
         uses: ./.github/actions/stage-and-upload
         with:
