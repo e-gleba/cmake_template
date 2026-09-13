@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://json.schemastore.org/dependabot-2.0.json
+version: 2
+
+updates:
+  # ─── GitHub Actions ────────────────────────────────────────────────────────
+  # Keep CI/CD actions up to date (checkout, cache, upload-artifact, docker/*).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # ─── Docker base images ────────────────────────────────────────────────────
+  # fedora.Dockerfile + manjaro.Dockerfile live under docker/.
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      docker:
+        patterns:
+          - "*"
+
+  # ─── CPM (CMake Package Manager) dependencies ─────────────────────────────
+  # CPM deps are declared in cmake/cpm/*.cmake via cpmaddpackage() with GIT_TAG.
+  # Dependabot does not natively support CPM, so we use Renovate for CPM packages.
+  # See .github/renovate.json5 for CPM dependency management.
