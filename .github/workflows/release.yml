@@ -2,9 +2,9 @@
 #
 # One-click GitHub Release.
 #
-# Flow: validate inputs -> build packages (+ optional docker images) ->
-# create the GitHub Release -> open an auto-merged PR that bumps the
-# project() VERSION to next_version.
+# Flow: validate inputs -> build packages (baseline + x86-64-v3) ->
+# (+ optional docker images) -> create the GitHub Release -> open an
+# auto-merged PR that bumps the project() VERSION to next_version.
 #
 # The bump PR needs a token whose events start workflow runs — GITHUB_TOKEN
 # opens the PR fine but its CI never runs, so --auto waits forever. When
@@ -115,23 +115,29 @@ jobs:
       id-token: write
       attestations: write
 
-  # build_v3 ships the x86-64-v3 (AVX2) + LTO packages alongside baseline.
   packages:
     name: packages
     needs: validate
     uses: ./.github/workflows/cmake_multi_platform.yml
-    with:
-      build_v3: true
+    permissions:
+      contents: read
+
+  # x86-64-v3 (AVX2) + LTO packages, shipped alongside baseline.
+  packages_v3:
+    name: packages_v3
+    needs: validate
+    uses: ./.github/workflows/cmake_v3.yml
     permissions:
       contents: read
 
   publish:
     name: github release
-    needs: [validate, docker, packages]
+    needs: [validate, docker, packages, packages_v3]
     if: >-
       !cancelled()
       && needs.validate.result == 'success'
       && needs.packages.result == 'success'
+      && needs.packages_v3.result == 'success'
       && (needs.docker.result == 'success' || needs.docker.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 15
