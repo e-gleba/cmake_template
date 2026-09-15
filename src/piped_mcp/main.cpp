@@ -1,5 +1,4 @@
-// Piped MCP stdio example with SDL3 callbacks
-// Demonstrates MCP protocol over stdio with SDL3 event loop
+#define SDL_MAIN_USE_CALLBACKS 1
 
 #include "mcp_server.hpp"
 
@@ -7,25 +6,22 @@
 #include <SDL3/SDL_main.h>
 
 #include <array>
-#include <cstdlib>
+#include <cstdio>
 #include <gsl/gsl>
-#include <iostream>
+#include <new>
 #include <string>
 
-namespace {
+namespace tb::detail {
 
-// Application state carried through SDL3 callbacks
 struct app_state {
     piped_mcp::mcp_server* mcp_server{nullptr};
     bool done{false};
 };
 
-// MCP server instance
-piped_mcp::mcp_server g_mcp_server;
+inline piped_mcp::mcp_server mcp_server;
 
-} // namespace
+} // namespace tb::detail
 
-/// Called once at startup. Initializes SDL video and MCP server.
 SDL_AppResult SDL_AppInit(
     void** appstate,
     [[maybe_unused]] int argc,
@@ -36,62 +32,60 @@ SDL_AppResult SDL_AppInit(
         return SDL_APP_FAILURE;
     }
 
-    // Create application state
-    auto* state = new (std::nothrow) app_state{};
+    auto* state = new (std::nothrow) tb::detail::app_state{};
     if (state == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to allocate app state");
         return SDL_APP_FAILURE;
     }
 
-    // Initialize MCP server
-    piped_mcp::server_config config{
+    tb::piped_mcp::server_config config{
         .name = "piped_mcp_example",
         .version = "1.0.0",
-        .capabilities = {"stdio", "tools"}
+        .capabilities = {"stdio", "tools"},
     };
 
-    if (!g_mcp_server.start(config)) {
+    tb::detail::mcp_server.register_handler("hello", [](const std::string&) {
+        return "\"Hello from C++ MCP Server!\"";
+    });
+
+    tb::detail::mcp_server.register_handler("sdl_info", [](const std::string&) {
+        const int compiled_version = SDL_VERSION;
+        const int linked_version = SDL_GetVersion();
+
+        std::array<char, 256> buffer{};
+        std::snprintf(
+            buffer.data(),
+            buffer.size(),
+            "{\"compiled\":\"%d.%d.%d\",\"linked\":\"%d.%d.%d\"}",
+            SDL_VERSIONNUM_MAJOR(compiled_version),
+            SDL_VERSIONNUM_MINOR(compiled_version),
+            SDL_VERSIONNUM_MICRO(compiled_version),
+            SDL_VERSIONNUM_MAJOR(linked_version),
+            SDL_VERSIONNUM_MINOR(linked_version),
+            SDL_VERSIONNUM_MICRO(linked_version)
+        );
+        return std::string{buffer.data()};
+    });
+
+    if (!tb::detail::mcp_server.start(config)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to start MCP server");
         delete state;
         return SDL_APP_FAILURE;
     }
 
-    // Register custom command handler
-    g_mcp_server.register_handler("hello", [](const std::string&) {
-        return "{\"result\":\"Hello from C++ MCP Server!\"}";
-    });
-
-    // Register SDL info command
-    g_mcp_server.register_handler("sdl_info", [](const std::string&) {
-        SDL_version compiled_version;
-        SDL_version linked_version;
-        SDL_GetVersion(&compiled_version);
-        SDL_GetVersion(&linked_version);
-        
-        char buffer[256];
-        std::snprintf(
-            buffer, sizeof(buffer),
-            "{\"compiled\":\"%d.%d.%d\",\"linked\":\"%d.%d.%d\"}",
-            compiled_version.major, compiled_version.minor, compiled_version.patch,
-            linked_version.major, linked_version.minor, linked_version.patch
-        );
-        return std::string(buffer);
-    });
-
-    state->mcp_server = &g_mcp_server;
+    state->mcp_server = &tb::detail::mcp_server;
     *appstate = state;
 
-    // Show welcome message box
     constexpr std::array buttons{
         SDL_MessageBoxButtonData{
             .flags = SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT,
             .buttonID = 0,
-            .text = "OK"
+            .text = "OK",
         },
         SDL_MessageBoxButtonData{
             .flags = SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT,
             .buttonID = 1,
-            .text = "Exit"
+            .text = "Exit",
         },
     };
 
@@ -118,42 +112,33 @@ SDL_AppResult SDL_AppInit(
     return SDL_APP_CONTINUE;
 }
 
-/// Called once per frame by SDL
 SDL_AppResult SDL_AppIterate(void* appstate) {
-    const auto* state = static_cast<const app_state*>(appstate);
-    if (state->done) {
-        return SDL_APP_SUCCESS;
-    }
-    return SDL_APP_CONTINUE;
+    const auto* state = static_cast<const tb::detail::app_state*>(appstate);
+    return state->done ? SDL_APP_SUCCESS : SDL_APP_CONTINUE;
 }
 
-/// Called for every pending event
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
-    auto* state = static_cast<app_state*>(appstate);
-    
+    auto* state = static_cast<tb::detail::app_state*>(appstate);
+
     if (event->type == SDL_EVENT_QUIT) {
         state->done = true;
         return SDL_APP_SUCCESS;
     }
-    
-    // Handle key events for MCP notifications
-    if (event->type == SDL_EVENT_KEY_DOWN) {
-        if (event->key.key == SDLK_SPACE && (event->key.mod & SDL_KMOD_CTRL)) {
-            g_mcp_server.notify("key_pressed", "{\"key\":\"CTRL+SPACE\"}");
-        }
+
+    if (
+        event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_SPACE
+        && (event->key.mod & SDL_KMOD_CTRL) != 0
+    ) {
+        tb::detail::mcp_server.notify("notifications/key_pressed", "{\"key\":\"CTRL+SPACE\"}");
     }
-    
+
     return SDL_APP_CONTINUE;
 }
 
-/// Called once on shutdown
 void SDL_AppQuit(void* appstate, [[maybe_unused]] SDL_AppResult result) {
-    auto* state = static_cast<app_state*>(appstate);
-    
-    // Stop MCP server
-    if (state->mcp_server != nullptr) {
+    auto* state = static_cast<tb::detail::app_state*>(appstate);
+    if (state != nullptr && state->mcp_server != nullptr) {
         state->mcp_server->stop();
     }
-    
     delete state;
 }
