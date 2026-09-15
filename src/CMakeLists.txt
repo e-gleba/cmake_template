@@ -7,4 +7,4 @@ add_subdirectory(05_webassembly)
 add_subdirectory(06_modules)
 
 # Piped MCP stdio implementation
-add_subdirectory(piped_mcp)
+add_subdirectory(07_piped_mcp)
