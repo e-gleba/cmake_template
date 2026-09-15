@@ -11,6 +11,9 @@
 #include <utility>
 
 #if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -269,7 +272,7 @@ private:
             }
             if (message.size() == max_message_size) {
                 message.clear();
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
                 continue;
             }
             message.push_back(static_cast<char>(character));
