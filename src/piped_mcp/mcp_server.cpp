@@ -247,42 +247,46 @@ private:
 #endif
     }
 
-    void io_loop() noexcept {
-        std::string message;
-        message.reserve(4096);
+    void io_loop() noexcept { // NOLINT(bugprone-exception-escape)
+        try {
+            std::string message;
+            message.reserve(4096);
 
-        while (running_) {
-            if (!input_ready()) {
+            while (running_) {
+                if (!input_ready()) {
 #if defined(_WIN32)
-                std::this_thread::sleep_for(std::chrono::milliseconds{10});
+                    std::this_thread::sleep_for(std::chrono::milliseconds{10});
 #endif
-                continue;
-            }
+                    continue;
+                }
 
-            const int character = std::cin.get();
-            if (character == std::char_traits<char>::eof()) {
-                break;
-            }
-            if (character == '\n') {
-                if (!message.empty() && message.back() == '\r') {
-                    message.pop_back();
+                const int character = std::cin.get();
+                if (character == std::char_traits<char>::eof()) {
+                    break;
                 }
-                if (!message.empty()) {
-                    process_message(message);
+                if (character == '\n') {
+                    if (!message.empty() && message.back() == '\r') {
+                        message.pop_back();
+                    }
+                    if (!message.empty()) {
+                        process_message(message);
+                    }
+                    message.clear();
+                    continue;
                 }
-                message.clear();
-                continue;
+                if (message.size() == max_message_size) {
+                    message.clear();
+                    std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+                    continue;
+                }
+                message.push_back(static_cast<char>(character));
             }
-            if (message.size() == max_message_size) {
-                message.clear();
-                std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
-                continue;
-            }
-            message.push_back(static_cast<char>(character));
+        } catch (...) {
+            running_ = false;
         }
     }
 
-    void process_message(std::string_view message) noexcept {
+    void process_message(std::string_view message) { // NOLINT(bugprone-exception-escape)
         const request_fields fields = parse_request(message);
         if (fields.method_.empty() || fields.id_.empty()) {
             return;
