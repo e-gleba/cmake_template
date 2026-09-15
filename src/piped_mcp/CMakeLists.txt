@@ -28,6 +28,11 @@ target_link_libraries(
         warnings
 )
 
+target_link_options(
+    piped_mcp PRIVATE
+    "$<$<AND:$<PLATFORM_ID:Windows>,$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>,$<CXX_COMPILER_FRONTEND_VARIANT:GNU>>:$<LINK_ONLY:-static>>"
+)
+
 if(CMAKE_SYSTEM_NAME MATCHES "Android|Emscripten")
     return()
 endif()
