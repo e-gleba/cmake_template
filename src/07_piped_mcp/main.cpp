@@ -5,11 +5,49 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+#include <algorithm>
 #include <array>
-#include <cstdio>
+#include <format>
 #include <gsl/gsl>
 #include <memory>
 #include <string>
+#include <string_view>
+
+namespace {
+
+[[nodiscard]] std::string json_field(std::string_view json,
+                                     std::string_view key)
+{
+    const std::string needle  = std::format(R"("{}")", key);
+    const auto        key_pos = json.find(needle);
+    if (key_pos == std::string_view::npos) {
+        return {};
+    }
+
+    const auto colon = json.find(':', key_pos + needle.size());
+    if (colon == std::string_view::npos) {
+        return {};
+    }
+
+    const auto open = json.find('"', colon + 1);
+    if (open == std::string_view::npos) {
+        return {};
+    }
+
+    const auto close = json.find('"', open + 1);
+    if (close == std::string_view::npos) {
+        return {};
+    }
+
+    return std::string{ json.substr(open + 1, close - open - 1) };
+}
+
+constexpr std::array tool_names{
+    std::string_view{ "hello" },
+    std::string_view{ "sdl_info" },
+};
+
+} // namespace
 
 namespace tb::detail {
 
@@ -33,48 +71,65 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
 
     auto state = std::make_unique<tb::detail::app_state>();
 
-    tb::piped_mcp::server_config config{
+    const tb::piped_mcp::server_config config{
         .name         = "piped_mcp_example",
         .version      = "1.0.0",
         .capabilities = { "stdio", "tools" },
     };
 
-    state->mcp_server_.register_handler("hello", [](const std::string&) {
-        return R"json("Hello from C++ MCP Server!")json";
-    });
-
-    state->mcp_server_.register_handler("sdl_info", [](const std::string&) {
-        const int compiled_version = SDL_VERSION;
-        const int linked_version   = SDL_GetVersion();
-
-        std::array<char, 256> buffer{};
-        std::snprintf( // NOLINT(cppcoreguidelines-pro-type-vararg)
-            buffer.data(),
-            buffer.size(),
-            R"json({"compiled":"%d.%d.%d","linked":"%d.%d.%d"})json",
-            SDL_VERSIONNUM_MAJOR(compiled_version),
-            SDL_VERSIONNUM_MINOR(compiled_version),
-            SDL_VERSIONNUM_MICRO(compiled_version),
-            SDL_VERSIONNUM_MAJOR(linked_version),
-            SDL_VERSIONNUM_MINOR(linked_version),
-            SDL_VERSIONNUM_MICRO(linked_version));
-        return std::string{ buffer.data() };
-    });
-
-    state->mcp_server_.register_handler("initialize", [](const std::string&) {
-        return R"json({"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"piped_mcp","version":"0.1.0"}})json";
-    });
+    state->mcp_server_.register_handler(
+        "initialize", [](const std::string&) -> std::string {
+            return R"json({"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"piped_mcp","version":"0.1.0"}})json";
+        });
 
     state->mcp_server_.register_handler(
-        "ping", [](const std::string&) { return R"json({})json"; });
+        "ping",
+        [](const std::string&) -> std::string { return R"json({})json"; });
 
-    state->mcp_server_.register_handler("tools/list", [](const std::string&) {
-        return R"json({"tools":[]})json";
-    });
+    state->mcp_server_.register_handler(
+        "hello", [](const std::string&) -> std::string {
+            return R"json("Hello from C++ MCP Server!")json";
+        });
 
-    state->mcp_server_.register_handler("tools/call", [](const std::string&) {
-        return R"json({"content":[{"type":"text","text":"ok"}],"isError":false})json";
-    });
+    state->mcp_server_.register_handler(
+        "sdl_info", [](const std::string&) -> std::string {
+            const int compiled = SDL_VERSION;
+            const int linked   = SDL_GetVersion();
+            return std::format(
+                R"json("SDL compiled {}.{}.{} / linked {}.{}.{}")json",
+                SDL_VERSIONNUM_MAJOR(compiled),
+                SDL_VERSIONNUM_MINOR(compiled),
+                SDL_VERSIONNUM_MICRO(compiled),
+                SDL_VERSIONNUM_MAJOR(linked),
+                SDL_VERSIONNUM_MINOR(linked),
+                SDL_VERSIONNUM_MICRO(linked));
+        });
+
+    state->mcp_server_.register_handler(
+        "tools/list", [](const std::string&) -> std::string {
+            return R"json({"tools":[{"name":"hello","description":"Returns a greeting","inputSchema":{"type":"object","properties":{},"required":[]}},{"name":"sdl_info","description":"SDL3 compiled and linked version","inputSchema":{"type":"object","properties":{},"required":[]}}]})json";
+        });
+
+    state->mcp_server_.register_handler(
+        "tools/call",
+        [&server =
+             state->mcp_server_](const std::string& params) -> std::string {
+            const std::string name = json_field(params, "name");
+            if (name.empty()) {
+                return R"json({"content":[{"type":"text","text":"missing tool name"}],"isError":true})json";
+            }
+
+            const auto* const known =
+                std::ranges::find(tool_names, std::string_view{ name });
+            if (known == tool_names.end()) {
+                return R"json({"content":[{"type":"text","text":"unknown tool"}],"isError":true})json";
+            }
+
+            const std::string result = server.execute(name, std::string{});
+            return std::format(
+                R"json({{"content":[{{"type":"text","text":{}}}],"isError":false}})json",
+                result);
+        });
 
     if (!state->mcp_server_.start(config)) {
         SDL_Log(

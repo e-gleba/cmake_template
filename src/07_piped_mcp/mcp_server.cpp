@@ -122,10 +122,11 @@ constexpr std::size_t max_message_size{ std::size_t{ 1024 } * 1024 };
     return std::string_view::npos;
 }
 
-struct request_fields
+struct request_fields final
 {
     std::string method_;
     std::string id_;
+    std::string params_;
 };
 
 [[nodiscard]] request_fields parse_request(std::string_view message)
@@ -218,7 +219,8 @@ public:
         }
     }
 
-    [[nodiscard]] std::string execute(const std::string& command) noexcept
+    [[nodiscard]] std::string execute(const std::string& command,
+                                      const std::string& params) noexcept
     {
         std::function<std::string(const std::string&)> handler;
         {
@@ -358,7 +360,7 @@ private:
             return;
         }
 
-        const std::string result = execute(fields.method_);
+        const std::string result = execute(fields.method_, fields.params_);
         std::lock_guard   lock{ output_mutex_ };
         if (result.empty()) {
             std::cout
@@ -410,9 +412,10 @@ void mcp_server::stop() noexcept
     }
 }
 
-std::string mcp_server::execute(const std::string& command) noexcept
+std::string mcp_server::execute(const std::string& command,
+                                const std::string& params) noexcept
 {
-    return pimpl_ != nullptr ? pimpl_->execute(command) : std::string{};
+    return pimpl_ != nullptr ? pimpl_->execute(command, params) : std::string{};
 }
 
 bool mcp_server::is_running() const noexcept
