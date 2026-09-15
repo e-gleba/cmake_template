@@ -2,7 +2,11 @@ if(NOT TARGET SDL3::SDL3-shared)
     return()
 endif()
 
-add_executable(piped_mcp)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    add_library(piped_mcp SHARED)
+else()
+    add_executable(piped_mcp)
+endif()
 
 target_sources(
     piped_mcp
@@ -23,6 +27,10 @@ target_link_libraries(
         Microsoft.GSL::GSL
         warnings
 )
+
+if(CMAKE_SYSTEM_NAME MATCHES "Android|Emscripten")
+    return()
+endif()
 
 install(
     TARGETS piped_mcp
