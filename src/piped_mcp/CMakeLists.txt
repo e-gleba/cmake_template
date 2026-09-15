@@ -3,11 +3,12 @@ if(NOT TARGET SDL3::SDL3-shared)
 endif()
 
 # Piped MCP (Model Context Protocol) stdio implementation
-add_library(piped_mcp STATIC)
+add_executable(piped_mcp)
 
 target_sources(
     piped_mcp
     PRIVATE
+        main.cpp
         mcp_server.hpp
         mcp_server.cpp
 )
@@ -25,12 +26,26 @@ target_link_libraries(
 # Install rules
 install(
     TARGETS piped_mcp
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    COMPONENT development
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT runtime
 )
 
-install(
-    FILES mcp_server.hpp
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/piped_mcp
-    COMPONENT development
+# ── RPATH: find libSDL3 at runtime after install ──
+set_target_properties(
+    piped_mcp
+    PROPERTIES
+        INSTALL_RPATH "$<IF:$<PLATFORM_ID:Darwin,iOS>,@executable_path,$ORIGIN>/../${CMAKE_INSTALL_LIBDIR}"
+        BUILD_RPATH_USE_ORIGIN ON
 )
+
+# Windows: stage runtime DLLs next to the .exe for build-tree runs
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    add_custom_command(
+        TARGET piped_mcp
+        POST_BUILD
+        COMMAND
+            ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:piped_mcp>
+            $<TARGET_RUNTIME_DLLS:piped_mcp>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
