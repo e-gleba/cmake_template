@@ -9,7 +9,8 @@ target_sources(
     PRIVATE
         main.cpp
         mcp_server.cpp
-    FILE_SET HEADERS
+    PRIVATE
+        FILE_SET HEADERS
         FILES mcp_server.hpp
 )
 
