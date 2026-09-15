@@ -47,9 +47,9 @@ constexpr std::size_t max_message_size{std::size_t{1024} * 1024};
 
 [[nodiscard]] std::size_t skip_whitespace(std::string_view message, std::size_t position) {
     const auto remaining = message.substr(position);
-    const auto iterator = std::ranges::find_if_not(remaining, [](const unsigned char character) {
+    const auto iterator = std::ranges::find_if_not(remaining, [](const unsigned char character) { // NOLINT(readability-qualified-auto)
         return std::isspace(character) != 0;
-    }); // NOLINT(readability-qualified-auto)
+    });
     return position + static_cast<std::size_t>(std::ranges::distance(remaining.begin(), iterator));
 }
 
