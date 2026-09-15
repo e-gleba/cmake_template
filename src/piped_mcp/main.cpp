@@ -37,7 +37,7 @@ SDL_AppResult SDL_AppInit(
     }
 
     // Create application state
-    auto* state = gsl::owner<AppState*>{new (std::nothrow) AppState{});
+    auto* state = new (std::nothrow) AppState{};
     if (state == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to allocate app state");
         return SDL_APP_FAILURE;
@@ -75,7 +75,7 @@ SDL_AppResult SDL_AppInit(
             compiled.major, compiled.minor, compiled.patch,
             linked.major, linked.minor, linked.patch
         );
-        return buffer;
+        return std::string(buffer);
     });
 
     state->mcp_server = &g_mcp_server;
@@ -148,7 +148,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
 
 /// Called once on shutdown
 void SDL_AppQuit(void* appstate, [[maybe_unused]] SDL_AppResult result) {
-    auto* state = static_cast<gsl::owner<AppState*>>(appstate);
+    auto* state = static_cast<AppState*>(appstate);
     
     // Stop MCP server
     if (state->mcp_server != nullptr) {
