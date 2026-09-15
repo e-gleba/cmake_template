@@ -15,13 +15,13 @@
 namespace {
 
 // Application state carried through SDL3 callbacks
-struct AppState {
-    piped_mcp::McpServer* mcp_server{nullptr};
+struct app_state {
+    piped_mcp::mcp_server* mcp_server{nullptr};
     bool done{false};
 };
 
 // MCP server instance
-piped_mcp::McpServer g_mcp_server;
+piped_mcp::mcp_server g_mcp_server;
 
 } // namespace
 
@@ -37,14 +37,14 @@ SDL_AppResult SDL_AppInit(
     }
 
     // Create application state
-    auto* state = new (std::nothrow) AppState{};
+    auto* state = new (std::nothrow) app_state{};
     if (state == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to allocate app state");
         return SDL_APP_FAILURE;
     }
 
     // Initialize MCP server
-    piped_mcp::ServerConfig config{
+    piped_mcp::server_config config{
         .name = "piped_mcp_example",
         .version = "1.0.0",
         .capabilities = {"stdio", "tools"}
@@ -63,17 +63,17 @@ SDL_AppResult SDL_AppInit(
 
     // Register SDL info command
     g_mcp_server.register_handler("sdl_info", [](const std::string&) {
-        SDL_version compiled;
-        SDL_version linked;
-        SDL_GetVersion(&compiled);
-        SDL_GetVersion(&linked);
+        SDL_version compiled_version;
+        SDL_version linked_version;
+        SDL_GetVersion(&compiled_version);
+        SDL_GetVersion(&linked_version);
         
         char buffer[256];
         std::snprintf(
             buffer, sizeof(buffer),
             "{\"compiled\":\"%d.%d.%d\",\"linked\":\"%d.%d.%d\"}",
-            compiled.major, compiled.minor, compiled.patch,
-            linked.major, linked.minor, linked.patch
+            compiled_version.major, compiled_version.minor, compiled_version.patch,
+            linked_version.major, linked_version.minor, linked_version.patch
         );
         return std::string(buffer);
     });
@@ -120,7 +120,7 @@ SDL_AppResult SDL_AppInit(
 
 /// Called once per frame by SDL
 SDL_AppResult SDL_AppIterate(void* appstate) {
-    const auto* state = static_cast<const AppState*>(appstate);
+    const auto* state = static_cast<const app_state*>(appstate);
     if (state->done) {
         return SDL_APP_SUCCESS;
     }
@@ -129,7 +129,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 /// Called for every pending event
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
-    auto* state = static_cast<AppState*>(appstate);
+    auto* state = static_cast<app_state*>(appstate);
     
     if (event->type == SDL_EVENT_QUIT) {
         state->done = true;
@@ -148,7 +148,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
 
 /// Called once on shutdown
 void SDL_AppQuit(void* appstate, [[maybe_unused]] SDL_AppResult result) {
-    auto* state = static_cast<AppState*>(appstate);
+    auto* state = static_cast<app_state*>(appstate);
     
     // Stop MCP server
     if (state->mcp_server != nullptr) {
