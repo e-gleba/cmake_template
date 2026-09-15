@@ -233,7 +233,7 @@ public:
         }
 
         try {
-            return handler(command);
+            return handler(params);
         } catch (...) {
             return {};
         }

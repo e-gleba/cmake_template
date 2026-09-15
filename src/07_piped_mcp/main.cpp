@@ -64,8 +64,8 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
                           [[maybe_unused]] char* argv[])
 {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        SDL_Log("SDL_Init failed: %s",
-                SDL_GetError()); // NOLINT(cppcoreguidelines-pro-type-vararg)
+        SDL_Log("SDL_Init failed: %s", // NOLINT(cppcoreguidelines-pro-type-vararg)
+                SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
@@ -119,7 +119,7 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
                 return R"json({"content":[{"type":"text","text":"missing tool name"}],"isError":true})json";
             }
 
-            const auto* const known =
+            const auto known =
                 std::ranges::find(tool_names, std::string_view{ name });
             if (known == tool_names.end()) {
                 return R"json({"content":[{"type":"text","text":"unknown tool"}],"isError":true})json";
@@ -132,8 +132,7 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
         });
 
     if (!state->mcp_server_.start(config)) {
-        SDL_Log(
-            "Failed to start MCP server"); // NOLINT(cppcoreguidelines-pro-type-vararg)
+        SDL_Log("Failed to start MCP server"); // NOLINT(cppcoreguidelines-pro-type-vararg)
         return SDL_APP_FAILURE;
     }
 
@@ -164,8 +163,8 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
 
     int button_id{ -1 };
     if (!SDL_ShowMessageBox(&box, &button_id)) {
-        SDL_Log("SDL_ShowMessageBox failed: %s",
-                SDL_GetError()); // NOLINT(cppcoreguidelines-pro-type-vararg)
+        SDL_Log("SDL_ShowMessageBox failed: %s", // NOLINT(cppcoreguidelines-pro-type-vararg)
+                SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
