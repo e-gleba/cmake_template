@@ -1,8 +1,10 @@
 #include "mcp_server.hpp"
 
-#include <array>
-#include <cstdio>
+#include <algorithm>
+#include <chrono>
+#include <cctype>
 #include <iostream>
+#include <ranges>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -21,6 +23,8 @@ namespace tb::piped_mcp {
 
 namespace {
 
+constexpr std::size_t max_message_size{1024U * 1024U};
+
 [[nodiscard]] std::string escape_json(std::string_view value) {
     std::string escaped;
     escaped.reserve(value.size());
@@ -37,62 +41,110 @@ namespace {
     return escaped;
 }
 
-[[nodiscard]] std::string extract_string(std::string_view message, std::string_view key) {
-    const std::string pattern = "\"" + std::string{key} + "\"";
-    const std::size_t key_position = message.find(pattern);
-    if (key_position == std::string_view::npos) {
-        return {};
-    }
-
-    const std::size_t colon_position = message.find(':', key_position + pattern.size());
-    const std::size_t quote_position = message.find('"', colon_position + 1);
-    if (colon_position == std::string_view::npos || quote_position == std::string_view::npos) {
-        return {};
-    }
-
-    std::string result;
-    for (std::size_t index = quote_position + 1; index < message.size(); ++index) {
-        const char character = message[index];
-        if (character == '"') {
-            return result;
-        }
-        if (character == '\\' && index + 1 < message.size()) {
-            ++index;
-            result += message[index];
-        } else {
-            result += character;
-        }
-    }
-    return {};
+[[nodiscard]] std::size_t skip_whitespace(std::string_view message, std::size_t position) {
+    const auto remaining = message.substr(position);
+    const auto iterator = std::ranges::find_if_not(remaining, [](const unsigned char character) {
+        return std::isspace(character) != 0;
+    });
+    return position + static_cast<std::size_t>(std::ranges::distance(remaining.begin(), iterator));
 }
 
-[[nodiscard]] std::string extract_id(std::string_view message) {
-    constexpr std::string_view key = "\"id\"";
-    const std::size_t key_position = message.find(key);
-    if (key_position == std::string_view::npos) {
+[[nodiscard]] std::size_t skip_string(std::string_view message, std::size_t position) {
+    if (position >= message.size() || message[position] != '"') {
+        return std::string_view::npos;
+    }
+
+    for (++position; position < message.size(); ++position) {
+        if (message[position] == '\\') {
+            ++position;
+        } else if (message[position] == '"') {
+            return position + 1;
+        }
+    }
+    return std::string_view::npos;
+}
+
+[[nodiscard]] std::size_t skip_value(std::string_view message, std::size_t position) {
+    position = skip_whitespace(message, position);
+    if (position >= message.size()) {
+        return std::string_view::npos;
+    }
+    if (message[position] == '"') {
+        return skip_string(message, position);
+    }
+
+    const char opening = message[position];
+    if (opening != '{' && opening != '[') {
+        const std::size_t end = message.find_first_of(",}", position);
+        return end == std::string_view::npos ? message.size() : end;
+    }
+
+    const char closing = opening == '{' ? '}' : ']';
+    std::size_t depth{};
+    for (; position < message.size(); ++position) {
+        if (message[position] == '"') {
+            position = skip_string(message, position);
+            if (position == std::string_view::npos) {
+                return position;
+            }
+            --position;
+        } else if (message[position] == opening) {
+            ++depth;
+        } else if (message[position] == closing && --depth == 0) {
+            return position + 1;
+        }
+    }
+    return std::string_view::npos;
+}
+
+struct request_fields {
+    std::string method;
+    std::string id;
+};
+
+[[nodiscard]] request_fields parse_request(std::string_view message) {
+    request_fields fields;
+    std::size_t position = skip_whitespace(message, 0);
+    if (position >= message.size() || message[position++] != '{') {
         return {};
     }
 
-    const std::size_t colon_position = message.find(':', key_position + key.size());
-    if (colon_position == std::string_view::npos) {
-        return {};
-    }
+    while (position < message.size()) {
+        position = skip_whitespace(message, position);
+        if (position < message.size() && message[position] == '}') {
+            return fields;
+        }
 
-    const std::size_t value_start = message.find_first_not_of(" \t", colon_position + 1);
-    if (value_start == std::string_view::npos) {
-        return {};
-    }
+        const std::size_t key_end = skip_string(message, position);
+        if (key_end == std::string_view::npos) {
+            return {};
+        }
+        const std::string_view key = message.substr(position + 1, key_end - position - 2);
 
-    if (message[value_start] == '"') {
-        const std::size_t value_end = message.find('"', value_start + 1);
+        position = skip_whitespace(message, key_end);
+        if (position >= message.size() || message[position++] != ':') {
+            return {};
+        }
+        position = skip_whitespace(message, position);
+        const std::size_t value_end = skip_value(message, position);
         if (value_end == std::string_view::npos) {
             return {};
         }
-        return std::string{message.substr(value_start, value_end - value_start + 1)};
-    }
 
-    const std::size_t value_end = message.find_first_of(",}", value_start);
-    return std::string{message.substr(value_start, value_end - value_start)};
+        if (key == "method" && message[position] == '"') {
+            fields.method = std::string{message.substr(position + 1, value_end - position - 2)};
+        } else if (key == "id") {
+            fields.id = std::string{message.substr(position, value_end - position)};
+        }
+
+        position = skip_whitespace(message, value_end);
+        if (position < message.size() && message[position] == ',') {
+            ++position;
+        } else if (position >= message.size() || message[position] != '}') {
+            return {};
+        }
+    }
+    return {};
 }
 
 } // namespace
@@ -105,16 +157,15 @@ public:
             return false;
         }
 
-        config_name_ = config.name;
-        config_version_ = config.version;
-        capabilities_.clear();
-        capabilities_.reserve(config.capabilities.size());
-        for (const std::string_view capability : config.capabilities) {
-            capabilities_.emplace_back(capability);
-        }
-
-        running_ = true;
         try {
+            config_name_ = config.name;
+            config_version_ = config.version;
+            capabilities_.clear();
+            capabilities_.reserve(config.capabilities.size());
+            std::ranges::transform(config.capabilities, std::back_inserter(capabilities_), [](const auto capability) {
+                return std::string{capability};
+            });
+            running_ = true;
             io_thread_ = std::thread{[this] { io_loop(); }};
         } catch (...) {
             running_ = false;
@@ -190,46 +241,53 @@ private:
     }
 
     void io_loop() noexcept {
-        std::array<char, 4096> buffer{};
+        std::string message;
+        message.reserve(4096);
+
         while (running_) {
             if (!input_ready()) {
 #if defined(_WIN32)
-                Sleep(10);
+                std::this_thread::sleep_for(std::chrono::milliseconds{10});
 #endif
                 continue;
             }
 
-            if (std::fgets(buffer.data(), static_cast<int>(buffer.size()), stdin) == nullptr) {
+            const int character = std::cin.get();
+            if (character == std::char_traits<char>::eof()) {
                 break;
             }
-
-            std::string message{buffer.data()};
-            if (!message.empty() && message.back() == '\n') {
-                message.pop_back();
+            if (character == '\n') {
+                if (!message.empty() && message.back() == '\r') {
+                    message.pop_back();
+                }
+                if (!message.empty()) {
+                    process_message(message);
+                }
+                message.clear();
+                continue;
             }
-            if (!message.empty() && message.back() == '\r') {
-                message.pop_back();
+            if (message.size() == max_message_size) {
+                message.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                continue;
             }
-            if (!message.empty()) {
-                process_message(message);
-            }
+            message.push_back(static_cast<char>(character));
         }
     }
 
     void process_message(std::string_view message) noexcept {
-        const std::string method = extract_string(message, "method");
-        const std::string id = extract_id(message);
-        if (method.empty() || id.empty()) {
+        const request_fields fields = parse_request(message);
+        if (fields.method.empty() || fields.id.empty()) {
             return;
         }
 
-        const std::string result = execute(method);
+        const std::string result = execute(fields.method);
         std::lock_guard lock{output_mutex_};
         if (result.empty()) {
-            std::cout << "{\"jsonrpc\":\"2.0\",\"id\":" << id
+            std::cout << "{\"jsonrpc\":\"2.0\",\"id\":" << fields.id
                       << ",\"error\":{\"code\":-32601,\"message\":\"Method not found\"}}\n";
         } else {
-            std::cout << "{\"jsonrpc\":\"2.0\",\"id\":" << id
+            std::cout << "{\"jsonrpc\":\"2.0\",\"id\":" << fields.id
                       << ",\"result\":" << result << "}\n";
         }
         std::cout << std::flush;

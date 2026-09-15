@@ -14,6 +14,9 @@ def find_mcp_server_path():
         Path("build/bin"),
         Path("build/Release"),
         Path("build/Debug"),
+        Path("build/src/piped_mcp"),
+        Path("build/src/piped_mcp/Release"),
+        Path("build/src/piped_mcp/Debug"),
         Path("out/build"),
         Path("out/build/bin"),
     ):
