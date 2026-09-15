@@ -32,7 +32,8 @@ public:
         running_ = true;
         
         // Start IO thread for stdio communication
-        io_thread_ = std::thread([this] { io_loop(); });n        
+        io_thread_ = std::thread([this] { io_loop(); });
+        
         return true;
     }
     
