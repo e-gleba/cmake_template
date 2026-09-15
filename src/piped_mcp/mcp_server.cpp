@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cctype>
 #include <iostream>
+#include <limits>
 #include <ranges>
 #include <string>
 #include <unordered_map>
@@ -30,11 +31,11 @@ constexpr std::size_t max_message_size{1024U * 1024U};
     escaped.reserve(value.size());
     for (const char character : value) {
         switch (character) {
-        case '\\': escaped += "\\\\"; break;
-        case '"': escaped += "\\\""; break;
-        case '\n': escaped += "\\n"; break;
-        case '\r': escaped += "\\r"; break;
-        case '\t': escaped += "\\t"; break;
+        case '\\': escaped += R"(\\)"; break;
+        case '"': escaped += R"(\")"; break;
+        case '\n': escaped += R"(\n)"; break;
+        case '\r': escaped += R"(\r)"; break;
+        case '\t': escaped += R"(\t)"; break;
         default: escaped += character; break;
         }
     }
@@ -220,8 +221,8 @@ public:
         }
 
         std::lock_guard lock{output_mutex_};
-        std::cout << "{\"jsonrpc\":\"2.0\",\"method\":\"" << escape_json(method)
-                  << "\",\"params\":" << params << "}\n"
+        std::cout << R"json({"jsonrpc":"2.0","method":")json" << escape_json(method)
+                  << R"json(","params":)json" << params << "}\n"
                   << std::flush;
     }
 
@@ -284,11 +285,12 @@ private:
         const std::string result = execute(fields.method);
         std::lock_guard lock{output_mutex_};
         if (result.empty()) {
-            std::cout << "{\"jsonrpc\":\"2.0\",\"id\":" << fields.id
-                      << ",\"error\":{\"code\":-32601,\"message\":\"Method not found\"}}\n";
+            std::cout << R"json({"jsonrpc":"2.0","id":)json" << fields.id
+                      << R"json(,"error":{"code":-32601,"message":"Method not found"}})json"
+                      << '\n';
         } else {
-            std::cout << "{\"jsonrpc\":\"2.0\",\"id\":" << fields.id
-                      << ",\"result\":" << result << "}\n";
+            std::cout << R"json({"jsonrpc":"2.0","id":)json" << fields.id
+                      << R"json(,"result":)json" << result << "}\n";
         }
         std::cout << std::flush;
     }

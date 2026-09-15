@@ -45,7 +45,7 @@ SDL_AppResult SDL_AppInit(
     };
 
     tb::detail::mcp_server.register_handler("hello", [](const std::string&) {
-        return "\"Hello from C++ MCP Server!\"";
+        return R"json("Hello from C++ MCP Server!")json";
     });
 
     tb::detail::mcp_server.register_handler("sdl_info", [](const std::string&) {
@@ -56,7 +56,7 @@ SDL_AppResult SDL_AppInit(
         std::snprintf(
             buffer.data(),
             buffer.size(),
-            "{\"compiled\":\"%d.%d.%d\",\"linked\":\"%d.%d.%d\"}",
+            R"json({"compiled":"%d.%d.%d","linked":"%d.%d.%d"})json",
             SDL_VERSIONNUM_MAJOR(compiled_version),
             SDL_VERSIONNUM_MINOR(compiled_version),
             SDL_VERSIONNUM_MICRO(compiled_version),
@@ -129,7 +129,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
         event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_SPACE
         && (event->key.mod & SDL_KMOD_CTRL) != 0
     ) {
-        tb::detail::mcp_server.notify("notifications/key_pressed", "{\"key\":\"CTRL+SPACE\"}");
+        tb::detail::mcp_server.notify("notifications/key_pressed", R"json({"key":"CTRL+SPACE"})json");
     }
 
     return SDL_APP_CONTINUE;
