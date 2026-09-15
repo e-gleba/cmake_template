@@ -27,7 +27,7 @@ namespace tb::piped_mcp {
 
 namespace {
 
-constexpr std::size_t max_message_size{1024U * 1024U};
+constexpr std::size_t max_message_size{std::size_t{1024} * 1024};
 
 [[nodiscard]] std::string escape_json(std::string_view value) {
     std::string escaped;
@@ -47,7 +47,7 @@ constexpr std::size_t max_message_size{1024U * 1024U};
 
 [[nodiscard]] std::size_t skip_whitespace(std::string_view message, std::size_t position) {
     const auto remaining = message.substr(position);
-    const auto iterator = std::ranges::find_if_not(remaining, [](const unsigned char character) {
+    const char* const iterator = std::ranges::find_if_not(remaining, [](const unsigned char character) {
         return std::isspace(character) != 0;
     });
     return position + static_cast<std::size_t>(std::ranges::distance(remaining.begin(), iterator));
@@ -102,16 +102,17 @@ constexpr std::size_t max_message_size{1024U * 1024U};
 }
 
 struct request_fields {
-    std::string method;
-    std::string id;
+    std::string method_;
+    std::string id_;
 };
 
 [[nodiscard]] request_fields parse_request(std::string_view message) {
     request_fields fields;
     std::size_t position = skip_whitespace(message, 0);
-    if (position >= message.size() || message[position++] != '{') {
+    if (position >= message.size() || message[position] != '{') {
         return {};
     }
+    ++position;
 
     while (position < message.size()) {
         position = skip_whitespace(message, position);
@@ -126,9 +127,10 @@ struct request_fields {
         const std::string_view key = message.substr(position + 1, key_end - position - 2);
 
         position = skip_whitespace(message, key_end);
-        if (position >= message.size() || message[position++] != ':') {
+        if (position >= message.size() || message[position] != ':') {
             return {};
         }
+        ++position;
         position = skip_whitespace(message, position);
         const std::size_t value_end = skip_value(message, position);
         if (value_end == std::string_view::npos) {
@@ -136,9 +138,9 @@ struct request_fields {
         }
 
         if (key == "method" && message[position] == '"') {
-            fields.method = std::string{message.substr(position + 1, value_end - position - 2)};
+            fields.method_ = std::string{message.substr(position + 1, value_end - position - 2)};
         } else if (key == "id") {
-            fields.id = std::string{message.substr(position, value_end - position)};
+            fields.id_ = std::string{message.substr(position, value_end - position)};
         }
 
         position = skip_whitespace(message, value_end);
@@ -214,7 +216,8 @@ public:
         try {
             std::lock_guard lock{mutex_};
             handlers_.insert_or_assign(std::string{command}, std::move(handler));
-        } catch (...) {
+        } catch (const std::exception&) {
+            return;
         }
     }
 
@@ -230,7 +233,7 @@ public:
     }
 
 private:
-    [[nodiscard]] bool input_ready() const noexcept {
+    [[nodiscard]] static bool input_ready() noexcept {
 #if defined(_WIN32)
         DWORD available_bytes{};
         const HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
@@ -281,18 +284,18 @@ private:
 
     void process_message(std::string_view message) noexcept {
         const request_fields fields = parse_request(message);
-        if (fields.method.empty() || fields.id.empty()) {
+        if (fields.method_.empty() || fields.id_.empty()) {
             return;
         }
 
-        const std::string result = execute(fields.method);
+        const std::string result = execute(fields.method_);
         std::lock_guard lock{output_mutex_};
         if (result.empty()) {
-            std::cout << R"json({"jsonrpc":"2.0","id":)json" << fields.id
+            std::cout << R"json({"jsonrpc":"2.0","id":)json" << fields.id_
                       << R"json(,"error":{"code":-32601,"message":"Method not found"}})json"
                       << '\n';
         } else {
-            std::cout << R"json({"jsonrpc":"2.0","id":)json" << fields.id
+            std::cout << R"json({"jsonrpc":"2.0","id":)json" << fields.id_
                       << R"json(,"result":)json" << result << "}\n";
         }
         std::cout << std::flush;
@@ -311,7 +314,8 @@ private:
 mcp_server::mcp_server() noexcept {
     try {
         pimpl_ = std::make_unique<impl>();
-    } catch (...) {
+    } catch (const std::bad_alloc&) {
+        pimpl_.reset();
     }
 }
 

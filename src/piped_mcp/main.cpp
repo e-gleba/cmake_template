@@ -1,4 +1,4 @@
-#define SDL_MAIN_USE_CALLBACKS 1
+#define SDL_MAIN_USE_CALLBACKS 1 // NOLINT(cppcoreguidelines-macro-usage)
 
 #include "mcp_server.hpp"
 
@@ -8,17 +8,15 @@
 #include <array>
 #include <cstdio>
 #include <gsl/gsl>
-#include <new>
+#include <memory>
 #include <string>
 
 namespace tb::detail {
 
 struct app_state {
-    piped_mcp::mcp_server* mcp_server{nullptr};
-    bool done{false};
+    piped_mcp::mcp_server mcp_server_;
+    bool done_{false};
 };
-
-inline piped_mcp::mcp_server mcp_server;
 
 } // namespace tb::detail
 
@@ -28,15 +26,11 @@ SDL_AppResult SDL_AppInit(
     [[maybe_unused]] char* argv[]
 ) {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init failed: %s", SDL_GetError());
+        SDL_Log("SDL_Init failed: %s", SDL_GetError()); // NOLINT(cppcoreguidelines-pro-type-vararg)
         return SDL_APP_FAILURE;
     }
 
-    auto* state = new (std::nothrow) tb::detail::app_state{};
-    if (state == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to allocate app state");
-        return SDL_APP_FAILURE;
-    }
+    auto state = std::make_unique<tb::detail::app_state>();
 
     tb::piped_mcp::server_config config{
         .name = "piped_mcp_example",
@@ -44,16 +38,16 @@ SDL_AppResult SDL_AppInit(
         .capabilities = {"stdio", "tools"},
     };
 
-    tb::detail::mcp_server.register_handler("hello", [](const std::string&) {
+    state->mcp_server_.register_handler("hello", [](const std::string&) {
         return R"json("Hello from C++ MCP Server!")json";
     });
 
-    tb::detail::mcp_server.register_handler("sdl_info", [](const std::string&) {
+    state->mcp_server_.register_handler("sdl_info", [](const std::string&) {
         const int compiled_version = SDL_VERSION;
         const int linked_version = SDL_GetVersion();
 
         std::array<char, 256> buffer{};
-        std::snprintf(
+        std::snprintf( // NOLINT(cppcoreguidelines-pro-type-vararg)
             buffer.data(),
             buffer.size(),
             R"json({"compiled":"%d.%d.%d","linked":"%d.%d.%d"})json",
@@ -67,14 +61,12 @@ SDL_AppResult SDL_AppInit(
         return std::string{buffer.data()};
     });
 
-    if (!tb::detail::mcp_server.start(config)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to start MCP server");
-        delete state;
+    if (!state->mcp_server_.start(config)) {
+        SDL_Log("Failed to start MCP server"); // NOLINT(cppcoreguidelines-pro-type-vararg)
         return SDL_APP_FAILURE;
     }
 
-    state->mcp_server = &tb::detail::mcp_server;
-    *appstate = state;
+    *appstate = state.release();
 
     constexpr std::array buttons{
         SDL_MessageBoxButtonData{
@@ -101,12 +93,12 @@ SDL_AppResult SDL_AppInit(
 
     int button_id{-1};
     if (!SDL_ShowMessageBox(&box, &button_id)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_ShowMessageBox failed: %s", SDL_GetError());
+        SDL_Log("SDL_ShowMessageBox failed: %s", SDL_GetError()); // NOLINT(cppcoreguidelines-pro-type-vararg)
         return SDL_APP_FAILURE;
     }
 
     if (button_id == 1) {
-        state->done = true;
+        static_cast<tb::detail::app_state*>(*appstate)->done_ = true;
     }
 
     return SDL_APP_CONTINUE;
@@ -114,14 +106,14 @@ SDL_AppResult SDL_AppInit(
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
     const auto* state = static_cast<const tb::detail::app_state*>(appstate);
-    return state->done ? SDL_APP_SUCCESS : SDL_APP_CONTINUE;
+    return state->done_ ? SDL_APP_SUCCESS : SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
     auto* state = static_cast<tb::detail::app_state*>(appstate);
 
     if (event->type == SDL_EVENT_QUIT) {
-        state->done = true;
+        state->done_ = true;
         return SDL_APP_SUCCESS;
     }
 
@@ -129,16 +121,15 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
         event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_SPACE
         && (event->key.mod & SDL_KMOD_CTRL) != 0
     ) {
-        tb::detail::mcp_server.notify("notifications/key_pressed", R"json({"key":"CTRL+SPACE"})json");
+        state->mcp_server_.notify("notifications/key_pressed", R"json({"key":"CTRL+SPACE"})json");
     }
 
     return SDL_APP_CONTINUE;
 }
 
 void SDL_AppQuit(void* appstate, [[maybe_unused]] SDL_AppResult result) {
-    auto* state = static_cast<tb::detail::app_state*>(appstate);
-    if (state != nullptr && state->mcp_server != nullptr) {
-        state->mcp_server->stop();
+    std::unique_ptr<tb::detail::app_state> state{static_cast<tb::detail::app_state*>(appstate)};
+    if (state != nullptr) {
+        state->mcp_server_.stop();
     }
-    delete state;
 }
