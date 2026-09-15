@@ -8,9 +8,11 @@
 #include <utility>
 
 #if defined(_WIN32)
-#include <io.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 #else
-#include <cerrno>
 #include <poll.h>
 #include <unistd.h>
 #endif
@@ -175,7 +177,11 @@ public:
 private:
     [[nodiscard]] bool input_ready() const noexcept {
 #if defined(_WIN32)
-        return _kbhit() != 0;
+        DWORD available_bytes{};
+        const HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
+        return input != nullptr && input != INVALID_HANDLE_VALUE
+            && PeekNamedPipe(input, nullptr, 0, nullptr, &available_bytes, nullptr) != 0
+            && available_bytes != 0;
 #else
         pollfd descriptor{.fd = STDIN_FILENO, .events = POLLIN, .revents = 0};
         const int result = ::poll(&descriptor, 1, 100);
@@ -187,6 +193,9 @@ private:
         std::array<char, 4096> buffer{};
         while (running_) {
             if (!input_ready()) {
+#if defined(_WIN32)
+                Sleep(10);
+#endif
                 continue;
             }
 
