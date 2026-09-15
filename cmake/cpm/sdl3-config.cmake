@@ -114,6 +114,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
         DESTINATION "${ct_sdl3_gen}/java/org"
         FILES_MATCHING
         PATTERN "*.java")
+    file(MAKE_DIRECTORY "${ct_sdl3_gen}")
     file(
         COPY_FILE
         "${SDL3_SOURCE_DIR}/android-project/app/src/main/AndroidManifest.xml"
