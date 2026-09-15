@@ -283,6 +283,27 @@ private:
 #endif
     }
 
+    [[nodiscard]] static int read_byte() noexcept
+    {
+#if defined(_WIN32)
+        const HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
+        if (input == nullptr || input == INVALID_HANDLE_VALUE) {
+            return std::char_traits<char>::eof();
+        }
+        char       byte{};
+        DWORD      bytes_read{};
+        const bool ok = ReadFile(input, &byte, 1, &bytes_read, nullptr) != 0 &&
+                        bytes_read != 0;
+        return ok ? static_cast<unsigned char>(byte)
+                  : std::char_traits<char>::eof();
+#else
+        char          byte{};
+        const ssize_t bytes_read = ::read(STDIN_FILENO, &byte, 1);
+        return bytes_read > 0 ? static_cast<unsigned char>(byte)
+                              : std::char_traits<char>::eof();
+#endif
+    }
+
     void io_loop()
     {
         try {
@@ -298,7 +319,7 @@ private:
                     continue;
                 }
 
-                const int character = std::cin.get();
+                const int character = read_byte();
                 if (character == std::char_traits<char>::eof()) {
                     break;
                 }
@@ -314,8 +335,13 @@ private:
                 }
                 if (message.size() == max_message_size) {
                     message.clear();
-                    std::cin.ignore(
-                        (std::numeric_limits<std::streamsize>::max)(), '\n');
+                    for (;;) {
+                        const int skip = read_byte();
+                        if (skip == std::char_traits<char>::eof() ||
+                            skip == '\n') {
+                            break;
+                        }
+                    }
                     continue;
                 }
                 message.push_back(static_cast<char>(character));

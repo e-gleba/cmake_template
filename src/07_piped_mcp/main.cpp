@@ -61,6 +61,21 @@ SDL_AppResult SDL_AppInit(void**                 appstate,
         return std::string{ buffer.data() };
     });
 
+    state->mcp_server_.register_handler("initialize", [](const std::string&) {
+        return R"json({"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"piped_mcp","version":"0.1.0"}})json";
+    });
+
+    state->mcp_server_.register_handler(
+        "ping", [](const std::string&) { return R"json({})json"; });
+
+    state->mcp_server_.register_handler("tools/list", [](const std::string&) {
+        return R"json({"tools":[]})json";
+    });
+
+    state->mcp_server_.register_handler("tools/call", [](const std::string&) {
+        return R"json({"content":[{"type":"text","text":"ok"}],"isError":false})json";
+    });
+
     if (!state->mcp_server_.start(config)) {
         SDL_Log(
             "Failed to start MCP server"); // NOLINT(cppcoreguidelines-pro-type-vararg)
