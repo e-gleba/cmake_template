@@ -19,7 +19,7 @@ if(NOT DEFINED CMAKE_SYSTEM_PROCESSOR)
 endif()
 
 set(LLVM_MINGW_VERSION
-    "20260826"
+    "20260908"
     CACHE STRING "llvm-mingw release tag")
 set(LLVM_MINGW_HOST_OS
     "ubuntu-22.04"
