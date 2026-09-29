@@ -33,5 +33,24 @@
                 "TGZ"
             ]
         }
+    ],
+    "workflowPresets": [
+        {
+            "name": "clang",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "clang"
+                },
+                {
+                    "type": "build",
+                    "name": "clang"
+                },
+                {
+                    "type": "package",
+                    "name": "clang-tgz"
+                }
+            ]
+        }
     ]
 }
