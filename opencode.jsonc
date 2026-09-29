@@ -1,0 +1,34 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "openTelemetry": false,
+    "formatter": true,
+    // MCPs catalog: https://mcpservers.org/
+    // For skills see: https://www.skills.sh/
+    "mcp": {
+        "xdocs": {
+            "type": "remote",
+            "url": "https://xdocs.dev/mcp",
+            "enabled": true
+        },
+        "qt-docs": {
+            "type": "remote",
+            "url": "https://qt-docs-mcp.qt.io/mcp",
+            "enabled": true
+        },
+        "ms-learn": {
+            "type": "remote",
+            "url": "https://learn.microsoft.com/api/mcp",
+            "enabled": true
+        },
+        "godbolt": {
+            "type": "remote",
+            "url": "https://godbolt.org/mcp",
+            "enabled": true
+        },
+        "google-dev": {
+            "type": "remote",
+            "url": "https://developerknowledge.googleapis.com/mcp",
+            "enabled": true
+        }
+    }
+}
