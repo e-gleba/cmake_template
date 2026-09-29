@@ -4,7 +4,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     SanderMertens/flecs
     GIT_TAG
-    v4.1.5
+    4.1.6
     GIT_SHALLOW
     ON
     EXCLUDE_FROM_ALL
