@@ -4,7 +4,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     microsoft/GSL
     VERSION
-    5.0.0
+    5.0.1
     GIT_SHALLOW
     TRUE
     GIT_PROGRESS
