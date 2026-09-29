@@ -5,6 +5,17 @@
     // MCPs catalog: https://mcpservers.org/
     // For skills see: https://www.skills.sh/
     "mcp": {
+        "github": {
+            "type": "remote",
+            "url": "https://api.githubcopilot.com/mcp/",
+            // As github is piece of shit disable it
+            // Done everything as they say: https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-opencode.md
+            "enabled": false,
+            "oauth": false,
+            "headers": {
+                "Authorization": "Bearer {env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+            }
+        },
         "xdocs": {
             "type": "remote",
             "url": "https://xdocs.dev/mcp",
