@@ -30,5 +30,30 @@
             "url": "https://developerknowledge.googleapis.com/mcp",
             "enabled": true
         }
+    },
+    "references": {
+        "boost": {
+            "repository": "boostorg/boost",
+            "branch": "master",
+            "description": "Use for Boost C++ Libraries API, headers in libs/, and CMake usage patterns"
+        },
+        "tdesktop": {
+            "repository": "telegramdesktop/tdesktop",
+            "branch": "dev",
+            "description": "Use for Telegram Desktop source, build instructions, Qt/C++ patterns, and patch structure"
+        },
+        "cmake": {
+            "repository": "Kitware/CMake",
+            "description": "Use for official CMake implementation, Help/ documentation, modules, and command behavior"
+        },
+        "modern-cmake": {
+            "repository": "https://gitlab.com/CLIUtils/modern-cmake.git",
+            "branch": "master",
+            "description": "Use for free Modern CMake book patterns: target-based design, presets, dependencies, and install rules"
+        },
+        "cppreference": {
+            "repository": "PeterFeicht/cppreference-doc",
+            "description": "Use for C++ standard library reference source used to build the cppreference offline archive"
+        }
     }
 }
