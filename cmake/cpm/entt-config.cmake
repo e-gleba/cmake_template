@@ -5,8 +5,8 @@ cpmaddpackage(
     skypjack/entt
     EXCLUDE_FROM_ALL
     ON
-    GIT_TAG
-    v3.16.0
+    VERSION
+    3.16.0
     OPTIONS
     "ENTT_USE_LIBCPP ON"
     "ENTT_BUILD_TESTING OFF"

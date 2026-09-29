@@ -3,8 +3,8 @@ cpmaddpackage(
     spdlog
     GITHUB_REPOSITORY
     gabime/spdlog
-    GIT_TAG
-    v1.17.0
+    VERSION
+    1.17.0
     EXCLUDE_FROM_ALL
     ON
     OPTIONS

@@ -3,7 +3,7 @@ cpmaddpackage(
     tracy
     GITHUB_REPOSITORY
     wolfpld/tracy
-    GIT_TAG
+    VERSION
     0.14.1
     GIT_SHALLOW
     ON

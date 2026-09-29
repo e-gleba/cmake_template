@@ -4,7 +4,7 @@ cpmaddpackage(
     pybind11
     GITHUB_REPOSITORY
     pybind/pybind11
-    GIT_TAG
+    VERSION
     3.1.0
     SYSTEM
     ON

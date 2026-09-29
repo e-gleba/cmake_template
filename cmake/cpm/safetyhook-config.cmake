@@ -3,7 +3,7 @@ cpmaddpackage(
     safetyhook
     GITHUB_REPOSITORY
     cursey/safetyhook
-    GIT_TAG
+    VERSION
     0.7.0
     EXCLUDE_FROM_ALL
     ON
