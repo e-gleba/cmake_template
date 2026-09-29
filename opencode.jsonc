@@ -54,6 +54,29 @@
         "cppreference": {
             "repository": "PeterFeicht/cppreference-doc",
             "description": "Use for C++ standard library reference source used to build the cppreference offline archive"
+        },
+        "sdl3": {
+            "repository": "libsdl-org/SDL",
+            "branch": "main",
+            "description": "Use for SDL3 windowing, rendering, audio, input, main-loop, and platform behavior"
+        },
+        "proton": {
+            "repository": "ValveSoftware/Proton",
+            "description": "Use for Proton/Steam Play compatibility, Wine integration, build scripts, and game-specific fixes"
+        },
+        "taskflow": {
+            "repository": "taskflow/taskflow",
+            "description": "Use for C++ task graphs, parallel algorithms, executors, scheduling, and C++20 task-parallel patterns"
+        },
+        "llvm": {
+            "repository": "llvm/llvm-project",
+            "branch": "main",
+            "description": "Use for Clang diagnostics, AST/tooling, LLVM IR, libc++, compiler flags, and sanitizers"
+        },
+        "chromium": {
+            "repository": "chromium/chromium",
+            "branch": "main",
+            "description": "Use only for Chromium internals, Blink, content layer, build/GN files, and large-scale C++ patterns"
         }
     }
 }
