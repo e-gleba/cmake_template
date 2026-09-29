@@ -1,159 +1,84 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-
-  // config:best-practices = config:recommended + docker:pinDigests +
-  // helpers:pinGitHubActionDigests + :configMigration + :pinDevDependencies +
-  // abandonments:recommended + security:minimumReleaseAgeNpm +
-  // :maintainLockFilesWeekly
-  extends: ["config:best-practices"],
-
-  // ─── General ──────────────────────────────────────────────────────────────
-  timezone: "UTC",
-  schedule: ["before 8am on monday"],
-
-  // No hourly PR cap: the self-hosted runner executes once per week, so any
-  // hourly limit trickles PR creation across weekly runs. 0 = unlimited per
-  // run; prConcurrentLimit still caps simultaneously open PRs.
-  // NOTE: if renovate/* branches appear but NO pull requests ever do, the
-  // cause is token permissions, not this limit — see the token comment in
-  // .github/workflows/renovate.yml. Seen so far: 403 on PR create, and 403
-  // on the renovate/stability commit status (minimumReleaseAge below) which
-  // aborts the run pre-PR with "Repository has changed during renovation".
-  prHourlyLimit: 0,
-  prConcurrentLimit: 10,
+  extends: ["config:recommended"],
 
   labels: ["dependencies"],
   commitMessagePrefix: "chore(deps):",
 
-  // Never ship zero-day releases: wait 3 days so yanked/broken upstream
-  // releases are filtered out before a PR is even created.
-  minimumReleaseAge: "3 days",
+  // Single weekly run — let it open every PR at once instead of trickling
+  // 2/hour and parking the rest behind dashboard checkboxes.
+  prHourlyLimit: 0,
 
-  // ─── Dependency Dashboard ─────────────────────────────────────────────────
-  // Persistent tracking issue listing pending/open/rate-limited updates and
-  // run errors. Tick a checkbox there to force-create any PR on demand —
-  // the Dependabot-like workflow, no CLI required.
+  // Tracking issue for pending updates; tick a checkbox to force a PR.
   dependencyDashboard: true,
-  dependencyDashboardTitle: "Renovate dependency dashboard",
 
-  // ─── Vulnerability alerts ─────────────────────────────────────────────────
-  // OSV database coverage on top of GitHub advisories.
-  osvVulnerabilityAlerts: true,
-  vulnerabilityAlerts: {
-    enabled: true,
-    schedule: ["at any time"],
-    labels: ["dependencies", "security"],
-    // Security fixes bypass the 3-day release-age gate.
-    minimumReleaseAge: null,
-  },
-
-  // Dependabot owns github-actions + docker updates (see .github/dependabot.yml) —
-  // disable here so the two bots never open duplicate PRs.
-  // Gradle/AGP updates stay enabled — including majors.
-  "github-actions": {
-    enabled: false,
-  },
-  dockerfile: {
-    enabled: false,
-  },
+  // Owned by Dependabot (see dependabot.yml) — never duplicate it here.
+  "github-actions": { enabled: false },
+  dockerfile: { enabled: false },
 
   packageRules: [
     {
-      description: "Auto-merge patch and pin updates after CI passes",
+      description: "Auto-merge safe updates once CI passes",
       matchUpdateTypes: ["patch", "pin"],
       automerge: true,
-      automergeStrategy: "squash",
-      platformAutomerge: true,
     },
     {
-      description:
-        "Group CPM minor updates into one weekly PR (patches stay separate and auto-merge, majors stay isolated)",
-      matchFileNames: ["cmake/cpm/**", "cmake/cpm-config.cmake"],
-      matchUpdateTypes: ["minor"],
-      groupName: "CPM dependencies (minor)",
-    },
-    {
-      description: "Roll toolchain releases into one PR",
-      matchDepNames: ["mstorsjo/llvm-mingw"],
-      groupName: "toolchains",
+      description: "Floating branches have no tags to compare — update manually",
+      matchDepNames: [
+        "libsdl-org/SDL_mixer",
+        "libsdl-org/SDL_shadercross",
+        "marton78/pffft",
+        "nothings/stb",
+        "tinyobjloader/tinyobjloader",
+      ],
+      enabled: false,
     },
   ],
 
-  // ─── CPM (CMake Package Manager) ──────────────────────────────────────────
-  // No native CPM manager — regex customManagers over cmake/cpm-config.cmake
-  // (CPM itself) and cmake/cpm/*-config.cmake (deps). Both
-  // GIT_REPOSITORY https://github.com/owner/repo and GITHUB_REPOSITORY owner/repo
-  // forms are matched.
+  // No native CPM manager exists — regex over cmake/cpm/*-config.cmake.
+  // Convention (keep it): GITHUB_REPOSITORY first, then one of GIT_TAG or
+  // VERSION. Never both — CPM uses GIT_TAG when present, so a stale VERSION
+  // next to it only confuses the updater.
   customManagers: [
-    // Matches: set(cpm_version "0.43.1")
     {
       customType: "regex",
-      description: "CPM.cmake itself (cpm_version variable)",
-      managerFilePatterns: ["/(^|/)cpm-config\\.cmake$/"],
+      description: "CPM bootstrap itself (cmake/ct_cpm.cmake)",
+      managerFilePatterns: ["/(^|/)cmake/ct_cpm\\.cmake$/"],
       matchStrings: [
-        "set\\(cpm_version\\s+\"(?<currentValue>[^\"]+)\"\\)",
+        "set\\(ct_cpm_version\\s+\"(?<currentValue>[^\"]+)\"\\)",
       ],
       depNameTemplate: "cpm-cmake/CPM.cmake",
       datasourceTemplate: "github-releases",
       extractVersionTemplate: "^v?(?<version>.+)$",
     },
-
-    // Matches: GIT_TAG v1.17.0 / GIT_TAG 1.0.3 / GIT_TAG VER-2-14-3
-    // paired with the repository declaration (either order, adjacent lines).
-    // Pure hex SHAs also match here but fail tag lookup harmlessly —
-    // they are handled by the digest manager below.
     {
       customType: "regex",
-      description: "CPM deps pinned by GIT_TAG (version tags)",
+      description: "CPM deps pinned by GIT_TAG",
       managerFilePatterns: ["/(^|/)cmake/cpm/[^/]+-config\\.cmake$/"],
       matchStrings: [
-        "GIT_TAG\\s+(?<currentValue>v?[A-Za-z]*\\d[^\\s\"]*?)\\s+(?:GIT_REPOSITORY\\s+https://github\\.com/|GITHUB_REPOSITORY\\s+)(?<depName>[^\\s\"]+?)(?:\\.git)?\\s",
-        "(?:GIT_REPOSITORY\\s+https://github\\.com/|GITHUB_REPOSITORY\\s+)(?<depName>[^\\s\"]+?)(?:\\.git)?\\s+GIT_TAG\\s+(?<currentValue>v?[A-Za-z]*\\d[^\\s\"]*?)\\s",
+        "GITHUB_REPOSITORY\\s+(?<depName>[\\w.-]+/[\\w.-]+)[\\s\\S]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
+        "GIT_REPOSITORY\\s+https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+?)(?:\\.git)?\\s[\\s\\S]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
       ],
       datasourceTemplate: "github-tags",
-      extractVersionTemplate: "^(?:v|VER-)?(?<version>.+)$",
+      extractVersionTemplate: "^(?:v|release-|VER-|yaml-cpp-)?(?<version>.+)$",
     },
-
-    // Matches: VERSION 1.92.8 paired with the repository declaration
-    // (implies GIT_TAG v{VERSION}). Used by: imgui, lua.
     {
       customType: "regex",
-      description: "CPM deps pinned by VERSION field",
+      description: "CPM deps pinned by VERSION only (implies GIT_TAG v{VERSION})",
       managerFilePatterns: ["/(^|/)cmake/cpm/[^/]+-config\\.cmake$/"],
       matchStrings: [
-        "VERSION\\s+(?<currentValue>\\d[^\\s\"]*?)\\s+(?:GIT_REPOSITORY\\s+https://github\\.com/|GITHUB_REPOSITORY\\s+)(?<depName>[^\\s\"]+?)(?:\\.git)?\\s",
-        "(?:GIT_REPOSITORY\\s+https://github\\.com/|GITHUB_REPOSITORY\\s+)(?<depName>[^\\s\"]+?)(?:\\.git)?\\s+VERSION\\s+(?<currentValue>\\d[^\\s\"]*?)\\s",
+        "GITHUB_REPOSITORY\\s+(?<depName>[\\w.-]+/[\\w.-]+)[\\s\\S]*?VERSION\\s+(?<currentValue>\\d[^\\s\"\\)]*)",
+        "GIT_REPOSITORY\\s+https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+?)(?:\\.git)?\\s[\\s\\S]*?VERSION\\s+(?<currentValue>\\d[^\\s\"\\)]*)",
       ],
       datasourceTemplate: "github-tags",
       extractVersionTemplate: "^v?(?<version>.+)$",
     },
-
-    // Matches: GIT_TAG 7bddff8c01f5fb931c3cb73d4aa8e66d303d97bc
-    // Tracks the default branch HEAD via git-refs.
     {
       customType: "regex",
-      description: "CPM deps pinned to a commit SHA",
-      managerFilePatterns: ["/(^|/)cmake/cpm/[^/]+-config\\.cmake$/"],
-      matchStrings: [
-        "GIT_TAG\\s+(?<currentDigest>[0-9a-f]{7,40})\\s+(?:GIT_REPOSITORY\\s+https://github\\.com/|GITHUB_REPOSITORY\\s+)(?<depName>[^\\s\"]+?)(?:\\.git)?\\s",
-        "(?:GIT_REPOSITORY\\s+https://github\\.com/|GITHUB_REPOSITORY\\s+)(?<depName>[^\\s\"]+?)(?:\\.git)?\\s+GIT_TAG\\s+(?<currentDigest>[0-9a-f]{7,40})\\s",
-      ],
-      datasourceTemplate: "git-refs",
-      depNameTemplate: "https://github.com/{{{depName}}}.git",
-      currentValueTemplate: "main",
-    },
-
-    // ─── Toolchains ─────────────────────────────────────────────────────────
-    // Matches: set(LLVM_MINGW_VERSION "20260826" ...) in the llvm-mingw
-    // toolchain file. Release tags are bare dates (YYYYMMDD, no v prefix),
-    // so semver-coerced versioning makes them comparable (20260826 ->
-    // 20260826.0.0) while the raw tag is written back as-is.
-    {
-      customType: "regex",
-      description: "llvm-mingw toolchain (LLVM_MINGW_VERSION release tag)",
+      description: "llvm-mingw toolchain release tag",
       managerFilePatterns: ["/(^|/)cmake/toolchains/llvm_mingw\\.cmake$/"],
       matchStrings: [
-        "set\\(LLVM_MINGW_VERSION\\s+\"(?<currentValue>[^\"]+)\"",
+        "LLVM_MINGW_VERSION\\s+\"(?<currentValue>[^\"]+)\"",
       ],
       depNameTemplate: "mstorsjo/llvm-mingw",
       datasourceTemplate: "github-releases",

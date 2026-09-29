@@ -35,8 +35,6 @@ cpmaddpackage(
     SDL3
     GITHUB_REPOSITORY
     libsdl-org/SDL
-    VERSION
-    3.4.14
     GIT_TAG
     release-3.4.14
     GIT_SHALLOW

@@ -3,8 +3,6 @@ cpmaddpackage(
     flecs
     GITHUB_REPOSITORY
     SanderMertens/flecs
-    VERSION
-    4.1.6
     GIT_TAG
     v4.1.5
     GIT_SHALLOW

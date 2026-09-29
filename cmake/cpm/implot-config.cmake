@@ -1,10 +1,10 @@
 cpmaddpackage(
     NAME
     implot
-    VERSION
-    1.0
     GITHUB_REPOSITORY
     epezent/implot
+    VERSION
+    1.0
     SYSTEM
     ON
     EXCLUDE_FROM_ALL

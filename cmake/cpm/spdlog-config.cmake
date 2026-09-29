@@ -1,12 +1,12 @@
 cpmaddpackage(
     NAME
     spdlog
+    GITHUB_REPOSITORY
+    gabime/spdlog
     GIT_TAG
     v1.17.0
     EXCLUDE_FROM_ALL
     ON
-    GITHUB_REPOSITORY
-    gabime/spdlog
     OPTIONS
     "SPDLOG_BUILD_EXAMPLE OFF"
     "SPDLOG_BUILD_TESTS OFF"
