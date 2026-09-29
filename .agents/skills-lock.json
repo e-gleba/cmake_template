@@ -169,6 +169,12 @@
       "skillPath": "skills/computer-architecture/cpu-pipelines-and-hazards/SKILL.md",
       "computedHash": "8fbe595ac74abf29cf9b75f93b925271fe5338cbe1493c32bbb6ddc9e4eae4d3"
     },
+    "create-github-action-workflow-specification": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/create-github-action-workflow-specification/SKILL.md",
+      "computedHash": "527e6c77d921d58a9d0059aa95d0d14b441d2166f9c20518263048a56ca8fbbb"
+    },
     "cross-gcc": {
       "source": "mohitmishra786/low-level-dev-skills",
       "sourceType": "github",
@@ -276,6 +282,12 @@
       "sourceType": "github",
       "skillPath": "skills/debuggers/gdb/SKILL.md",
       "computedHash": "2a05cf6a724c6d4cc6b1390d7472dd26c25ff1bb12340c0ea30f50a5f355ef82"
+    },
+    "git-commit": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/git-commit/SKILL.md",
+      "computedHash": "2607fc60629b82b257136dd2a7a373f0a4466c0b49df7746d845d59313c99b21"
     },
     "gpu-memory-model": {
       "source": "mohitmishra786/low-level-dev-skills",

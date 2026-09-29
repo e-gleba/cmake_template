@@ -119,6 +119,12 @@ install_agent_skills(
     resolving-merge-conflicts)
 install_agent_skills(
     URL
+    https://github.com/github/awesome-copilot
+    SKILLS
+    create-github-action-workflow-specification
+    git-commit)
+install_agent_skills(
+    URL
     https://github.com/mohitmishra786/low-level-dev-skills
     SKILLS
     gcc
@@ -221,12 +227,6 @@ install_agent_skills(
     wasm-emscripten
     wasm-wasmtime)
 
-# GitHub MCP (OAuth, browser login): opencode mcp auth githubcopilot
-install_agent_mcp(
-    URL
-    https://api.githubcopilot.com/mcp/
-    NAME
-    githubcopilot)
 install_agent_mcp(
     URL
     https://xdocs.dev/mcp
