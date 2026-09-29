@@ -1,0 +1,44 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Kitware/CMake/master/Help/manual/presets/schema.json",
+    "version": 12,
+    "cmakeMinimumRequired": {
+        "major": 4,
+        "minor": 4,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "dev",
+            "displayName": "dev",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/dev",
+            "toolchainFile": "${sourceDir}/cmake/toolchain-clang-libcxx.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "dev",
+            "configurePreset": "dev"
+        }
+    ],
+    "packagePresets": [
+        {
+            "name": "dev-tgz",
+            "configurePreset": "dev",
+            "generators": [
+                "TGZ"
+            ]
+        },
+        {
+            "name": "dev-deb",
+            "configurePreset": "dev",
+            "generators": [
+                "DEB"
+            ]
+        }
+    ]
+}
