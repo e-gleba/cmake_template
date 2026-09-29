@@ -1,4 +1,23 @@
 [tools]
 cmake = "4.3"
 ninja = "1"
-clang = "22"
+clang = "21"
+"conda:clangxx" = "21"
+"conda:libcxx" = "21"
+"conda:libcxx-devel" = "21"
+
+[env]
+# Install prefix of conda-forge libc++ runtime.
+# mise Templates: tools.<name>.path — https://mise.jdx.dev/templates.html
+CT_LIBCXX = { value = "{{ tools['conda:libcxx'].path }}", tools = true }
+# Install prefix of conda-forge libc++ headers (same mechanism as above).
+CT_LIBCXX_DEVEL = { value = "{{ tools['conda:libcxx-devel'].path }}", tools = true }
+# C++ header search path (as -isystem). GCC driver env var, honored by Clang:
+# https://gcc.gnu.org/onlinedocs/gcc/Environment-Variables.html
+CPLUS_INCLUDE_PATH = { value = "{{ env.CT_LIBCXX_DEVEL }}/include/c++/v1", tools = true }
+# Link-time library search path (-L for -l). GCC driver env var, honored by Clang:
+# https://gcc.gnu.org/onlinedocs/gcc/Environment-Variables.html
+LIBRARY_PATH = { value = "{{ env.CT_LIBCXX }}/lib", tools = true }
+# Loader search path for build-tree runs. glibc ld.so:
+# https://man7.org/linux/man-pages/man8/ld.so.8.html
+LD_LIBRARY_PATH = { value = "{{ env.CT_LIBCXX }}/lib", tools = true }

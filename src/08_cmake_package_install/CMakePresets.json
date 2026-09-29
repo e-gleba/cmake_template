@@ -9,7 +9,7 @@
     "configurePresets": [
         {
             "name": "clang",
-            "displayName": "Clang (mise)",
+            "displayName": "Clang + libc++",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/clang",
             "cacheVariables": {
