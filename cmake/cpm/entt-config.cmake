@@ -6,7 +6,7 @@ cpmaddpackage(
     EXCLUDE_FROM_ALL
     ON
     VERSION
-    3.16.0
+    4.0.0
     OPTIONS
     "ENTT_USE_LIBCPP ON"
     "ENTT_BUILD_TESTING OFF"
