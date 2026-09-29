@@ -7,7 +7,7 @@ include(FetchContent)
 # NOTE: no URL_HASH on purpose. Renovate bumps ct_cpm_version but cannot
 # recompute a hash — a stale hash fails the configure step harder than
 # no hash. Same trust model as the GIT_TAG-pinned deps below.
-set(ct_cpm_version "0.43.1")
+set(ct_cpm_version "0.43.2")
 
 fetchcontent_declare(
     get_cpm
