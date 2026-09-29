@@ -4,7 +4,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     doctest/doctest
     GIT_TAG
-    2.5.3
+    v2.5.3
     GIT_SHALLOW
     ON
     EXCLUDE_FROM_ALL

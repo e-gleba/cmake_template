@@ -9,8 +9,8 @@
   // 2/hour and parking the rest behind dashboard checkboxes.
   prHourlyLimit: 0,
 
-  // Tracking issue for pending updates; tick a checkbox to force a PR.
-  dependencyDashboard: true,
+  // No dashboard issue — updates arrive as PRs directly.
+  dependencyDashboard: false,
 
   // Owned by Dependabot (see dependabot.yml) — never duplicate it here.
   "github-actions": { enabled: false },

@@ -4,7 +4,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     spnda/fastgltf
     GIT_TAG
-    0.9.1
+    v0.9.1
     SYSTEM
     ON
     EXCLUDE_FROM_ALL
