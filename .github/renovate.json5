@@ -36,9 +36,14 @@
   ],
 
   // No native CPM manager exists — regex over cmake/cpm/*-config.cmake.
+  // Renovate writes back the STRIPPED version (no tag prefix), so the pin
+  // form must round-trip it — pick by upstream tag style:
+  //   tag vX.Y.Z                -> VERSION X.Y.Z  (CPM prepends the v)
+  //   tag X.Y.Z (bare)          -> GIT_TAG X.Y.Z  (exact as-is)
+  //   VER- / release- / yaml-cpp- tags -> dedicated managers below that
+  //   restore the prefix via autoReplaceStringTemplate.
   // Convention (keep it): GITHUB_REPOSITORY first, then one of GIT_TAG or
-  // VERSION. Never both — CPM uses GIT_TAG when present, so a stale VERSION
-  // next to it only confuses the updater.
+  // VERSION — never both.
   customManagers: [
     {
       customType: "regex",
@@ -60,7 +65,11 @@
         "GIT_REPOSITORY\\s+https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+?)(?:\\.git)?\\s[\\s\\S]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
       ],
       datasourceTemplate: "github-tags",
-      extractVersionTemplate: "^(?:v|release-|VER-|yaml-cpp-)?(?<version>.+)$",
+      // Keep the full tag (e.g. "release-3.4.14", "v2.5.3") as currentValue
+      // so Renovate writes the complete tag back into GIT_TAG. The
+      // versioningTemplate strips the prefix only for comparison.
+      extractVersionTemplate: "^(?<version>.+)$",
+      versioningTemplate: "^(?:v|release-|VER-|yaml-cpp-)?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
     },
     {
       customType: "regex",
