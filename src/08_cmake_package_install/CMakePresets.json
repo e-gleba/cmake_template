@@ -1,21 +1,50 @@
 {
-    "$schema": "https://raw.githubusercontent.com/Kitware/CMake/master/Help/manual/presets/schema.json",
-    "version": 12,
+    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+    "version": 11,
     "cmakeMinimumRequired": {
         "major": 4,
-        "minor": 4,
+        "minor": 3,
         "patch": 0
     },
     "configurePresets": [
         {
             "name": "dev",
-            "displayName": "dev",
+            "displayName": "dev (default compiler)",
+            "description": "Zero-pin native iteration: whatever cc/cxx is on PATH.",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/dev",
-            "toolchainFile": "${sourceDir}/cmake/toolchain-clang-libcxx.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "clang",
+            "displayName": "Clang + libstdc++",
+            "description": "Default Clang stdlib. Bundles libstdc++.so.6 + libgcc_s.so.1. Under 'mise x' this resolves to the mise-pinned Clang.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/clang",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++"
+            }
+        },
+        {
+            "name": "clang-libcxx",
+            "displayName": "Clang + libc++ (mise)",
+            "description": "Bundles libc++.so.1 + libc++abi.so.1 from the mise conda-forge libc++. Roots come from RT_LIBCXX_* in mise.toml, so this preset only works with the mise env active — configure fails fast with the fix otherwise.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/clang-libcxx",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_CXX_FLAGS": "--sysroot=/ -stdlib=libc++ -isystem $env{RT_LIBCXX_INCLUDE}",
+                "CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -L$env{RT_LIBCXX_LIB}/lib -Wl,-rpath,$env{RT_LIBCXX_LIB}/lib",
+                "CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -L$env{RT_LIBCXX_LIB}/lib -Wl,-rpath,$env{RT_LIBCXX_LIB}/lib"
             }
         }
     ],
@@ -23,6 +52,14 @@
         {
             "name": "dev",
             "configurePreset": "dev"
+        },
+        {
+            "name": "clang",
+            "configurePreset": "clang"
+        },
+        {
+            "name": "clang-libcxx",
+            "configurePreset": "clang-libcxx"
         }
     ],
     "packagePresets": [

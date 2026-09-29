@@ -1,0 +1,4 @@
+[tools]
+cmake = "4.3"
+ninja = "1"
+clang = "22"
