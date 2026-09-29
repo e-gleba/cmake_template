@@ -1,5 +1,6 @@
 #include "rt_build_info.hpp"
 
+#include <atomic>
 #include <format>
 #include <iostream>
 #include <ranges>
@@ -23,6 +24,17 @@ auto probe_exceptions() -> std::string
     }
 }
 
+auto probe_atomics() -> long long
+{
+    // 16-byte RMW lowers to a __atomic_fetch_add_16 libcall, so the link
+    // genuinely needs libatomic (undefined reference without it). This
+    // keeps the imported lib in NEEDED instead of letting the linker
+    // drop it as unused.
+    static std::atomic<__int128> counter{ 0 };
+    counter.fetch_add(1, std::memory_order_relaxed);
+    return static_cast<long long>(counter.load(std::memory_order_relaxed));
+}
+
 void print_status()
 {
     std::vector<int> values{ 3, 1, 2 };
@@ -30,6 +42,7 @@ void print_status()
     std::cout << std::format("version={}\n", rt::k_project_version);
     std::cout << std::format("vector_size={}\n", values.size());
     std::cout << std::format("unwind_probe={}\n", probe_exceptions());
+    std::cout << std::format("atomic128={}\n", probe_atomics());
 #if defined(_LIBCPP_VERSION)
     std::cout << std::format("stdlib=libc++ {}\n", _LIBCPP_VERSION);
 #elif defined(__GLIBCXX__)
@@ -64,6 +77,14 @@ void print_status()
 #endif
 #ifdef _LIBCPP_ABI_VERSION
     std::cout << std::format("libcxx_abi={}\n", _LIBCPP_ABI_VERSION);
+#endif
+#if defined(_LIBCPP_VERSION) && defined(__clang_major__)
+    // Same-release-line tripwire: the headers baked _LIBCPP_VERSION, the
+    // compiler baked __clang_major__. Pinning "21" across the conda
+    // packages keeps this "yes"; drifted headers flip it to "no".
+    std::cout << std::format("release_match={}\n",
+                             _LIBCPP_VERSION / 10000 == __clang_major__ ? "yes"
+                                                                        : "no");
 #endif
 }
 

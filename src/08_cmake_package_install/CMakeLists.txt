@@ -39,6 +39,14 @@ configure_file(rt_build_info.hpp.in
 add_executable(rt_demo main.cpp)
 target_compile_features(rt_demo PRIVATE cxx_std_23)
 target_include_directories(rt_demo PRIVATE ${PROJECT_BINARY_DIR}/generated)
+# Imported-lib bundling test: libatomic from the toolchain (found via the
+# env-provided LIBRARY_PATH, no hardcoded paths). Linked PRIVATE, so it
+# lands in NEEDED and the RUNTIME_DEPENDENCY_SET below must pack it.
+find_library(ct_atomic_lib atomic HINTS $ENV{LIBRARY_PATH} REQUIRED)
+add_library(ct_atomic UNKNOWN IMPORTED)
+set_target_properties(ct_atomic PROPERTIES IMPORTED_LOCATION
+                                            "${ct_atomic_lib}")
+target_link_libraries(rt_demo PRIVATE ct_atomic)
 target_compile_options(
     rt_demo PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-stdlib=libc++>)
 target_link_options(rt_demo PRIVATE -stdlib=libc++)

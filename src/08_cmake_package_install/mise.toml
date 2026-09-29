@@ -1,23 +1,39 @@
 [tools]
+# Build system matching cmake_minimum_required(VERSION 4.3).
+# Official Kitware release: https://cmake.org/
 cmake = "4.3"
+# Parallel build backend used by the Ninja presets.
+# Official project: https://ninja-build.org/
 ninja = "1"
+# C compiler. Pinned to 21 to prove the build uses this toolchain,
+# not the system Clang 22. Official conda-forge package:
+# https://anaconda.org/conda-forge/clang
 clang = "21"
+# C++ compiler: the plain clang package ships no clang++ shim, this one
+# does. Must match clang above. Official conda-forge package:
+# https://anaconda.org/conda-forge/clangxx
 "conda:clangxx" = "21"
+# LLVM libc++ runtime (libc++.so, libc++abi.so, unwinder) bundled into
+# the tar. Must match the compiler. Official conda-forge package:
+# https://anaconda.org/conda-forge/libcxx
 "conda:libcxx" = "21"
+# libc++ headers (include/c++/v1) for -stdlib=libc++ compiles.
+# Same version. Official conda-forge package:
+# https://anaconda.org/conda-forge/libcxx-devel
 "conda:libcxx-devel" = "21"
 
 [env]
 # Install prefix of conda-forge libc++ runtime.
 # mise Templates: tools.<name>.path — https://mise.jdx.dev/templates.html
-CT_LIBCXX = { value = "{{ tools['conda:libcxx'].path }}", tools = true }
+EGLEBA_LIBCXX = { value = "{{ tools['conda:libcxx'].path }}", tools = true }
 # Install prefix of conda-forge libc++ headers (same mechanism as above).
-CT_LIBCXX_DEVEL = { value = "{{ tools['conda:libcxx-devel'].path }}", tools = true }
+EGLEBA_LIBCXX_DEVEL = { value = "{{ tools['conda:libcxx-devel'].path }}", tools = true }
 # C++ header search path (as -isystem). GCC driver env var, honored by Clang:
 # https://gcc.gnu.org/onlinedocs/gcc/Environment-Variables.html
-CPLUS_INCLUDE_PATH = { value = "{{ env.CT_LIBCXX_DEVEL }}/include/c++/v1", tools = true }
+CPLUS_INCLUDE_PATH = { value = "{{ env.EGLEBA_LIBCXX_DEVEL }}/include/c++/v1", tools = true }
 # Link-time library search path (-L for -l). GCC driver env var, honored by Clang:
 # https://gcc.gnu.org/onlinedocs/gcc/Environment-Variables.html
-LIBRARY_PATH = { value = "{{ env.CT_LIBCXX }}/lib", tools = true }
+LIBRARY_PATH = { value = "{{ env.EGLEBA_LIBCXX }}/lib", tools = true }
 # Loader search path for build-tree runs. glibc ld.so:
 # https://man7.org/linux/man-pages/man8/ld.so.8.html
-LD_LIBRARY_PATH = { value = "{{ env.CT_LIBCXX }}/lib", tools = true }
+LD_LIBRARY_PATH = { value = "{{ env.EGLEBA_LIBCXX }}/lib", tools = true }
