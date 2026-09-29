@@ -36,14 +36,19 @@
   ],
 
   // No native CPM manager exists — regex over cmake/cpm/*-config.cmake.
-  // Renovate writes back the STRIPPED version (no tag prefix), so the pin
-  // form must round-trip it — pick by upstream tag style:
-  //   tag vX.Y.Z                -> VERSION X.Y.Z  (CPM prepends the v)
-  //   tag X.Y.Z (bare)          -> GIT_TAG X.Y.Z  (exact as-is)
-  //   release- / yaml-cpp- tags -> dedicated managers below that restore
-  //   the prefix via autoReplaceStringTemplate.
-  //   VER-x-y-z tags (freetype) -> dedicated manager: dots for lookup,
-  //   dashes restored on write via newMajor/newMinor/newPatch.
+  // Two pin forms, picked by upstream tag style (CPM prepends the v, so
+  // a vX.Y.Z tag is pinned as VERSION X.Y.Z and round-trips exactly):
+  //   tag vX.Y.Z                -> VERSION X.Y.Z
+  //   tag X.Y.Z (bare)          -> GIT_TAG X.Y.Z
+  // Prefixed tags that are NOT bare and NOT v- (release-, yaml-cpp-,
+  // VER-x-y-z) stay GIT_TAG and get a dedicated manager below whose
+  // regex versioning parses the numeric segments out of the FULL tag.
+  // The full tag stays the version throughout: newValue keeps the prefix,
+  // the default in-place swap preserves the file structure, and the
+  // post-write re-extraction confirms cleanly. (An extractVersionTemplate
+  // that strips the prefix breaks this: the stripped newValue no longer
+  // matches the re-extracted full tag, and an autoReplaceStringTemplate
+  // replaces the whole match region instead of just the value.)
   // Convention (keep it): GITHUB_REPOSITORY first, then one of GIT_TAG or
   // VERSION — never both. The [^()]*? span keeps each match inside one
   // cpmaddpackage() call (a call's own args never contain parens, while
@@ -90,36 +95,43 @@
     },
     {
       customType: "regex",
-      description: "freetype: VER-x-y-z tags (dashes; dots for lookup)",
+      description: "freetype: VER-x-y-z tags (dashes; full tag is the version)",
       managerFilePatterns: ["/(^|/)cmake/cpm/freetype-config\\.cmake$/"],
       matchStrings: [
-        "GITHUB_REPOSITORY\\s+(?<depName>[\\w.-]+/[\\w.-]+)[\\s\\S]*?GIT_TAG\\s+(?<currentValue>VER-(?<major>\\d+)-(?<minor>\\d+)-(?<patch>\\d+))",
+        "GITHUB_REPOSITORY\\s+(?<depName>[\\w.-]+/[\\w.-]+)[^()]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
+        "GIT_REPOSITORY\\s+https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+?)(?:\\.git)?\\s[^()]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
       ],
       datasourceTemplate: "github-tags",
-      extractVersionTemplate: "{{{major}}}.{{{minor}}}.{{{patch}}}",
-      autoReplaceStringTemplate: "VER-{{{newMajor}}}-{{{newMinor}}}-{{{newPatch}}}",
+      // Same shape as SDL. Bonus: VER- tags now pass isVersion, so the
+      // datasource actually returns releases (previously filtered to []).
+      versioningTemplate: "regex:^VER-(?<major>\\d+)-(?<minor>\\d+)-(?<patch>\\d+)$",
     },
     {
       customType: "regex",
-      description: "SDL: release- tags (prefix restored on write)",
+      description: "SDL: release- tags (full tag is the version)",
       managerFilePatterns: ["/(^|/)cmake/cpm/sdl3-config\\.cmake$/"],
       matchStrings: [
-        "GITHUB_REPOSITORY\\s+(?<depName>[\\w.-]+/[\\w.-]+)[\\s\\S]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
+        "GITHUB_REPOSITORY\\s+(?<depName>[\\w.-]+/[\\w.-]+)[^()]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
+        "GIT_REPOSITORY\\s+https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+?)(?:\\.git)?\\s[^()]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
       ],
       datasourceTemplate: "github-tags",
-      extractVersionTemplate: "^release-(?<version>.+)$",
-      autoReplaceStringTemplate: "release-{{{newValue}}}",
+      // Full tag stays the version: regex versioning compares the numeric
+      // segments, newValue keeps the prefix, and the default in-place swap
+      // preserves the file structure (autoReplaceStringTemplate would
+      // replace the whole match and break confirmIfDepUpdated).
+      versioningTemplate: "regex:^release-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
     },
     {
       customType: "regex",
-      description: "yaml-cpp: yaml-cpp- tags (prefix restored on write)",
+      description: "yaml-cpp: yaml-cpp- tags (full tag is the version)",
       managerFilePatterns: ["/(^|/)cmake/cpm/yaml-cpp-config\\.cmake$/"],
       matchStrings: [
-        "GITHUB_REPOSITORY\\s+(?<depName>[\\w.-]+/[\\w.-]+)[\\s\\S]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
+        "GITHUB_REPOSITORY\\s+(?<depName>[\\w.-]+/[\\w.-]+)[^()]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
+        "GIT_REPOSITORY\\s+https://github\\.com/(?<depName>[\\w.-]+/[\\w.-]+?)(?:\\.git)?\\s[^()]*?GIT_TAG\\s+(?<currentValue>[^\\s\"\\)]+)",
       ],
       datasourceTemplate: "github-tags",
-      extractVersionTemplate: "^yaml-cpp-(?<version>.+)$",
-      autoReplaceStringTemplate: "yaml-cpp-{{{newValue}}}",
+      // Same shape as SDL (see above).
+      versioningTemplate: "regex:^yaml-cpp-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
     },
     {
       customType: "regex",
