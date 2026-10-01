@@ -1,0 +1,30 @@
+[tools]
+# Build system matching cmake_minimum_required(VERSION 4.3).
+# Official Kitware release: https://cmake.org/
+cmake = "4.4.3"
+# Parallel build backend used by the Ninja presets.
+# Official project: https://ninja-build.org/
+ninja = "1.13.2"
+
+[tools."github:llvm/llvm-project"]
+# Pinned LLVM release. Tag on GitHub is llvmorg-<version>, so version_prefix
+# strips/adds that decoration: version stays bare ("23.1.2") and {{ version }}
+# in asset_pattern below always matches it — bump once, no other edits.
+# Official release: https://github.com/llvm/llvm-project/releases
+version = "23.1.2"
+version_prefix = "llvmorg-"
+# Archives wrap everything in one top-level dir (LLVM-<version>-<platform>/):
+# strip it, then expose its bin/ on PATH.
+# Ref: https://mise.jdx.dev/dev-tools/backends/github.html#bin_path
+strip_components = 1
+bin_path = "bin"
+
+[tools."github:llvm/llvm-project".platforms]
+# Asset names embed the bare version, templated — never hardcode it twice.
+# Full list: https://github.com/llvm/llvm-project/releases/tag/llvmorg-23.1.2
+# macOS x64 has no upstream asset for 23.x (ARM64 only), so it is omitted.
+linux-x64 = { asset_pattern = "LLVM-{{ version }}-Linux-X64.tar.zst" }
+linux-arm64 = { asset_pattern = "LLVM-{{ version }}-Linux-ARM64.tar.zst" }
+macos-arm64 = { asset_pattern = "LLVM-{{ version }}-macOS-ARM64.tar.zst" }
+windows-x64 = { asset_pattern = "clang+llvm-{{ version }}-x86_64-pc-windows-msvc.tar.zst" }
+windows-arm64 = { asset_pattern = "clang+llvm-{{ version }}-aarch64-pc-windows-msvc.tar.zst" }

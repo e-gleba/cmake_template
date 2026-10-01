@@ -12,7 +12,8 @@
             "inherits": "base",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "clang",
-                "CMAKE_CXX_COMPILER": "clang++"
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CT_CXX_STDLIB": "libc++"
             },
             "condition": {
                 "type": "equals",

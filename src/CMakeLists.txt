@@ -8,3 +8,4 @@ add_subdirectory(06_modules)
 
 # Piped MCP stdio implementation
 add_subdirectory(07_piped_mcp)
+add_subdirectory(08_cmake_package_install)
