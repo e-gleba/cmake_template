@@ -11,6 +11,33 @@ set(CT_CXX_STDLIB
     ""
     CACHE STRING "C++ stdlib for rt_demo (empty = default)")
 
+# "libc++" is a request, not a promise: verify the toolchain really ships
+# it — try_compile with a real <string_view> TU (headers AND link both
+# have to work), not just a flag probe a header-less toolchain could pass.
+# Toolchains without libc++ (e.g. CI system Clang) fall back to the driver
+# default with a warning instead of failing the whole configure.
+set(ct_stdlib_flag "")
+if(CT_CXX_STDLIB STREQUAL "libc++")
+    include(CheckCXXSourceCompiles)
+    set(CMAKE_REQUIRED_FLAGS "-stdlib=libc++")
+    set(CMAKE_REQUIRED_LINK_OPTIONS "-stdlib=libc++")
+    check_cxx_source_compiles(
+        "#include <string_view>\nint main() { std::string_view v{\"x\"}; return v.empty() ? 0 : 1; }"
+        CT_HAS_LIBCXX)
+    unset(CMAKE_REQUIRED_FLAGS)
+    unset(CMAKE_REQUIRED_LINK_OPTIONS)
+    if(CT_HAS_LIBCXX)
+        set(ct_stdlib_flag "-stdlib=libc++")
+    else()
+        message(
+            WARNING
+                "08/rt_demo: CT_CXX_STDLIB=libc++ unsupported by ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}; using driver default"
+        )
+    endif()
+elseif(CT_CXX_STDLIB)
+    message(FATAL_ERROR "08/rt_demo: CT_CXX_STDLIB='${CT_CXX_STDLIB}': only '' or 'libc++' supported")
+endif()
+
 add_executable(rt_demo)
 target_sources(rt_demo PRIVATE main.cpp)
 
@@ -24,15 +51,9 @@ tb_add_build_info(
 
 target_compile_features(rt_demo PRIVATE cxx_std_20)
 target_include_directories(rt_demo PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-
-# fmt is 08-local (root ct_cpm.cmake stays lean): the wrapper makes it
-# findable via the CMAKE_PREFIX_PATH the root already exports.
-find_package(fmt CONFIG REQUIRED)
-# Header-only fmt: templates instantiate in our TUs with our stdlib, so no
-# libc++/libstdc++ ABI boundary to manage at link time (fmt's documented
-# header-only mode). No extra shared lib lands in the install bundle either.
-target_compile_definitions(rt_demo PRIVATE FMT_HEADER_ONLY)
-target_link_libraries(rt_demo PRIVATE fmt::fmt warnings)
+# Deliberately no fmt here (dependency-free std): fmt 12 cannot compile
+# on 32-bit llvm-mingw at all — see the caveat in cmake/cpm/fmt-config.cmake.
+target_link_libraries(rt_demo PRIVATE warnings)
 
 set_target_properties(
     rt_demo

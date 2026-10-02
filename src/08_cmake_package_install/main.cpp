@@ -1,14 +1,10 @@
 #include <build_info.hpp>
 
 #include <cstdlib>
-#include <fmt/format.h>
+#include <iostream>
 
-auto main() -> int
+int main()
 {
-    try {
-        fmt::print("{}\n", tb::build_info::get_build_report());
-    } catch (...) {
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
+    std::cout << tb::build_info::get_build_report() << '\n';
+    return std::cout.good() ? EXIT_SUCCESS : EXIT_FAILURE;
 }

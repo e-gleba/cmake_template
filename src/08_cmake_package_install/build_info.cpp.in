@@ -2,11 +2,9 @@
 #include <build_info.hpp>
 
 #include <bit>
-#include <fmt/format.h>
-#include <fmt/ranges.h>
 #include <initializer_list>
-#include <iterator>
 #include <ranges>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -276,30 +274,43 @@ constexpr std::string_view cpp_features =
     for (auto const part : raw | std::views::split(';')) {
         parts.emplace_back(part.begin(), part.end());
     }
-    return fmt::format("{} items: [{}]", parts.size(), fmt::join(parts, ", "));
+    std::ostringstream out;
+    out << parts.size() << " items: [";
+    bool first{ true };
+    for (std::string_view const item : parts) {
+        if (!first) {
+            out << ", ";
+        }
+        first = false;
+        out << item;
+    }
+    out << "]";
+    return std::move(out).str();
 }
 
 struct report_builder final
 {
-    std::string out_;
+    std::ostringstream os_;
 
     void line(std::initializer_list<std::string_view> parts)
     {
         for (std::string_view const part : parts) {
-            fmt::format_to(std::back_inserter(out_), "{}", part);
+            os_ << part;
         }
-        out_ += '\n';
+        os_ << '\n';
     }
 
     void list(std::string_view label, std::string_view raw)
     {
-        fmt::format_to(std::back_inserter(out_),
-                       "{:<11}: {}\n",
-                       label,
-                       format_list(raw));
+        // "{:<11}: {}\n" without fmt: pad the label, then the value.
+        os_ << label;
+        for (std::size_t i{ label.size() }; i < 11; ++i) {
+            os_ << ' ';
+        }
+        os_ << ": " << format_list(raw) << '\n';
     }
 
-    [[nodiscard]] std::string str() && { return std::move(out_); }
+    [[nodiscard]] std::string str() && { return std::move(os_).str(); }
 };
 
 [[nodiscard]] std::string make_report()
