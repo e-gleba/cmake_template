@@ -7,15 +7,20 @@ include("${CMAKE_CURRENT_LIST_DIR}/tb_build_info.cmake")
 # -stdlib= value. The linux_clang preset sets libc++; GCC/MSVC presets
 # leave it empty. -stdlib= is a Clang-only flag — setting it for a
 # non-Clang compiler fails loudly instead of silently doing the wrong thing.
-set(CT_CXX_STDLIB "" CACHE STRING "C++ stdlib for rt_demo (empty = default)")
+set(CT_CXX_STDLIB
+    ""
+    CACHE STRING "C++ stdlib for rt_demo (empty = default)")
 
 add_executable(rt_demo)
 target_sources(rt_demo PRIVATE main.cpp)
 
 tb_add_build_info(
-    TARGET rt_demo
-    TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/build_info.cpp.in"
-    OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+    TARGET
+    rt_demo
+    TEMPLATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/build_info.cpp.in"
+    OUT_DIR
+    "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 target_compile_features(rt_demo PRIVATE cxx_std_20)
 target_include_directories(rt_demo PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -31,37 +36,56 @@ target_link_libraries(rt_demo PRIVATE fmt::fmt warnings)
 
 set_target_properties(
     rt_demo
-    PROPERTIES CXX_EXTENSIONS OFF
-               CXX_SCAN_FOR_MODULES OFF
-               # Relocatable PIE: no fixed load address, ASLR on. Reported as
-               # pie/pic/static in the build report via __PIE__/__PIC__.
-               POSITION_INDEPENDENT_CODE ON
-               BUILD_RPATH_USE_ORIGIN TRUE
-               # Build-tree run needs the toolchain runtime (libc++/libunwind
-               # live in the compiler's implicit link dirs, not on ld.so path).
-               # Compiler-derived, no hardcoded paths.
-               BUILD_RPATH "${CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES}"
-               INSTALL_RPATH_USE_LINK_PATH OFF
-               # @executable_path on Apple, $ORIGIN elsewhere — one genex,
-               # CMP0095 (NEW at our 4.3 floor) escapes $ORIGIN correctly.
-               INSTALL_RPATH
-               "$<IF:$<PLATFORM_ID:Darwin,iOS>,@executable_path,$ORIGIN>/../${CMAKE_INSTALL_LIBDIR}")
+    PROPERTIES
+        CXX_EXTENSIONS OFF
+        CXX_SCAN_FOR_MODULES OFF
+        # Relocatable PIE: no fixed load address, ASLR on. Reported as
+        # pie/pic/static in the build report via __PIE__/__PIC__.
+        POSITION_INDEPENDENT_CODE ON
+        BUILD_RPATH_USE_ORIGIN TRUE
+        # Build-tree run needs the toolchain runtime (libc++/libunwind
+        # live in the compiler's implicit link dirs, not on ld.so path).
+        # Compiler-derived, no hardcoded paths.
+        BUILD_RPATH "${CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES}"
+        INSTALL_RPATH_USE_LINK_PATH OFF
+        # @executable_path on Apple, $ORIGIN elsewhere — one genex,
+        # CMP0095 (NEW at our 4.3 floor) escapes $ORIGIN correctly.
+        INSTALL_RPATH
+        "$<IF:$<PLATFORM_ID:Darwin,iOS>,@executable_path,$ORIGIN>/../${CMAKE_INSTALL_LIBDIR}"
+)
 
-if(CT_CXX_STDLIB)
-    target_compile_options(
-        rt_demo PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-stdlib=${CT_CXX_STDLIB}>)
-    target_link_options(rt_demo PRIVATE -stdlib=${CT_CXX_STDLIB})
+if(ct_stdlib_flag)
+    target_compile_options(rt_demo
+                           PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${ct_stdlib_flag}>)
+    target_link_options(rt_demo PRIVATE ${ct_stdlib_flag})
 endif()
 
-install(
-    TARGETS rt_demo
-    RUNTIME_DEPENDENCY_SET ct_deps
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    COMPONENT runtime)
+# Windows GNU-frontend exes link static — no shipped libc++.dll /
+# libunwind.dll. Same as 01/02/03/07; MSVC / clang-cl (MSVC frontend)
+# and non-Windows never match.
+target_link_options(
+    rt_demo
+    PRIVATE
+    "$<$<AND:$<PLATFORM_ID:Windows>,$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>,$<CXX_COMPILER_FRONTEND_VARIANT:GNU>>:$<LINK_ONLY:-static>>"
+)
 
-install(
-    RUNTIME_DEPENDENCY_SET ct_deps
-    PRE_EXCLUDE_REGEXES
+install(TARGETS rt_demo RUNTIME_DEPENDENCY_SET ct_deps
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT runtime)
+
+# Dependency bundling needs a runnable loader to resolve against: it runs
+# only on native builds. Cross targets (llvm-mingw/Android/Emscripten)
+# ship static/self-contained exes; target OS components come with the
+# target. Without this guard, cross installs die in
+# file(GET_RUNTIME_DEPENDENCIES) — there is no System32 on the host.
+if(NOT CMAKE_CROSSCOMPILING)
+    install(
+        RUNTIME_DEPENDENCY_SET
+        ct_deps
+        # api-ms-win-*/ext-ms-* are virtual API-set forwarders resolved by the
+        # OS loader — not real files. Without excluding them, native Windows
+        # installs fail with "Could not resolve runtime dependencies".
+        # Ref: file(GET_RUNTIME_DEPENDENCIES) docs.
+        PRE_EXCLUDE_REGEXES
         [[ld-linux.*]]
         [[libc\.so.*]]
         [[libm\.so.*]]
@@ -69,7 +93,9 @@ install(
         [[libdl\.so.*]]
         [[librt\.so.*]]
         [[libresolv\.so.*]]
-    POST_EXCLUDE_REGEXES
+        [[api-ms-win-.*]]
+        [[ext-ms-.*]]
+        POST_EXCLUDE_REGEXES
         [[ld-linux.*]]
         [[libc\.so.*]]
         [[libm\.so.*]]
@@ -77,8 +103,13 @@ install(
         [[libdl\.so.*]]
         [[librt\.so.*]]
         [[libresolv\.so.*]]
-    DIRECTORIES
+        [[api-ms-win-.*]]
+        [[ext-ms-.*]]
+        DIRECTORIES
         ${CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES}
         ${CMAKE_C_IMPLICIT_LINK_DIRECTORIES}
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    COMPONENT runtime)
+        DESTINATION
+        "${CMAKE_INSTALL_LIBDIR}"
+        COMPONENT
+        runtime)
+endif()
