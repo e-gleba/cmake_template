@@ -36,7 +36,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     libsdl-org/SDL
     GIT_TAG
-    release-3.4.16
+    release-3.4.18
     GIT_SHALLOW
     ON
     GIT_PROGRESS
