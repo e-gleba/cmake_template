@@ -251,7 +251,7 @@ jobs:
           java-version: "21"
           distribution: temurin
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6.3.0
+        uses: gradle/actions/setup-gradle@v6.4.0
       # AGP passes -DCPM_SOURCE_CACHE=~/.cache/cpm-cmake (see app/build.gradle),
       # which overrides the workflow-level env var — cache that directory.
       - name: Cache CPM sources
