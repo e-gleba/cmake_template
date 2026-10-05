@@ -1,7 +1,7 @@
 [tools]
 # Build system matching cmake_minimum_required(VERSION 4.3).
 # Official Kitware release: https://cmake.org/
-cmake = "4.4.3"
+cmake = "4.4.4"
 # Parallel build backend used by the Ninja presets.
 # Official project: https://ninja-build.org/
 ninja = "1.13.2"
