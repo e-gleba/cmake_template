@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name: [fedora, steamos, alt]
+        name: [fedora, alt]
     steps:
       - name: Checkout
         uses: actions/checkout@v7

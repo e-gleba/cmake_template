@@ -23,8 +23,7 @@ list(
     CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_LIST_DIR}/cmake"
     "${CMAKE_CURRENT_LIST_DIR}/cmake/cpack"
-    "${CMAKE_CURRENT_LIST_DIR}/cmake/code_quality"
-    "${CMAKE_CURRENT_LIST_DIR}/cmake/steampipe")
+    "${CMAKE_CURRENT_LIST_DIR}/cmake/code_quality")
 
 include(ct_cpm) # dependency bootstrap: CPM + package configs
 include(ct_warnings) # warnings interface target
@@ -53,10 +52,6 @@ if(PROJECT_IS_TOP_LEVEL)
     endif()
 
     include(ct_cpack)
-
-    # SteamPipe deploy scripts (VDF, steam_appid.txt), generated into the
-    # build tree when a preset enables CT_STEAMPIPE (cmake/presets/steam.json).
-    include(ct_steampipe)
 
     # include(CPack) reads all CPACK_* variables at include-time and
     # ignores later changes — keep it last.

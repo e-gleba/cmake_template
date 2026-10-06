@@ -18,7 +18,7 @@ target_compile_features(tests PRIVATE cxx_std_23)
 target_link_libraries(tests PRIVATE doctest::doctest
                                     $<$<PLATFORM_ID:Android>:log>)
 
-# Steam depot: no shipped libc++.dll / libunwind.dll. Windows GNU-frontend
+# Static runtime: no shipped libc++.dll / libunwind.dll. Windows GNU-frontend
 # exes only — MSVC / clang-cl (MSVC frontend) and non-Windows never match.
 target_link_options(
     tests PRIVATE

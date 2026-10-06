@@ -17,7 +17,7 @@
   <a href="https://github.com/e-gleba/cmake_template/actions/workflows/renovate.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-renovate-2ea44f" alt="Run Renovate"/></a>
 </p>
 
-C++23 CMake template. Ninja Multi-Config, CPM, doctest + CTest, CPack. Presets for Linux, Windows, Android, WebAssembly, and Steam Runtime.
+C++23 CMake template. Ninja Multi-Config, CPM, doctest + CTest, CPack. Presets for Linux, Windows, Android, and WebAssembly.
 
 ## Quick start
 
@@ -34,7 +34,7 @@ Or replace the three steps with the `linux_gcc_x86_64_release_package` workflow 
 - C++23, target-based CMake, no glob, no global flags
 - Dependencies via CPM, pinned tags
 - Tests: doctest + CTest, JNI harness for Android
-- Packaging: CPack (TGZ/ZIP/TXZ), Steampipe files for Steam builds
+- Packaging: CPack (TGZ/ZIP/TXZ)
 - Quality: clang-format, clang-tidy (native only), pre-commit
 
 ## Demo
@@ -58,11 +58,10 @@ Replayable sources and re-record instructions: [`assets/casts/`](assets/casts/re
 | Windows cross (from Linux) | `windows_llvm_mingw_x86_64`, `_x86`, `_aarch64` | llvm-mingw toolchain, no tests |
 | Android | `android_clang_aarch64`, `_armv7`, `_x86_64`, `_x86` | NDK, API 24, `c++_shared`; tests via `./gradlew connectedCheck` in `android_project/` |
 | WebAssembly | `web_emscripten_wasm32` | Emscripten toolchain, SDK bootstrapped to `.emsdk/`; tests under Node.js |
-| Steam | `linux_steamrt4_x86_64`, `windows_msvc_steam_x86_64`, `windows_llvm_mingw_steam_x86_64` | SteamPipe-ready ZIP, ABI/loader gates |
 
 Release via the [release workflow](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml): builds all platforms, tags, attaches artifacts.
 
-Docker images (`fedora`, `steamos`, `alt`) are manual only: run [`docker_ci`](https://github.com/e-gleba/cmake_template/actions/workflows/docker.yml) (build + verify) or [`docker_publish`](https://github.com/e-gleba/cmake_template/actions/workflows/publish-docker.yml) (push to GHCR) — or tick `publish_docker` in a release run.
+Docker images (`fedora`, `alt`) are manual only: run [`docker_ci`](https://github.com/e-gleba/cmake_template/actions/workflows/docker.yml) (build + verify) or [`docker_publish`](https://github.com/e-gleba/cmake_template/actions/workflows/publish-docker.yml) (push to GHCR) — or tick `publish_docker` in a release run.
 
 ## Comparison
 
@@ -74,7 +73,6 @@ Docker images (`fedora`, `steamos`, `alt`) are manual only: run [`docker_ci`](ht
 | **Android instrumented tests** | ✅ GMD + doctest JNI | ❌ | ❌ | ❌ |
 | **Linux → Windows cross** | ✅ llvm-mingw (3 arch) | ❌ | ❌ | ❌ |
 | **WebAssembly** | ✅ Emscripten (SDL3 + ImGui + OpenGL demo) | ✅ + Pages deploy | ❌ | ❌ |
-| **Steam Runtime / Deck** | ✅ steamrt4 + static CRT + ABI CI | ❌ | ❌ | ❌ |
 | **Docker / CI** | ✅ + Actions matrix | ✅ Docker + Actions | ✅ GitHub Actions | ✅ |
 | **CPack packaging** | ✅ tar.gz / zip / txz | ❌ | ❌ | ❌ |
 | **Sanitizers** | ❌ [#9](https://github.com/e-gleba/cmake_template/issues/9) | ✅ ASan/UBSan | ✅ | ❌ |

@@ -12,12 +12,12 @@ ln -sf build/dev/compile_commands.json .
 
 - CMakeLists.txt — project(), CT_* cache vars, add_subdirectory(src), top-level only tests + packaging + CPack last
 - CMakePresets.json — includes cmake/presets/*.json
-- cmake/presets/ — base.json dev + build_release/debug + test_base, linux.json, windows.json, android.json, web.json, steam.json
+- cmake/presets/ — base.json dev + build_release/debug + test_base, linux.json, windows.json, android.json, web.json
 - cmake/toolchains/ — llvm_mingw.cmake, emscripten.cmake
 - cmake/ct_cpm.cmake — fetch CPM, find_package(doctest, sdl3, gsl, imgui)
 - cmake/cpm/ — package configs
 - cmake/cpack/ct_cpack.cmake — DEB/RPM/NSIS metadata, CPACK_SYSTEM_NAME os_compiler_arch
-- cmake/code_quality/ + cmake/scripts/ + cmake/steampipe/
+- cmake/code_quality/ + cmake/scripts/
 - src/ — 01_hello_world 02_sdl3_app 03_unity_build 04_tracy_profiler 05_webassembly 06_modules, one CMakeLists per dir
 - tests/ — doctest_example.cpp, main.cpp, doctest_android_jni.cpp
 - tools/ + scripts/ — python helpers, format/lint scripts
@@ -67,7 +67,6 @@ ln -sf build/dev/compile_commands.json .
 - windows_msvc_x86_64 (VS17) + windows_llvm_mingw_x86/x86_64/aarch64, cross has no test presets.
 - android_clang_aarch64/armv7/x86_64/x86, NDK + c++_shared + API24, tidy cleared, release (+debug aarch64/x86_64).
 - web_emscripten_wasm32 via Emscripten toolchainFile, Node tests.
-- steam: linux_steamrt4_x86_64 + windows_msvc_steam_x86_64 + windows_llvm_mingw_steam_x86_64, CT_STEAMPIPE ON, IPO ON.
 - No platform hacks in CI. Logic in presets/docker/toolchains.
 
 ## Deps

@@ -2,5 +2,4 @@
 # Keep the context to Dockerfiles only.
 *
 !fedora.Dockerfile
-!steamos.Dockerfile
 !alt.Dockerfile

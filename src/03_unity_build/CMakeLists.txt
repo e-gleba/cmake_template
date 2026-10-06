@@ -14,7 +14,7 @@ target_link_libraries(03_unity_build PRIVATE SDL3::SDL3-shared
                                              Microsoft.GSL::GSL warnings)
 target_compile_features(03_unity_build PRIVATE cxx_std_23)
 
-# Steam depot: no shipped libc++.dll / libunwind.dll. Windows GNU-frontend
+# Static runtime: no shipped libc++.dll / libunwind.dll. Windows GNU-frontend
 # exes only — MSVC / clang-cl (MSVC frontend) and non-Windows never match.
 target_link_options(
     03_unity_build PRIVATE

@@ -7,11 +7,7 @@ Reproducible **toolchain** images. Source is not baked in — mount repo at `/ap
 | File | Base | Purpose | Architecture |
 |------|------|---------|--------------|
 | `fedora.Dockerfile` | Official `fedora:44` | Primary native validator | amd64, arm64 |
-| `steamos.Dockerfile` | Valve Steam Runtime 4 SDK | Current Steam Linux ABI validation | amd64 |
 | `alt.Dockerfile` | Docker Official Image `alt:p11` | Stable ALT compiler/tool validation | amd64, arm64 |
-
-SteamOS is appliance firmware, not a build sysroot. Valve recommends Steam Linux
-Runtime 4 for new native Linux games, so the Steam image uses its official SDK.
 
 ALT p11 does not package Ninja under the expected cross-distro name. Its validator
 uses Make while all other images exercise Ninja. This keeps ALT coverage native
@@ -26,10 +22,6 @@ without improving coverage for this glibc/Wayland/Android-oriented template.
 # Run from repository root.
 docker build -t cmake-template:fedora -f docker/fedora.Dockerfile docker
 docker run --rm -v "$PWD:/app" cmake-template:fedora
-
-# Current Steam ABI target.
-docker build -t cmake-template:steamos -f docker/steamos.Dockerfile docker
-docker run --rm -v "$PWD:/app" cmake-template:steamos
 
 # Interactive shell.
 docker run --rm -it -v "$PWD:/app" --entrypoint bash cmake-template:fedora
