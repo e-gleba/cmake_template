@@ -10,7 +10,20 @@
         {
             "name": "linux_gcc_x86_64_vcpkg",
             "displayName": "Linux GCC x86_64 (vcpkg)",
-            "description": "Native Linux x86_64 build with GCC, dependencies from the vcpkg manifest (vcpkg.json) instead of CPM fetch. Requires VCPKG_ROOT to be set (CI: lukka/run-vcpkg); CPM reuses whatever the toolchain provides.",
+            "description": "Native Linux x86_64 build with GCC, dependencies from the vcpkg manifest (vcpkg.json) instead of CPM fetch. Requires VCPKG_ROOT to be set (CI: lukka/run-vcpkg); CPM reuses whatever the toolchain provides. Release-only triplet: no Debug builds through this preset.",
+            "inherits": "linux_gcc_x86_64",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CPM_USE_LOCAL_PACKAGES": "ON",
+                "VCPKG_TARGET_TRIPLET": "x64-linux-release",
+                "VCPKG_HOST_TRIPLET": "x64-linux-release",
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/vcpkg/triplets"
+            }
+        },
+        {
+            "name": "linux_gcc_x86_64_vcpkg_debug",
+            "displayName": "Linux GCC x86_64 (vcpkg, Debug)",
+            "description": "Debug variant of the vcpkg lane. Uses the default triplet (both library variants installed), so cold dependency builds cost roughly twice the release preset.",
             "inherits": "linux_gcc_x86_64",
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
@@ -20,7 +33,20 @@
         {
             "name": "windows_msvc_x86_64_vcpkg",
             "displayName": "Windows MSVC x86_64 (vcpkg)",
-            "description": "Native Windows x86_64 build with Visual Studio 2022, dependencies from the vcpkg manifest (vcpkg.json) instead of CPM fetch. Requires VCPKG_ROOT to be set (CI: lukka/run-vcpkg); CPM reuses whatever the toolchain provides.",
+            "description": "Native Windows x86_64 build with Visual Studio 2022, dependencies from the vcpkg manifest (vcpkg.json) instead of CPM fetch. Requires VCPKG_ROOT to be set (CI: lukka/run-vcpkg); CPM reuses whatever the toolchain provides. Release-only triplet: no Debug builds through this preset.",
+            "inherits": "windows_msvc_x86_64",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CPM_USE_LOCAL_PACKAGES": "ON",
+                "VCPKG_TARGET_TRIPLET": "x64-windows-release",
+                "VCPKG_HOST_TRIPLET": "x64-windows-release",
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/vcpkg/triplets"
+            }
+        },
+        {
+            "name": "windows_msvc_x86_64_vcpkg_debug",
+            "displayName": "Windows MSVC x86_64 (vcpkg, Debug)",
+            "description": "Debug variant of the vcpkg lane. Uses the default triplet (both library variants installed), so cold dependency builds cost roughly twice the release preset.",
             "inherits": "windows_msvc_x86_64",
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
@@ -36,7 +62,7 @@
         },
         {
             "name": "linux_gcc_x86_64_vcpkg_debug",
-            "configurePreset": "linux_gcc_x86_64_vcpkg",
+            "configurePreset": "linux_gcc_x86_64_vcpkg_debug",
             "inherits": "build_debug"
         },
         {
@@ -46,7 +72,7 @@
         },
         {
             "name": "windows_msvc_x86_64_vcpkg_debug",
-            "configurePreset": "windows_msvc_x86_64_vcpkg",
+            "configurePreset": "windows_msvc_x86_64_vcpkg_debug",
             "inherits": "build_debug"
         }
     ],
@@ -59,7 +85,7 @@
         },
         {
             "name": "linux_gcc_x86_64_vcpkg_debug",
-            "configurePreset": "linux_gcc_x86_64_vcpkg",
+            "configurePreset": "linux_gcc_x86_64_vcpkg_debug",
             "inherits": "test_base",
             "configuration": "Debug"
         },
@@ -71,7 +97,7 @@
         },
         {
             "name": "windows_msvc_x86_64_vcpkg_debug",
-            "configurePreset": "windows_msvc_x86_64_vcpkg",
+            "configurePreset": "windows_msvc_x86_64_vcpkg_debug",
             "inherits": "test_base",
             "configuration": "Debug"
         }
