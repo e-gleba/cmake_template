@@ -82,7 +82,7 @@ target_sources(
     PRIVATE math.cpp
     PUBLIC
         FILE_SET CXX_MODULES
-        FILES math.cppm math-operations.cppm)
+        FILES math.cppm math_operations.cppm)
 target_compile_features(06_modules_library PUBLIC cxx_std_23)
 set_target_properties(06_modules_library PROPERTIES CXX_EXTENSIONS OFF)
 target_link_libraries(06_modules_library PRIVATE warnings)

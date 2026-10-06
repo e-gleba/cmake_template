@@ -39,8 +39,10 @@ ln -sf build/dev/compile_commands.json .
 
 ## C++
 
-- C++23. Value types copy/move, share nothing.
-- snake_case types/funcs/vars. UPPER_CASE macros only. No m_, no Hungarian.
+- C++23. Value types copy/move, share nothing. Follow Boost design best practices: https://www.boost.org/doc/contributor-guide/design-guide/design-best-practices.html
+- snake_case types/funcs/vars. UPPER_CASE macros only. No m_, no Hungarian. Data members end with trailing `_` per .clang-tidy MemberSuffix.
+- Files/dirs: lowercase snake_case, `_` separator, no hyphens (e.g. `logo_400.png`, `math_operations.cppm`). Rename on touch. Tool-mandated names stay: `CMakeLists.txt`, `.clang-format`/`.clang-tidy`, `.gitignore`/`.editorconfig`, GitHub UPPER docs, Android `res/` + `*.pro`, `*.Dockerfile`, `cmake/cpm/*-config.cmake` (package name).
+- `.clang-format` / `.clang-tidy` stay extensionless: LLVM discovers only those exact names, `.yaml` suffix breaks it (verified via `clang-format --dump-config` + `clang-tidy --help`). They are YAML already; LSP via `# yaml-language-server` header.
 - {} over (). Init every var. RAII only, no new/delete.
 - class for invariants, struct for data. final on non-base. Rule of zero. No owning raw ptrs.
 - std::int32_t/uint32_t/int64_t/uint64_t with std::. size_t sizes, ptrdiff_t diffs.

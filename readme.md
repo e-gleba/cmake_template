@@ -1,7 +1,7 @@
 # cmake_template
 
 <p align="center">
-  <img src="assets/logo-400.png" alt="cmake_template logo" width="200"/>
+  <img src="assets/logo_400.png" alt="cmake_template logo" width="200"/>
 </p>
 
 <p align="center">
@@ -37,6 +37,18 @@ Or replace the three steps with the `linux_gcc_x86_64_release_package` workflow 
 - Packaging: CPack (TGZ/ZIP/TXZ), Steampipe files for Steam builds
 - Quality: clang-format, clang-tidy (native only), pre-commit
 
+## Demo
+
+**Quick start** — configure, build, test:
+
+![Quick start: configure, build, test](assets/casts/quickstart.gif)
+
+**Release in one command** — `release_package` workflow with CPack:
+
+![One-command release_package workflow with CPack](assets/casts/package.gif)
+
+Replayable sources and re-record instructions: [`assets/casts/`](assets/casts/readme.md).
+
 ## Platforms
 
 | Target | Configure preset | Notes |
@@ -71,18 +83,6 @@ Docker images (`fedora`, `steamos`, `alt`) are manual only: run [`docker_ci`](ht
 | **macOS/iOS (Xcode)** | ❌ [#20](https://github.com/e-gleba/cmake_template/issues/20) | Limited | ❌ | ❌ |
 | **vcpkg** | ❌ [#3](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ |
 | **License** | MIT | Unlicense | Unlicense | MIT |
-
-## Demo
-
-**Quick start** — configure, build, test:
-
-![Quick start: configure, build, test](assets/casts/quickstart.gif)
-
-**Release in one command** — `release_package` workflow with CPack:
-
-![One-command release_package workflow with CPack](assets/casts/package.gif)
-
-Replayable sources and re-record instructions: [`assets/casts/`](assets/casts/readme.md).
 
 ## Layout
 
