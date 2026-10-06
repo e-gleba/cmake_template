@@ -21,7 +21,7 @@ updates:
           - "*"
 
   # ─── Docker base images ────────────────────────────────────────────────────
-  # fedora.Dockerfile + manjaro.Dockerfile live under docker/.
+  # fedora.Dockerfile + steamos.Dockerfile + alt.Dockerfile live under docker/.
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:

@@ -7,9 +7,7 @@ Reproducible **toolchain** images. Source is not baked in — mount repo at `/ap
 | File | Base | Purpose | Architecture |
 |------|------|---------|--------------|
 | `fedora.Dockerfile` | Official `fedora:44` | Primary native validator | amd64, arm64 |
-| `manjaro.Dockerfile` | `manjarolinux/base:latest` | Arch-family rolling validator | Upstream-dependent |
 | `steamos.Dockerfile` | Valve Steam Runtime 4 SDK | Current Steam Linux ABI validation | amd64 |
-| `cachyos.Dockerfile` | CachyOS official image | Optimized x86-64-v3 rolling validator | amd64; x86-64-v3 required |
 | `alt.Dockerfile` | Docker Official Image `alt:p11` | Stable ALT compiler/tool validation | amd64, arm64 |
 
 SteamOS is appliance firmware, not a build sysroot. Valve recommends Steam Linux

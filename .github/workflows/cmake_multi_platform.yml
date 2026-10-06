@@ -216,7 +216,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        abi: [aarch64, armv7, x86_64, x86]
+        abi: [aarch64, x86_64]
     steps:
       - name: Checkout
         uses: actions/checkout@v7

@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name: [fedora, manjaro, steamos, cachyos, alt]
+        name: [fedora, steamos, alt]
     steps:
       - name: Checkout
         uses: actions/checkout@v7

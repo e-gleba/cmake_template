@@ -39,7 +39,7 @@ jobs:
         id: changes
         shell: bash
         run: |
-          files=(fedora manjaro steamos cachyos alt)
+          files=(fedora steamos alt)
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             changed=("${files[@]}")
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
