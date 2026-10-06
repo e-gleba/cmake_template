@@ -73,7 +73,7 @@ ln -sf build/dev/compile_commands.json .
 ## Deps
 
 - CPM primary, vcpkg manifest optional. Tagged releases, not branches. FETCHCONTENT_QUIET OFF for CI.
-- Options inside CPMAddPackage. vcpkg.json (builtin-baseline pinned) is an opt-in overlay: configure with `CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCPM_USE_LOCAL_PACKAGES=ON` to reuse it, otherwise CPM fetches.
+- Options inside CPMAddPackage. vcpkg.json + vcpkg-configuration.json (registry baseline pinned) is an opt-in overlay: configure with `CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCPM_USE_LOCAL_PACKAGES=ON` to reuse it, otherwise CPM fetches.
 - find_package(CONFIG REQUIRED) via cmake/cpm configs. Cross keeps configs reachable via CMAKE_FIND_ROOT_PATH.
 
 ## Tests

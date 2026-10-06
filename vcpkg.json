@@ -5,7 +5,6 @@
   "description": "Production-ready cross-platform C++ project template",
   "homepage": "https://github.com/e-gleba/cmake_template",
   "license": "MIT",
-  "builtin-baseline": "001713e802f5cf619a64461b918161be6a0634f0",
   "dependencies": [
     {
       "name": "doctest",
