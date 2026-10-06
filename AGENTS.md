@@ -64,6 +64,7 @@ ln -sf build/dev/compile_commands.json .
 - Edit cmake/presets/*.json only. dev = zero-pin native iteration. Platform presets pin compilers.
 - Native needs build + test (+package/workflow). Cross disables test, workflow skips test step.
 - linux_clang_x86_64 / linux_gcc_x86_64 + release/debug + TGZ/DEB.
+- linux_gcc_x86_64_vcpkg + windows_msvc_x86_64_vcpkg (cmake/presets/vcpkg.json) — same trees via vcpkg manifest; need VCPKG_ROOT, CPM reuse ON.
 - windows_msvc_x86_64 (VS17) + windows_llvm_mingw_x86/x86_64/aarch64, cross has no test presets.
 - android_clang_aarch64/armv7/x86_64/x86, NDK + c++_shared + API24, tidy cleared, release (+debug aarch64/x86_64).
 - web_emscripten_wasm32 via Emscripten toolchainFile, Node tests.
@@ -71,8 +72,8 @@ ln -sf build/dev/compile_commands.json .
 
 ## Deps
 
-- CPM only. Tagged releases, not branches. FETCHCONTENT_QUIET OFF for CI.
-- Options inside CPMAddPackage. No conan/vcpkg.json.
+- CPM primary, vcpkg manifest optional. Tagged releases, not branches. FETCHCONTENT_QUIET OFF for CI.
+- Options inside CPMAddPackage. vcpkg.json (builtin-baseline pinned) is an opt-in overlay: configure with `CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DCPM_USE_LOCAL_PACKAGES=ON` to reuse it, otherwise CPM fetches.
 - find_package(CONFIG REQUIRED) via cmake/cpm configs. Cross keeps configs reachable via CMAKE_FIND_ROOT_PATH.
 
 ## Tests

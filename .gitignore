@@ -103,6 +103,9 @@ llvm_mingw/
 # emsdk (auto-bootstrapped by cmake/toolchains/emscripten.cmake)
 .emsdk/
 
+# vcpkg manifest-mode install dir (when it lands outside build/)
+vcpkg_installed/
+
 # osxcross toolchain (auto-built)
 cmake/toolchains/osxcross_toolchain/
 cmake/toolchains/.osxcross-src/

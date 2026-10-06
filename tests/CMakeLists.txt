@@ -38,7 +38,13 @@ target_compile_definitions(
 # binary. When cross-compiling, the executable targets a foreign
 # platform and cannot run on the host.
 if(NOT CMAKE_CROSSCOMPILING)
-    include(doctest)
+    # CPM fetch exposes doctest.cmake via CMAKE_MODULE_PATH (see
+    # cmake/cpm/doctest-config.cmake); vcpkg installs it next to its
+    # config, so fall back to doctest_DIR on that lane.
+    include(doctest OPTIONAL RESULT_VARIABLE ct_doctest_module)
+    if(NOT ct_doctest_module)
+        include("${doctest_DIR}/doctest.cmake")
+    endif()
     doctest_discover_tests(tests)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     # Discovery needs a host-runnable binary (see above), but the suite

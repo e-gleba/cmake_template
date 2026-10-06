@@ -133,6 +133,47 @@ jobs:
           build-dir: build/${{ matrix.artifact_name }}
           artifact-name: release-assets-${{ matrix.artifact_name }}
 
+  # vcpkg manifest lane: same sources, dependencies from vcpkg.json via
+  # the vcpkg toolchain instead of CPM fetch. Runs in parallel with the
+  # CPM jobs; binary caching (run-vcpkg) keeps warm runs fast.
+  vcpkg_build:
+    name: ${{ matrix.artifact_name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            preset: linux_gcc_x86_64_vcpkg_release_package
+            artifact_name: linux_gcc_x86_64_vcpkg
+            build_dir: linux_gcc_x86_64_vcpkg
+            sdl3_deps: "true"
+          - os: windows-2022
+            preset: windows_msvc_x86_64_vcpkg_release_package
+            artifact_name: windows_msvc_x86_64_vcpkg
+            build_dir: windows_msvc_x86_64_vcpkg
+            sdl3_deps: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up build
+        uses: ./.github/actions/setup-cmake
+        with:
+          cache-key: ${{ matrix.artifact_name }}
+          sdl3-deps: ${{ matrix.sdl3_deps }}
+      - name: Set up vcpkg
+        uses: lukka/run-vcpkg@v11
+      - name: Build and test
+        run: cmake --workflow --preset ${{ matrix.preset }}
+      - name: Stage and upload release assets
+        uses: ./.github/actions/stage-and-upload
+        with:
+          build-dir: build/${{ matrix.build_dir }}
+          artifact-name: release-assets-${{ matrix.artifact_name }}
+
   windows_cross_build:
     name: linux_${{ matrix.compiler }}_${{ matrix.arch }}
     runs-on: ubuntu-latest

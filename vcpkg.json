@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "cmake-template",
+  "version-semver": "1.0.1",
+  "description": "Production-ready cross-platform C++ project template",
+  "homepage": "https://github.com/e-gleba/cmake_template",
+  "license": "MIT",
+  "builtin-baseline": "001713e802f5cf619a64461b918161be6a0634f0",
+  "dependencies": [
+    {
+      "name": "doctest",
+      "version>=": "2.5.3"
+    },
+    {
+      "name": "sdl3",
+      "version>=": "3.4.18"
+    },
+    "ms-gsl",
+    {
+      "name": "imgui",
+      "version>=": "1.92.9"
+    }
+  ],
+  "features": {
+    "imgui-freetype": {
+      "description": "ImGui FreeType rasterizer (maps to CT_IMGUI_FREETYPE)",
+      "dependencies": [
+        {
+          "name": "imgui",
+          "features": ["freetype"]
+        }
+      ]
+    },
+    "imgui-sdl3-opengl": {
+      "description": "ImGui SDL3 + OpenGL3 backend (maps to CT_IMGUI_SDL3_OPENGL3)",
+      "dependencies": [
+        {
+          "name": "imgui",
+          "features": ["sdl3-binding", "opengl3-binding"]
+        }
+      ]
+    },
+    "imgui-sdl3-renderer": {
+      "description": "ImGui SDL3 renderer backend (maps to CT_IMGUI_SDL3_RENDERER, requires CT_SDL_RENDER=ON)",
+      "dependencies": [
+        {
+          "name": "imgui",
+          "features": ["sdl3-binding", "sdl3-renderer-binding"]
+        }
+      ]
+    }
+  }
+}

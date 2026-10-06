@@ -32,7 +32,7 @@ Or replace the three steps with the `linux_gcc_x86_64_release_package` workflow 
 ## What you get
 
 - C++23, target-based CMake, no glob, no global flags
-- Dependencies via CPM, pinned tags
+- Dependencies via CPM, pinned tags (optional vcpkg manifest overlay)
 - Tests: doctest + CTest, JNI harness for Android
 - Packaging: CPack (TGZ/ZIP/TXZ)
 - Quality: clang-format, clang-tidy (native only), pre-commit
@@ -54,9 +54,11 @@ Replayable sources and re-record instructions: [`assets/casts/`](assets/casts/re
 | Target | Configure preset | Notes |
 | --- | --- | --- |
 | Linux x86_64 | `linux_gcc_x86_64`, `linux_clang_x86_64` | Native, full test + package |
+| Linux x86_64 (vcpkg) | `linux_gcc_x86_64_vcpkg` | Same tree, deps from `vcpkg.json` manifest; needs `VCPKG_ROOT` |
 | Linux sanitizers | `linux_*_asan`, `*_ubsan`, `*_tsan`, `*_asan_ubsan` | Debug only, no package; e.g. `cmake --preset linux_clang_x86_64_asan && cmake --build --preset linux_clang_x86_64_asan_debug && ctest --preset linux_clang_x86_64_asan_debug` |
 | Linux Valgrind | `linux_*_valgrind` | Debug only; tests run under memcheck via the `_valgrind_debug` test preset (or built-in `ctest --test-dir build/<preset> -C Debug -T memcheck`) |
 | Windows x86_64 | `windows_msvc_x86_64` | Native, Visual Studio 17 2022 |
+| Windows x86_64 (vcpkg) | `windows_msvc_x86_64_vcpkg` | Same tree, deps from `vcpkg.json` manifest; needs `VCPKG_ROOT` |
 | Windows cross (from Linux) | `windows_llvm_mingw_x86_64`, `_x86`, `_aarch64` | llvm-mingw toolchain, no tests |
 | Android | `android_clang_aarch64`, `_armv7`, `_x86_64`, `_x86` | NDK, API 24, `c++_shared`; tests via `./gradlew connectedCheck` in `android_project/` |
 | WebAssembly | `web_emscripten_wasm32` | Emscripten toolchain, SDK bootstrapped to `.emsdk/`; tests under Node.js |
@@ -80,8 +82,7 @@ Docker images (`fedora`, `alt`) are manual only: run [`docker_ci`](https://githu
 | **Sanitizers** | ✅ ASan/UBSan/TSan + Valgrind presets | ✅ ASan/UBSan | ✅ | ❌ |
 | **Fuzz testing** | ❌ | ✅ libFuzzer | ❌ | ❌ |
 | **Code coverage** | ❌ [#10](https://github.com/e-gleba/cmake_template/issues/10) | ✅ codecov | ✅ codecov | ❌ |
-| **macOS/iOS (Xcode)** | ❌ [#20](https://github.com/e-gleba/cmake_template/issues/20) | Limited | ❌ | ❌ |
-| **vcpkg** | ❌ [#3](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ |
+| **vcpkg** | ✅ manifest (optional overlay, [#3](https://github.com/e-gleba/cmake_template/issues/3)) | ❌ | ❌ | ❌ |
 | **License** | MIT | Unlicense | Unlicense | MIT |
 
 ## Layout

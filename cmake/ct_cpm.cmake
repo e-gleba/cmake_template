@@ -18,9 +18,15 @@ fetchcontent_makeavailable(get_cpm)
 
 include("${get_cpm_SOURCE_DIR}/CPM.cmake")
 
-# Enable local package reuse (vcpkg, system, etc.)
+# Local package reuse (vcpkg manifest, system, etc.) stays OFF by default:
+# cmake/cpm/ wrappers share the real packages' config names, so ON makes
+# find_package() hit the wrapper again -> infinite recursion (verified).
+# vcpkg users opt in with -DCPM_USE_LOCAL_PACKAGES=ON alongside the vcpkg
+# toolchain, where vcpkg paths precede the wrappers in CMAKE_PREFIX_PATH.
 # Ref: https://github.com/cpm-cmake/CPM.cmake#find_package-integration
-set(CPM_USE_LOCAL_PACKAGES OFF)
+if(NOT DEFINED CPM_USE_LOCAL_PACKAGES)
+    set(CPM_USE_LOCAL_PACKAGES OFF)
+endif()
 
 # Keep clang-tidy out of the dependency source cache. Guarded: the cache
 # dir only exists when CPM_SOURCE_CACHE is set (CI always sets it).

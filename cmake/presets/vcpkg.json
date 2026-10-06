@@ -1,0 +1,149 @@
+{
+    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+    "version": 11,
+    "include": [
+        "base.json",
+        "linux.json",
+        "windows.json"
+    ],
+    "configurePresets": [
+        {
+            "name": "linux_gcc_x86_64_vcpkg",
+            "displayName": "Linux GCC x86_64 (vcpkg)",
+            "description": "Native Linux x86_64 build with GCC, dependencies from the vcpkg manifest (vcpkg.json) instead of CPM fetch. Requires VCPKG_ROOT to be set (CI: lukka/run-vcpkg); CPM reuses whatever the toolchain provides.",
+            "inherits": "linux_gcc_x86_64",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CPM_USE_LOCAL_PACKAGES": "ON"
+            }
+        },
+        {
+            "name": "windows_msvc_x86_64_vcpkg",
+            "displayName": "Windows MSVC x86_64 (vcpkg)",
+            "description": "Native Windows x86_64 build with Visual Studio 2022, dependencies from the vcpkg manifest (vcpkg.json) instead of CPM fetch. Requires VCPKG_ROOT to be set (CI: lukka/run-vcpkg); CPM reuses whatever the toolchain provides.",
+            "inherits": "windows_msvc_x86_64",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CPM_USE_LOCAL_PACKAGES": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "linux_gcc_x86_64_vcpkg_release",
+            "configurePreset": "linux_gcc_x86_64_vcpkg",
+            "inherits": "build_release"
+        },
+        {
+            "name": "linux_gcc_x86_64_vcpkg_debug",
+            "configurePreset": "linux_gcc_x86_64_vcpkg",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "windows_msvc_x86_64_vcpkg_release",
+            "configurePreset": "windows_msvc_x86_64_vcpkg",
+            "inherits": "build_release"
+        },
+        {
+            "name": "windows_msvc_x86_64_vcpkg_debug",
+            "configurePreset": "windows_msvc_x86_64_vcpkg",
+            "inherits": "build_debug"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "linux_gcc_x86_64_vcpkg_release",
+            "configurePreset": "linux_gcc_x86_64_vcpkg",
+            "inherits": "test_base",
+            "configuration": "Release"
+        },
+        {
+            "name": "linux_gcc_x86_64_vcpkg_debug",
+            "configurePreset": "linux_gcc_x86_64_vcpkg",
+            "inherits": "test_base",
+            "configuration": "Debug"
+        },
+        {
+            "name": "windows_msvc_x86_64_vcpkg_release",
+            "configurePreset": "windows_msvc_x86_64_vcpkg",
+            "inherits": "test_base",
+            "configuration": "Release"
+        },
+        {
+            "name": "windows_msvc_x86_64_vcpkg_debug",
+            "configurePreset": "windows_msvc_x86_64_vcpkg",
+            "inherits": "test_base",
+            "configuration": "Debug"
+        }
+    ],
+    "packagePresets": [
+        {
+            "name": "linux_gcc_x86_64_vcpkg_release_tgz",
+            "configurePreset": "linux_gcc_x86_64_vcpkg",
+            "configurations": [
+                "Release"
+            ],
+            "generators": [
+                "TGZ"
+            ]
+        },
+        {
+            "name": "windows_msvc_x86_64_vcpkg_release_zip",
+            "configurePreset": "windows_msvc_x86_64_vcpkg",
+            "configurations": [
+                "Release"
+            ],
+            "generators": [
+                "ZIP"
+            ]
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "linux_gcc_x86_64_vcpkg_release_package",
+            "displayName": "Linux GCC x86_64 (vcpkg) release package",
+            "description": "Configure, build, test, and package a Linux x86_64 release with GCC and vcpkg-provided dependencies",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "linux_gcc_x86_64_vcpkg"
+                },
+                {
+                    "type": "build",
+                    "name": "linux_gcc_x86_64_vcpkg_release"
+                },
+                {
+                    "type": "test",
+                    "name": "linux_gcc_x86_64_vcpkg_release"
+                },
+                {
+                    "type": "package",
+                    "name": "linux_gcc_x86_64_vcpkg_release_tgz"
+                }
+            ]
+        },
+        {
+            "name": "windows_msvc_x86_64_vcpkg_release_package",
+            "displayName": "Windows MSVC x86_64 (vcpkg) release package",
+            "description": "Configure, build, test, and package a Windows x86_64 release with MSVC and vcpkg-provided dependencies",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "windows_msvc_x86_64_vcpkg"
+                },
+                {
+                    "type": "build",
+                    "name": "windows_msvc_x86_64_vcpkg_release"
+                },
+                {
+                    "type": "test",
+                    "name": "windows_msvc_x86_64_vcpkg_release"
+                },
+                {
+                    "type": "package",
+                    "name": "windows_msvc_x86_64_vcpkg_release_zip"
+                }
+            ]
+        }
+    ]
+}
