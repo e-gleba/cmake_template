@@ -5,12 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/e-gleba/cmake_template/blob/main/license.md"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
   <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&label=ci" alt="ci"/></a>
-  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/steam_runtime.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/steam_runtime.yml?branch=main&label=steam" alt="steam"/></a>
   <a href="https://github.com/e-gleba/cmake_template/releases"><img src="https://img.shields.io/github/v/release/e-gleba/cmake_template" alt="release"/></a>
-  <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-23%2F26-00599C?logo=cplusplus&logoColor=white" alt="C++ Standard"/></a>
-  <a href="https://cmake.org"><img src="https://img.shields.io/badge/CMake-4.4%2B-064F8C?logo=cmake" alt="CMake"/></a>
 </p>
 
 <p align="center">
