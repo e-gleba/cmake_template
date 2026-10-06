@@ -12,7 +12,9 @@
     },
     {
       "name": "sdl3",
-      "version>=": "3.4.18"
+      "version>=": "3.4.18",
+      "default-features": false,
+      "features": ["x11"]
     },
     "ms-gsl",
     {

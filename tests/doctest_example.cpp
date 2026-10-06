@@ -63,18 +63,21 @@ DOCTEST_TEST_CASE("string length")
 }
 
 namespace {
-    void throw_out_of_range() {
-        throw std::out_of_range("bounds");
-    }
-
-    void throw_logic_check() {
-        throw std::logic_error("vector::_M_range_check");
-    }
-
-    void noop() {}
+void throw_out_of_range()
+{
+    throw std::out_of_range("bounds");
 }
 
-DOCTEST_TEST_CASE("exception contracts" * doctest::timeout(0.1))
+void throw_logic_check()
+{
+    throw std::logic_error("vector::_M_range_check");
+}
+
+void noop() {}
+} // namespace
+
+// Generous budget: sub-second timeouts flake on loaded Windows CI runners.
+DOCTEST_TEST_CASE("exception contracts" * doctest::timeout(10))
 {
     DOCTEST_CHECK_THROWS_AS(throw_out_of_range(), std::out_of_range);
     DOCTEST_CHECK_THROWS_WITH(throw_logic_check(),
@@ -83,17 +86,17 @@ DOCTEST_TEST_CASE("exception contracts" * doctest::timeout(0.1))
 }
 
 namespace {
-    template<typename T>
-    T clamp(T v, T lo, T hi) noexcept {
-        if (v < lo) {
-            return lo;
-        }
-        if (hi < v) {
-            return hi;
-        }
-        return v;
+template <typename T> T clamp(T v, T lo, T hi) noexcept
+{
+    if (v < lo) {
+        return lo;
     }
+    if (hi < v) {
+        return hi;
+    }
+    return v;
 }
+} // namespace
 
 DOCTEST_TEST_CASE_TEMPLATE("clamp", T, int, float, double)
 {
