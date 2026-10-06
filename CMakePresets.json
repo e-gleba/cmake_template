@@ -8,6 +8,7 @@
     },
     "include": [
         "cmake/presets/base.json",
+        "cmake/presets/sanitize.json",
         "cmake/presets/linux.json",
         "cmake/presets/windows.json",
         "cmake/presets/android.json",

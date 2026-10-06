@@ -1,0 +1,69 @@
+{
+    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+    "version": 11,
+    "configurePresets": [
+        {
+            "name": "sanitize_asan",
+            "displayName": "AddressSanitizer flags",
+            "description": "Fragment: CT_ADDRESS_SANITIZER=ON. Inherit alongside a native platform preset; provides the Debug build/test presets only.",
+            "hidden": true,
+            "cacheVariables": {
+                "CT_ADDRESS_SANITIZER": "ON"
+            }
+        },
+        {
+            "name": "sanitize_ubsan",
+            "displayName": "UndefinedBehaviorSanitizer flags",
+            "description": "Fragment: CT_UNDEFINED_BEHAVIOR_SANITIZER=ON with -fno-sanitize-recover=all (aborts on first error). Inherit alongside a native platform preset.",
+            "hidden": true,
+            "cacheVariables": {
+                "CT_UNDEFINED_BEHAVIOR_SANITIZER": "ON"
+            }
+        },
+        {
+            "name": "sanitize_tsan",
+            "displayName": "ThreadSanitizer flags",
+            "description": "Fragment: CT_THREAD_SANITIZER=ON. Incompatible with AddressSanitizer — never inherit both. Inherit alongside a native platform preset.",
+            "hidden": true,
+            "cacheVariables": {
+                "CT_THREAD_SANITIZER": "ON"
+            }
+        },
+        {
+            "name": "sanitize_asan_ubsan",
+            "displayName": "AddressSanitizer + UndefinedBehaviorSanitizer flags",
+            "description": "Composed fragment: inherits sanitize_asan + sanitize_ubsan. The standard combined memory debugging build.",
+            "hidden": true,
+            "inherits": [
+                "sanitize_asan",
+                "sanitize_ubsan"
+            ]
+        },
+        {
+            "name": "valgrind",
+            "displayName": "Valgrind memcheck test executor",
+            "description": "Fragment: CMAKE_CROSSCOMPILING_EMULATOR runs every test under valgrind memcheck (--error-exitcode=1 so CTest fails on errors). The emulator — not TEST_LAUNCHER — is used because doctest_discover_tests bakes absolute paths at build time and only honors the target CROSSCOMPILING_EMULATOR as its TEST_EXECUTOR. Needs no compile flags: inherit alongside a native platform preset, never with a sanitizer preset.",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_CROSSCOMPILING_EMULATOR": "valgrind;--error-exitcode=1;--leak-check=full;--show-leak-kinds=all;--track-origins=yes"
+            }
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "sanitize_test_base",
+            "displayName": "Sanitizer runtime options",
+            "description": "Fragment: ASan/UBSan/TSan abort on first error so CTest reports failures instead of continuing past them.",
+            "hidden": true,
+            "environment": {
+                "ASAN_OPTIONS": "abort_on_error=1:detect_leaks=1:symbolize=1",
+                "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1:symbolize=1",
+                "TSAN_OPTIONS": "halt_on_error=1:second_deadlock_stack=1"
+            },
+            "execution": {
+                "noTestsAction": "error",
+                "stopOnFailure": false
+            }
+        }
+    ]
+}

@@ -18,4 +18,5 @@ target_link_libraries(
     PRIVATE SDL3::SDL3-shared
             Tracy::TracyClient
             Microsoft.GSL::GSL
-            warnings)
+            warnings
+            ct_sanitize)

@@ -2,7 +2,8 @@
     "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
     "version": 11,
     "include": [
-        "base.json"
+        "base.json",
+        "sanitize.json"
     ],
     "configurePresets": [
         {
@@ -35,6 +36,96 @@
                 "lhs": "${hostSystemName}",
                 "rhs": "Linux"
             }
+        },
+        {
+            "name": "linux_clang_x86_64_asan",
+            "displayName": "Linux Clang x86_64 AddressSanitizer",
+            "description": "Native Linux x86_64 AddressSanitizer build with Clang; use the linux_clang_x86_64_asan_debug build/test presets",
+            "inherits": [
+                "linux_clang_x86_64",
+                "sanitize_asan"
+            ]
+        },
+        {
+            "name": "linux_clang_x86_64_ubsan",
+            "displayName": "Linux Clang x86_64 UndefinedBehaviorSanitizer",
+            "description": "Native Linux x86_64 UndefinedBehaviorSanitizer build with Clang; use the linux_clang_x86_64_ubsan_debug build/test presets",
+            "inherits": [
+                "linux_clang_x86_64",
+                "sanitize_ubsan"
+            ]
+        },
+        {
+            "name": "linux_clang_x86_64_tsan",
+            "displayName": "Linux Clang x86_64 ThreadSanitizer",
+            "description": "Native Linux x86_64 ThreadSanitizer build with Clang; use the linux_clang_x86_64_tsan_debug build/test presets",
+            "inherits": [
+                "linux_clang_x86_64",
+                "sanitize_tsan"
+            ]
+        },
+        {
+            "name": "linux_clang_x86_64_asan_ubsan",
+            "displayName": "Linux Clang x86_64 AddressSanitizer + UndefinedBehaviorSanitizer",
+            "description": "Native Linux x86_64 combined sanitizer build with Clang; use the linux_clang_x86_64_asan_ubsan_debug build/test presets",
+            "inherits": [
+                "linux_clang_x86_64",
+                "sanitize_asan_ubsan"
+            ]
+        },
+        {
+            "name": "linux_clang_x86_64_valgrind",
+            "displayName": "Linux Clang x86_64 Valgrind",
+            "description": "Native Linux x86_64 build with Clang for Valgrind memcheck (tests run under valgrind via the emulator); use the linux_clang_x86_64_valgrind_debug build/test presets",
+            "inherits": [
+                "linux_clang_x86_64",
+                "valgrind"
+            ]
+        },
+        {
+            "name": "linux_gcc_x86_64_asan",
+            "displayName": "Linux GCC x86_64 AddressSanitizer",
+            "description": "Native Linux x86_64 AddressSanitizer build with GCC; use the linux_gcc_x86_64_asan_debug build/test presets",
+            "inherits": [
+                "linux_gcc_x86_64",
+                "sanitize_asan"
+            ]
+        },
+        {
+            "name": "linux_gcc_x86_64_ubsan",
+            "displayName": "Linux GCC x86_64 UndefinedBehaviorSanitizer",
+            "description": "Native Linux x86_64 UndefinedBehaviorSanitizer build with GCC; use the linux_gcc_x86_64_ubsan_debug build/test presets",
+            "inherits": [
+                "linux_gcc_x86_64",
+                "sanitize_ubsan"
+            ]
+        },
+        {
+            "name": "linux_gcc_x86_64_tsan",
+            "displayName": "Linux GCC x86_64 ThreadSanitizer",
+            "description": "Native Linux x86_64 ThreadSanitizer build with GCC; use the linux_gcc_x86_64_tsan_debug build/test presets",
+            "inherits": [
+                "linux_gcc_x86_64",
+                "sanitize_tsan"
+            ]
+        },
+        {
+            "name": "linux_gcc_x86_64_asan_ubsan",
+            "displayName": "Linux GCC x86_64 AddressSanitizer + UndefinedBehaviorSanitizer",
+            "description": "Native Linux x86_64 combined sanitizer build with GCC; use the linux_gcc_x86_64_asan_ubsan_debug build/test presets",
+            "inherits": [
+                "linux_gcc_x86_64",
+                "sanitize_asan_ubsan"
+            ]
+        },
+        {
+            "name": "linux_gcc_x86_64_valgrind",
+            "displayName": "Linux GCC x86_64 Valgrind",
+            "description": "Native Linux x86_64 build with GCC for Valgrind memcheck (tests run under valgrind via the emulator); use the linux_gcc_x86_64_valgrind_debug build/test presets",
+            "inherits": [
+                "linux_gcc_x86_64",
+                "valgrind"
+            ]
         }
     ],
     "buildPresets": [
@@ -66,6 +157,56 @@
             "name": "linux_gcc_x86_64_debug",
             "configurePreset": "linux_gcc_x86_64",
             "inherits": "build_debug"
+        },
+        {
+            "name": "linux_clang_x86_64_asan_debug",
+            "configurePreset": "linux_clang_x86_64_asan",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "linux_clang_x86_64_ubsan_debug",
+            "configurePreset": "linux_clang_x86_64_ubsan",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "linux_clang_x86_64_tsan_debug",
+            "configurePreset": "linux_clang_x86_64_tsan",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "linux_clang_x86_64_asan_ubsan_debug",
+            "configurePreset": "linux_clang_x86_64_asan_ubsan",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "linux_clang_x86_64_valgrind_debug",
+            "configurePreset": "linux_clang_x86_64_valgrind",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_asan_debug",
+            "configurePreset": "linux_gcc_x86_64_asan",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_ubsan_debug",
+            "configurePreset": "linux_gcc_x86_64_ubsan",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_tsan_debug",
+            "configurePreset": "linux_gcc_x86_64_tsan",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_asan_ubsan_debug",
+            "configurePreset": "linux_gcc_x86_64_asan_ubsan",
+            "inherits": "build_debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_valgrind_debug",
+            "configurePreset": "linux_gcc_x86_64_valgrind",
+            "inherits": "build_debug"
         }
     ],
     "testPresets": [
@@ -90,6 +231,90 @@
         {
             "name": "linux_gcc_x86_64_debug",
             "configurePreset": "linux_gcc_x86_64",
+            "inherits": "test_base",
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_clang_x86_64_asan_debug",
+            "configurePreset": "linux_clang_x86_64_asan",
+            "inherits": [
+                "test_base",
+                "sanitize_test_base"
+            ],
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_clang_x86_64_ubsan_debug",
+            "configurePreset": "linux_clang_x86_64_ubsan",
+            "inherits": [
+                "test_base",
+                "sanitize_test_base"
+            ],
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_clang_x86_64_tsan_debug",
+            "configurePreset": "linux_clang_x86_64_tsan",
+            "inherits": [
+                "test_base",
+                "sanitize_test_base"
+            ],
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_clang_x86_64_asan_ubsan_debug",
+            "configurePreset": "linux_clang_x86_64_asan_ubsan",
+            "inherits": [
+                "test_base",
+                "sanitize_test_base"
+            ],
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_clang_x86_64_valgrind_debug",
+            "configurePreset": "linux_clang_x86_64_valgrind",
+            "inherits": "test_base",
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_asan_debug",
+            "configurePreset": "linux_gcc_x86_64_asan",
+            "inherits": [
+                "test_base",
+                "sanitize_test_base"
+            ],
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_ubsan_debug",
+            "configurePreset": "linux_gcc_x86_64_ubsan",
+            "inherits": [
+                "test_base",
+                "sanitize_test_base"
+            ],
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_tsan_debug",
+            "configurePreset": "linux_gcc_x86_64_tsan",
+            "inherits": [
+                "test_base",
+                "sanitize_test_base"
+            ],
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_asan_ubsan_debug",
+            "configurePreset": "linux_gcc_x86_64_asan_ubsan",
+            "inherits": [
+                "test_base",
+                "sanitize_test_base"
+            ],
+            "configuration": "Debug"
+        },
+        {
+            "name": "linux_gcc_x86_64_valgrind_debug",
+            "configurePreset": "linux_gcc_x86_64_valgrind",
             "inherits": "test_base",
             "configuration": "Debug"
         }

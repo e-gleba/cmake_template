@@ -85,12 +85,12 @@ target_sources(
         FILES math.cppm math_operations.cppm)
 target_compile_features(06_modules_library PUBLIC cxx_std_23)
 set_target_properties(06_modules_library PROPERTIES CXX_EXTENSIONS OFF)
-target_link_libraries(06_modules_library PRIVATE warnings)
+target_link_libraries(06_modules_library PRIVATE warnings ct_sanitize)
 
 add_executable(06_modules main.cpp)
 target_compile_features(06_modules PRIVATE cxx_std_23)
 set_target_properties(06_modules PROPERTIES CXX_EXTENSIONS OFF)
-target_link_libraries(06_modules PRIVATE cxx_project::modules warnings)
+target_link_libraries(06_modules PRIVATE cxx_project::modules warnings ct_sanitize)
 
 install(TARGETS 06_modules RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
                                  COMPONENT runtime)

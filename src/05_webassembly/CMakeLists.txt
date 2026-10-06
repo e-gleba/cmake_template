@@ -10,6 +10,7 @@ target_compile_features(05_webassembly PRIVATE cxx_std_23)
 target_link_libraries(
     05_webassembly
     PRIVATE warnings
+            ct_sanitize
             SDL3::SDL3-static
             ct::imgui_sdl3_opengl3
             Microsoft.GSL::GSL)

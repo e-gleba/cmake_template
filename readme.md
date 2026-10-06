@@ -54,6 +54,8 @@ Replayable sources and re-record instructions: [`assets/casts/`](assets/casts/re
 | Target | Configure preset | Notes |
 | --- | --- | --- |
 | Linux x86_64 | `linux_gcc_x86_64`, `linux_clang_x86_64` | Native, full test + package |
+| Linux sanitizers | `linux_*_asan`, `*_ubsan`, `*_tsan`, `*_asan_ubsan` | Debug only, no package; e.g. `cmake --preset linux_clang_x86_64_asan && cmake --build --preset linux_clang_x86_64_asan_debug && ctest --preset linux_clang_x86_64_asan_debug` |
+| Linux Valgrind | `linux_*_valgrind` | Debug only; tests run under memcheck via the `_valgrind_debug` test preset (or built-in `ctest --test-dir build/<preset> -C Debug -T memcheck`) |
 | Windows x86_64 | `windows_msvc_x86_64` | Native, Visual Studio 17 2022 |
 | Windows cross (from Linux) | `windows_llvm_mingw_x86_64`, `_x86`, `_aarch64` | llvm-mingw toolchain, no tests |
 | Android | `android_clang_aarch64`, `_armv7`, `_x86_64`, `_x86` | NDK, API 24, `c++_shared`; tests via `./gradlew connectedCheck` in `android_project/` |
@@ -75,7 +77,7 @@ Docker images (`fedora`, `alt`) are manual only: run [`docker_ci`](https://githu
 | **WebAssembly** | ✅ Emscripten (SDL3 + ImGui + OpenGL demo) | ✅ + Pages deploy | ❌ | ❌ |
 | **Docker / CI** | ✅ + Actions matrix | ✅ Docker + Actions | ✅ GitHub Actions | ✅ |
 | **CPack packaging** | ✅ tar.gz / zip / txz | ❌ | ❌ | ❌ |
-| **Sanitizers** | ❌ [#9](https://github.com/e-gleba/cmake_template/issues/9) | ✅ ASan/UBSan | ✅ | ❌ |
+| **Sanitizers** | ✅ ASan/UBSan/TSan + Valgrind presets | ✅ ASan/UBSan | ✅ | ❌ |
 | **Fuzz testing** | ❌ | ✅ libFuzzer | ❌ | ❌ |
 | **Code coverage** | ❌ [#10](https://github.com/e-gleba/cmake_template/issues/10) | ✅ codecov | ✅ codecov | ❌ |
 | **macOS/iOS (Xcode)** | ❌ [#20](https://github.com/e-gleba/cmake_template/issues/20) | Limited | ❌ | ❌ |

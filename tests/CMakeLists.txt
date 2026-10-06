@@ -15,7 +15,7 @@ target_sources(
 target_include_directories(tests PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
 target_compile_features(tests PRIVATE cxx_std_23)
 
-target_link_libraries(tests PRIVATE doctest::doctest
+target_link_libraries(tests PRIVATE doctest::doctest ct_sanitize
                                     $<$<PLATFORM_ID:Android>:log>)
 
 # Static runtime: no shipped libc++.dll / libunwind.dll. Windows GNU-frontend

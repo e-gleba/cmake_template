@@ -26,6 +26,7 @@ target_link_libraries(
         SDL3::SDL3-shared
         Microsoft.GSL::GSL
         warnings
+        ct_sanitize
 )
 
 target_link_options(

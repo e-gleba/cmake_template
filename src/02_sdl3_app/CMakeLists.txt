@@ -12,7 +12,7 @@ target_sources(02_sdl3_app PRIVATE main.cpp)
 
 target_compile_features(02_sdl3_app PRIVATE cxx_std_23)
 target_link_libraries(02_sdl3_app PRIVATE SDL3::SDL3-shared Microsoft.GSL::GSL
-                                          warnings)
+                                          warnings ct_sanitize)
 
 # Static runtime: no shipped libc++.dll / libunwind.dll. Windows GNU-frontend
 # exes only — MSVC / clang-cl (MSVC frontend) and non-Windows never match.

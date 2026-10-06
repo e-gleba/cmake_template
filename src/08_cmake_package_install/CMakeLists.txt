@@ -53,7 +53,7 @@ target_compile_features(rt_demo PRIVATE cxx_std_20)
 target_include_directories(rt_demo PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 # Deliberately no fmt here (dependency-free std): fmt 12 cannot compile
 # on 32-bit llvm-mingw at all — see the caveat in cmake/cpm/fmt-config.cmake.
-target_link_libraries(rt_demo PRIVATE warnings)
+target_link_libraries(rt_demo PRIVATE warnings ct_sanitize)
 
 set_target_properties(
     rt_demo

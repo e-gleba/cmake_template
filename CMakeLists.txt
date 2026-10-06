@@ -27,6 +27,7 @@ list(
 
 include(ct_cpm) # dependency bootstrap: CPM + package configs
 include(ct_warnings) # warnings interface target
+include(ct_sanitize) # sanitizer interface targets (CT_*_SANITIZER options, all off = no-op)
 
 if(PROJECT_IS_TOP_LEVEL)
     include(ct_clang_format)

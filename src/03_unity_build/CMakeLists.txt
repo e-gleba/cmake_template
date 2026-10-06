@@ -11,7 +11,8 @@ endif()
 target_sources(03_unity_build PRIVATE greet.cpp main.cpp)
 
 target_link_libraries(03_unity_build PRIVATE SDL3::SDL3-shared
-                                             Microsoft.GSL::GSL warnings)
+                                             Microsoft.GSL::GSL warnings
+                                             ct_sanitize)
 target_compile_features(03_unity_build PRIVATE cxx_std_23)
 
 # Static runtime: no shipped libc++.dll / libunwind.dll. Windows GNU-frontend
