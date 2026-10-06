@@ -14,7 +14,14 @@
       "name": "sdl3",
       "version>=": "3.4.18",
       "default-features": false,
-      "features": ["x11"]
+      "features": ["x11"],
+      "platform": "linux"
+    },
+    {
+      "name": "sdl3",
+      "version>=": "3.4.18",
+      "default-features": false,
+      "platform": "windows"
     },
     "ms-gsl",
     {
