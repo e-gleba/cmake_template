@@ -138,3 +138,6 @@ cmake_system_information__/
 
 # qtcreator
 .qtcreator
+
+# Demo recordings: .cast is an intermediate, .gif is the artifact.
+assets/casts/*.cast

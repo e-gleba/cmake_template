@@ -4,8 +4,10 @@
   <img src="assets/logo-400.png" alt="cmake_template logo" width="200"/>
 </p>
 
-[![ci](https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&label=ci)](https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml)
-[![release](https://img.shields.io/github/v/release/e-gleba/cmake_template)](https://github.com/e-gleba/cmake_template/releases)
+<p align="center">
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&label=ci" alt="ci"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/releases"><img src="https://img.shields.io/github/v/release/e-gleba/cmake_template" alt="release"/></a>
+</p>
 
 <p align="center">
   <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-ci-2ea44f" alt="Run CI"/></a>
@@ -69,6 +71,18 @@ Docker images (`fedora`, `steamos`, `alt`) are manual only: run [`docker_ci`](ht
 | **macOS/iOS (Xcode)** | ❌ [#20](https://github.com/e-gleba/cmake_template/issues/20) | Limited | ❌ | ❌ |
 | **vcpkg** | ❌ [#3](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ |
 | **License** | MIT | Unlicense | Unlicense | MIT |
+
+## Demo
+
+**Quick start** — configure, build, test:
+
+![Quick start: configure, build, test](assets/casts/quickstart.gif)
+
+**Release in one command** — `release_package` workflow with CPack:
+
+![One-command release_package workflow with CPack](assets/casts/package.gif)
+
+Replayable sources and re-record instructions: [`assets/casts/`](assets/casts/readme.md).
 
 ## Layout
 
