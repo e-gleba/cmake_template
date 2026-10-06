@@ -119,6 +119,8 @@ jobs:
     name: packages
     needs: validate
     uses: ./.github/workflows/cmake_multi_platform.yml
+    with:
+      android_emulator_tests: true
     permissions:
       contents: read
 
