@@ -1,18 +1,9 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: docker_ci
 
-# Builds only the Dockerfiles that changed; a workflow-file edit rebuilds
-# all. Docs and meta files never trigger this pipeline.
+# Manual only: toolchain images are stable and slow to rebuild, so no
+# push/pull_request triggers — run from Actions or the readme ▶ buttons.
 on:
-  pull_request:
-    paths: &docker_paths
-      - "docker/**"
-      - '!.github/workflows/docker.yml'
-      - "!docker/**/*.md"
-      - ".github/workflows/docker.yml"
-  push:
-    branches: [main]
-    paths: *docker_paths
   workflow_dispatch:
 
 concurrency:
@@ -23,54 +14,14 @@ permissions:
   contents: read
 
 jobs:
-  detect_changes:
-    name: docker_detect_changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      matrix: ${{ steps.changes.outputs.matrix }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Detect changed Dockerfiles
-        id: changes
-        shell: bash
-        run: |
-          files=(fedora steamos alt)
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            changed=("${files[@]}")
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            mapfile -t diff < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
-          else
-            mapfile -t diff < <(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
-          fi
-          if [[ "${{ github.event_name }}" != "workflow_dispatch" ]]; then
-            changed=()
-            for name in "${files[@]}"; do
-              if printf '%s\n' "${diff[@]}" | grep -qx "docker/${name}.Dockerfile"; then
-                changed+=("${name}")
-              fi
-            done
-            if printf '%s\n' "${diff[@]}" | grep -qx '.github/workflows/docker.yml'; then
-              changed=("${files[@]}")
-            fi
-          fi
-          matrix=$(printf '%s\n' "${changed[@]}" | jq -R . | jq -sc .)
-          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
-
   docker_build_and_lint:
     name: linux_docker_${{ matrix.name }}
-    needs: detect_changes
-    if: needs.detect_changes.outputs.matrix != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        name: ${{ fromJSON(needs.detect_changes.outputs.matrix) }}
+        name: [fedora, steamos, alt]
     steps:
       - name: Checkout
         uses: actions/checkout@v7

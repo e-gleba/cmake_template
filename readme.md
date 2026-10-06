@@ -1,7 +1,19 @@
 # cmake_template
 
+<p align="center">
+  <img src="assets/logo-400.png" alt="cmake_template logo" width="200"/>
+</p>
+
 [![ci](https://img.shields.io/github/actions/workflow/status/e-gleba/cmake_template/cmake_multi_platform.yml?branch=main&label=ci)](https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml)
 [![release](https://img.shields.io/github/v/release/e-gleba/cmake_template)](https://github.com/e-gleba/cmake_template/releases)
+
+<p align="center">
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/cmake_multi_platform.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-ci-2ea44f" alt="Run CI"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/release.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-release-2ea44f" alt="Run release"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/docker.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-docker--build-2ea44f" alt="Run docker build"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/publish-docker.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-publish--docker-2ea44f" alt="Run publish-docker"/></a>
+  <a href="https://github.com/e-gleba/cmake_template/actions/workflows/renovate.yml"><img src="https://img.shields.io/badge/%E2%96%B6_run-renovate-2ea44f" alt="Run Renovate"/></a>
+</p>
 
 C++23 CMake template. Ninja Multi-Config, CPM, doctest + CTest, CPack. Presets for Linux, Windows, Android, WebAssembly, and Steam Runtime.
 
@@ -35,6 +47,28 @@ Or replace the three steps with the `linux_gcc_x86_64_release_package` workflow 
 | Steam | `linux_steamrt4_x86_64`, `windows_msvc_steam_x86_64`, `windows_llvm_mingw_steam_x86_64` | SteamPipe-ready ZIP, ABI/loader gates |
 
 Release via the [release workflow](https://github.com/e-gleba/cmake_template/actions/workflows/release.yml): builds all platforms, tags, attaches artifacts.
+
+Docker images (`fedora`, `steamos`, `alt`) are manual only: run [`docker_ci`](https://github.com/e-gleba/cmake_template/actions/workflows/docker.yml) (build + verify) or [`docker_publish`](https://github.com/e-gleba/cmake_template/actions/workflows/publish-docker.yml) (push to GHCR) — or tick `publish_docker` in a release run.
+
+## Comparison
+
+| Feature | **cmake_template** | [cpp-best-practices](https://github.com/cpp-best-practices/cmake_template) | [modern-cpp-template](https://github.com/filipdutescu/modern-cpp-template) | [cmake-init](https://github.com/cginternals/cmake-init) |
+| --- | --- | --- | --- | --- |
+| **C++ Standard** | **23 / 26** | 17 / 20 | 17 | 11+ |
+| **CMake Presets** | ✅ 10+ with workflows | ❌ | ❌ | ❌ |
+| **Android NDK** | ✅ 4 presets, 64-bit CI | ❌ | ❌ | ❌ |
+| **Android instrumented tests** | ✅ GMD + doctest JNI | ❌ | ❌ | ❌ |
+| **Linux → Windows cross** | ✅ llvm-mingw (3 arch) | ❌ | ❌ | ❌ |
+| **WebAssembly** | ✅ Emscripten (SDL3 + ImGui + OpenGL demo) | ✅ + Pages deploy | ❌ | ❌ |
+| **Steam Runtime / Deck** | ✅ steamrt4 + static CRT + ABI CI | ❌ | ❌ | ❌ |
+| **Docker / CI** | ✅ + Actions matrix | ✅ Docker + Actions | ✅ GitHub Actions | ✅ |
+| **CPack packaging** | ✅ tar.gz / zip / txz | ❌ | ❌ | ❌ |
+| **Sanitizers** | ❌ [#9](https://github.com/e-gleba/cmake_template/issues/9) | ✅ ASan/UBSan | ✅ | ❌ |
+| **Fuzz testing** | ❌ | ✅ libFuzzer | ❌ | ❌ |
+| **Code coverage** | ❌ [#10](https://github.com/e-gleba/cmake_template/issues/10) | ✅ codecov | ✅ codecov | ❌ |
+| **macOS/iOS (Xcode)** | ❌ [#20](https://github.com/e-gleba/cmake_template/issues/20) | Limited | ❌ | ❌ |
+| **vcpkg** | ❌ [#3](https://github.com/e-gleba/cmake_template/issues/3) | ❌ | ❌ | ❌ |
+| **License** | MIT | Unlicense | Unlicense | MIT |
 
 ## Layout
 

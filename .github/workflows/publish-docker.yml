@@ -16,11 +16,6 @@ on:
         required: false
         type: string
         default: ""
-  push:
-    branches: [main]
-    paths:
-      - "docker/**"
-      - ".github/workflows/publish-docker.yml"
 
 concurrency:
   group: docker_publish-${{ github.workflow }}-${{ github.ref }}

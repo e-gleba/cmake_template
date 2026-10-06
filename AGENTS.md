@@ -88,7 +88,7 @@ cmake --build build/dev --target format tidy
 
 - Workflows start with yaml-language-server schema line.
 - Matrix in cmake_multi_platform.yml (workflow_call). release.yml pipes it + publish-docker.yml, tags via softprops/action-gh-release, then PR bumps project(VERSION).
-- Docker: matrix row in publish-docker.yml, ghcr.io/${{ github.repository }}/<name>. Pin bases. Dependabot watches /docker.
+- Docker: manual dispatch only (`docker_ci` build, `docker_publish` push or via release input). Matrix row in publish-docker.yml, ghcr.io/${{ github.repository }}/<name>. Pin bases. Dependabot watches /docker.
 - New matrix entries use existing presets only.
 
 ## Cross

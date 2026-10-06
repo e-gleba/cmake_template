@@ -44,4 +44,6 @@ BuildKit is required for package-manager cache mounts.
 - BuildKit cache mounts persist package downloads.
 - Default entrypoint: `cmake --workflow --preset=linux_gcc_x86_64_release_package`.
 - GHCR publication includes provenance and SBOM attestations.
-- Docker jobs run only when their respective files change.
+- Docker jobs are manual only: dispatch `docker_ci` (build + verify) or
+  `docker_publish` (push to GHCR) from Actions, the release workflow input,
+  or the readme ▶ buttons.
