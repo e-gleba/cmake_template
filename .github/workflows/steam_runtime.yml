@@ -38,7 +38,6 @@ on:
       - "tools/**"
       - "scripts/**"
       - "android_project/**"
-      - "nix/**"
       - "license.md"
       - "AGENTS.md"
       - ".github/ISSUE_TEMPLATE/**"
@@ -53,7 +52,6 @@ on:
       - ".github/workflows/cmake_multi_platform.yml"
       - ".github/workflows/docker.yml"
       - ".github/workflows/lint.yml"
-      - ".github/workflows/nix.yml"
       - ".github/workflows/release.yml"
       - ".github/workflows/publish-docker.yml"
   pull_request:

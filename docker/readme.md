@@ -11,7 +11,6 @@ Reproducible **toolchain** images. Source is not baked in — mount repo at `/ap
 | `steamos.Dockerfile` | Valve Steam Runtime 4 SDK | Current Steam Linux ABI validation | amd64 |
 | `cachyos.Dockerfile` | CachyOS official image | Optimized x86-64-v3 rolling validator | amd64; x86-64-v3 required |
 | `alt.Dockerfile` | Docker Official Image `alt:p11` | Stable ALT compiler/tool validation | amd64, arm64 |
-| `../nix/flake.nix` | nixpkgs `dockerTools` | Reproducible Nix dev shell and OCI image | amd64, arm64 |
 
 SteamOS is appliance firmware, not a build sysroot. Valve recommends Steam Linux
 Runtime 4 for new native Linux games, so the Steam image uses its official SDK.
@@ -40,26 +39,6 @@ docker run --rm -it -v "$PWD:/app" --entrypoint bash cmake-template:fedora
 
 BuildKit is required for package-manager cache mounts.
 
-## Nix usage
-
-Nix lives under `nix/` with other environment definitions. One flake defines both
-the interactive shell and OCI image, preventing package-list drift.
-
-```bash
-# Development shell.
-nix develop ./nix
-nix develop ./nix --command cmake --workflow --preset=linux_gcc_x86_64_release_package
-
-# Build and load the OCI image.
-nix build ./nix#docker
-./result | docker load
-docker run --rm -v "$PWD:/app" cmake-template-nix:latest
-```
-
-CI evaluates and builds the Nix image whenever `nix/**` changes. A committed lock
-file can be added after generating it with Nix; CI currently resolves the selected
-nixpkgs branch on each build instead of claiming a fixed dependency snapshot.
-
 ## Design
 
 - Toolchain images only: no source snapshot and no runtime packaging.
@@ -67,4 +46,4 @@ nixpkgs branch on each build instead of claiming a fixed dependency snapshot.
 - BuildKit cache mounts persist package downloads.
 - Default entrypoint: `cmake --workflow --preset=linux_gcc_x86_64_release_package`.
 - GHCR publication includes provenance and SBOM attestations.
-- Docker and Nix jobs run only when their respective files change.
+- Docker jobs run only when their respective files change.

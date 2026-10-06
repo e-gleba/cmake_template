@@ -23,7 +23,6 @@ ln -sf build/dev/compile_commands.json .
 - tools/ + scripts/ — python helpers, format/lint scripts
 - docker/ — official-base images, no source COPY
 - android_project/ — manifest + Gradle wrapper
-- nix/ — nix shells
 - docs/references.md — links live here, not readme
 
 ## CMake
