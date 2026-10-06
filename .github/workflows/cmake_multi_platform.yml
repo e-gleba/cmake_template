@@ -229,12 +229,20 @@ jobs:
       - name: Build
         run: cmake --workflow --preset android_clang_${{ matrix.abi }}_release_build
 
-  # One JDK/Gradle/SDK setup for both the release APK and the emulator run —
-  # previously two jobs repeating the same five setup steps.
+  # Gradle builds sharing one JDK/Gradle/SDK setup on both 64-bit arches: the
+  # release APK (both 64-bit ABIs) per leg, plus the emulator run on x86_64
+  # only (arm64 emulation on an x86_64 host is too slow/flaky — that leg is
+  # build-only).
   android_gradle:
-    name: android_gradle_x86_64
+    name: android_gradle_${{ matrix.arch }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        # 64-bit only: 32-bit ABIs (armeabi-v7a, x86) intentionally excluded,
+        # mirroring the android_build matrix.
+        arch: [x86_64, arm64-v8a]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -271,6 +279,7 @@ jobs:
         working-directory: ${{ env.ANDROID_PROJECT_DIR }}
         run: ./gradlew --stacktrace :app:assembleRelease
       - name: Run instrumented tests
+        if: matrix.arch == 'x86_64'
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -281,8 +290,9 @@ jobs:
       # Diagnostics for the upload below: when the test step fails before AGP
       # writes reports (build error, emulator boot failure) the upload errors
       # with a bare "no files found" — this step shows what actually exists.
+      # x86_64 only: the arm64-v8a leg is build-only (no emulator run).
       - name: Locate test reports
-        if: always()
+        if: always() && matrix.arch == 'x86_64'
         shell: bash
         run: |
           build_dir="${{ env.ANDROID_PROJECT_DIR }}/app/build"
@@ -298,7 +308,7 @@ jobs:
       # Strict on purpose: a completed test run must produce reports. If this
       # errors, the step above shows where AGP actually wrote them.
       - name: Upload test results
-        if: always()
+        if: always() && matrix.arch == 'x86_64'
         uses: actions/upload-artifact@v7
         with:
           name: android_emulator_x86_64_test_results
@@ -311,4 +321,4 @@ jobs:
         uses: ./.github/actions/stage-and-upload
         with:
           build-dir: android_project/app/build/outputs/apk/release
-          artifact-name: release-assets-android_gradle_x86_64
+          artifact-name: release-assets-android_gradle_${{ matrix.arch }}
