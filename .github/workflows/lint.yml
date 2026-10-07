@@ -11,6 +11,7 @@ on:
       - ".github/actions/**"
       - "CMakePresets.json"
       - "cmake/presets/**"
+      - "cmake/scripts/**"
   push:
     branches: [main]
     paths: *lint_paths
@@ -52,9 +53,8 @@ jobs:
       - name: Set up build
         uses: ./.github/actions/setup-cmake
         with:
-          cache-key: unused
-          cache-cpm: "false"
+          cpm-cache: "false"
       - name: Validate JSON syntax
-        run: find cmake/presets -name '*.json' -print0 | sort -z | xargs -0 -n1 jq empty && jq empty CMakePresets.json
+        run: cmake -P cmake/scripts/validate_preset_json.cmake
       - name: Validate CMake preset schema and includes
         run: cmake --list-presets=all

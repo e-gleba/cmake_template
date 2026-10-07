@@ -49,29 +49,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      VERSION: ${{ inputs.version }}
-      NEXT_VERSION: ${{ inputs.next_version }}
     steps:
-      - name: Validate input formats
-        run: |
-          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::version must look like v1.2.3 or v1.2.3-rc.1 (got '${VERSION}')"
-            exit 1
-          fi
-          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\\.[0-9]+$ ]]; then
-            echo "::error::next_version must be plain semver, no v prefix (e.g. 1.0.1) — got '${NEXT_VERSION}'"
-            exit 1
-          fi
-
-      - name: Fail if tag already exists
-        run: |
-          if gh api "repos/${{ github.repository }}/git/ref/tags/${VERSION}" >/dev/null 2>&1; then
-            echo "::error::tag ${VERSION} already exists"
-            exit 1
-          fi
-
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -80,25 +58,17 @@ jobs:
       - name: Set up build
         uses: ./.github/actions/setup-cmake
         with:
-          cache-key: unused
-          cache-cpm: "false"
+          cpm-cache: "false"
 
-      - name: Check versions against project()
+      - name: Check release inputs against project()
+        run: cmake -DPROJECT_FILE=CMakeLists.txt -DVERSION="${{ inputs.version }}" -DNEXT_VERSION="${{ inputs.next_version }}" -P cmake/scripts/check_release.cmake
+
+      - name: Fail if tag already exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          current=$(cmake -DPROJECT_FILE=CMakeLists.txt -P cmake/scripts/get_project_version.cmake | sed -n 's/^-- //p')
-          # VERSION passed the format check above, so the numeric core
-          # (the tag without any prerelease suffix) always matches.
-          [[ "${VERSION}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+) ]]
-          version_core="${BASH_REMATCH[1]}"
-          if [[ "${version_core}" != "${current}" ]]; then
-            printf "::error::release version core (%s) must match CMake project version (%s)\n" \
-              "${version_core}" "${current}"
-            exit 1
-          fi
-          if ! printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -C -V \
-            || [[ "${current}" == "${NEXT_VERSION}" ]]; then
-            printf "::error::next_version (%s) must be greater than current project version (%s)\n" \
-              "${NEXT_VERSION}" "${current}"
+          if gh api "repos/${{ github.repository }}/git/ref/tags/${{ inputs.version }}" >/dev/null 2>&1; then
+            echo "::error::tag ${{ inputs.version }} already exists"
             exit 1
           fi
 
@@ -201,48 +171,21 @@ jobs:
       - name: Set up build
         uses: ./.github/actions/setup-cmake
         with:
-          cache-key: unused
-          cache-cpm: "false"
+          cpm-cache: "false"
 
       # main may have moved since validate ran (builds take ~45 min), so
       # re-read the version from this fresh checkout: an auto-merged PR
       # must never lower project(VERSION).
       - name: Guard against version regression
-        id: version_guard
-        env:
-          NEXT_VERSION: ${{ inputs.next_version }}
-        run: |
-          current=$(cmake -DPROJECT_FILE=CMakeLists.txt -P cmake/scripts/get_project_version.cmake | sed -n 's/^-- //p')
-          if ! printf '%s\n%s\n' "${current}" "${NEXT_VERSION}" | sort -C -V \
-            || [[ "${current}" == "${NEXT_VERSION}" ]]; then
-            printf "::error::next_version (%s) must be greater than the version now on main (%s) — main moved during this release\n" \
-              "${NEXT_VERSION}" "${current}"
-            exit 1
-          fi
-          echo "current_version=${current}" >> "${GITHUB_OUTPUT}"
+        run: cmake -DPROJECT_FILE=CMakeLists.txt -DNEXT_VERSION="${{ inputs.next_version }}" -P cmake/scripts/check_release.cmake
 
       - name: Bump project version
-        env:
-          NEXT_VERSION: ${{ inputs.next_version }}
-        run: >-
-          cmake
-          -DPROJECT_FILE=CMakeLists.txt
-          -DVERSION="${NEXT_VERSION}"
-          -P cmake/scripts/set_project_version.cmake
+        run: cmake -DPROJECT_FILE=CMakeLists.txt -DVERSION="${{ inputs.next_version }}" -P cmake/scripts/set_project_version.cmake
 
-      # Getter re-read proves the rewrite; buildability of the bumped
-      # project is gated by the bump PR's own CI before auto-merge.
+      # The rewrite itself is proven by the getter; buildability of the
+      # bumped project is gated by the bump PR's own CI before auto-merge.
       - name: Verify bumped project
-        env:
-          NEXT_VERSION: ${{ inputs.next_version }}
-        run: |
-          actual=$(cmake -DPROJECT_FILE=CMakeLists.txt -P cmake/scripts/get_project_version.cmake | sed -n 's/^-- //p')
-          test "${actual}" = "${NEXT_VERSION}" || {
-            printf "::error::expected CMake project version %s, got %s\n" "${NEXT_VERSION}" "${actual}"
-            exit 1
-          }
-          git diff --check
-          git diff --exit-code -- . ':!CMakeLists.txt'
+        run: cmake -DPROJECT_FILE=CMakeLists.txt -DEXPECTED="${{ inputs.next_version }}" -P cmake/scripts/verify_version_bump.cmake
 
       - name: Create version bump pull request
         id: bump_pr
@@ -260,7 +203,6 @@ jobs:
           body: |
             Post-release version bump after `${{ inputs.version }}`.
 
-            - Previous project version: `${{ steps.version_guard.outputs.current_version }}`
             - Next project version: `${{ inputs.next_version }}`
             - Changed file: `CMakeLists.txt`
 

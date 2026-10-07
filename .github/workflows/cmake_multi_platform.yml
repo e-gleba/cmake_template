@@ -64,9 +64,13 @@ env:
     -Dorg.gradle.daemon=false
     -Dorg.gradle.configureondemand=true
 
+# Every job is one checkout plus parallel cmake --workflow runs. Presets own
+# their binaryDir (build/<preset>), so parallel jobs never share a build tree.
+# Anything beyond configure/build/test/package is a ci_* target from
+# cmake/ct_ci.cmake — workflows name a preset and a target, nothing else.
 jobs:
   native_build:
-    name: ${{ matrix.platform }}_${{ matrix.compiler }}_${{ matrix.arch }}
+    name: ${{ matrix.build }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -74,29 +78,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            platform: linux
-            compiler: clang
-            arch: x86_64
-            preset: linux_clang_x86_64_release_package
-            artifact_name: linux_clang_x86_64
-            sdl3_deps: "true"
-            apt: "clang doxygen graphviz"
+            build: linux_clang_x86_64
           - os: ubuntu-latest
-            platform: linux
-            compiler: gcc
-            arch: x86_64
-            preset: linux_gcc_x86_64_release_package
-            artifact_name: linux_gcc_x86_64
-            sdl3_deps: "true"
-            apt: "clang doxygen graphviz"
+            build: linux_gcc_x86_64
           - os: windows-2022
-            platform: windows
-            compiler: msvc
-            arch: x86_64
-            preset: windows_msvc_x86_64_release_package
-            artifact_name: windows_msvc_x86_64
-            sdl3_deps: "false"
-            apt: ""
+            build: windows_msvc_x86_64
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -105,22 +91,15 @@ jobs:
       - name: Set up build
         uses: ./.github/actions/setup-cmake
         with:
-          cache-key: ${{ matrix.artifact_name }}
-          sdl3-deps: ${{ matrix.sdl3_deps }}
-          apt-packages: ${{ matrix.apt }}
+          sdl3: ${{ matrix.os == 'ubuntu-latest' && 'true' || 'false' }}
+          apt-packages: ${{ matrix.os == 'ubuntu-latest' && 'clang doxygen graphviz' || '' }}
       - name: Build and test
-        run: cmake --workflow --preset ${{ matrix.preset }}
-      - name: Build documentation
-        if: matrix.compiler == 'clang'
-        run: cmake --build --preset linux_clang_x86_64_docs
-      - name: Verify documentation
-        if: matrix.compiler == 'clang'
-        shell: bash
-        run: |
-          index_path="build/linux_clang_x86_64/generated_docs/html/index.html"
-          test -f "${index_path}" || { echo "::error::Documentation index not found at ${index_path}"; exit 1; }
+        run: cmake --workflow --preset ${{ matrix.build }}_release_package
+      - name: Build and verify documentation
+        if: matrix.build == 'linux_clang_x86_64'
+        run: cmake --build --preset linux_clang_x86_64_release --target ci_docs
       - name: Upload documentation
-        if: matrix.compiler == 'clang'
+        if: matrix.build == 'linux_clang_x86_64'
         uses: actions/upload-artifact@v7
         with:
           name: doxygen_html_${{ github.run_id }}
@@ -130,14 +109,14 @@ jobs:
       - name: Stage and upload release assets
         uses: ./.github/actions/stage-and-upload
         with:
-          build-dir: build/${{ matrix.artifact_name }}
-          artifact-name: release-assets-${{ matrix.artifact_name }}
+          build-dir: build/${{ matrix.build }}
+          artifact: release-assets-${{ matrix.build }}
 
   # vcpkg manifest lane: same sources, dependencies from vcpkg.json via
   # the vcpkg toolchain instead of CPM fetch. Runs in parallel with the
   # CPM jobs; binary caching (run-vcpkg) keeps warm runs fast.
   vcpkg_build:
-    name: ${{ matrix.artifact_name }}
+    name: ${{ matrix.build }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -145,15 +124,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            preset: linux_gcc_x86_64_vcpkg_release_package
-            artifact_name: linux_gcc_x86_64_vcpkg
-            build_dir: linux_gcc_x86_64_vcpkg
-            sdl3_deps: "true"
+            build: linux_gcc_x86_64_vcpkg
           - os: windows-2022
-            preset: windows_msvc_x86_64_vcpkg_release_package
-            artifact_name: windows_msvc_x86_64_vcpkg
-            build_dir: windows_msvc_x86_64_vcpkg
-            sdl3_deps: "false"
+            build: windows_msvc_x86_64_vcpkg
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -162,38 +135,28 @@ jobs:
       - name: Set up build
         uses: ./.github/actions/setup-cmake
         with:
-          cache-key: ${{ matrix.artifact_name }}
-          sdl3-deps: ${{ matrix.sdl3_deps }}
+          sdl3: ${{ matrix.os == 'ubuntu-latest' && 'true' || 'false' }}
       - name: Set up vcpkg
         uses: lukka/run-vcpkg@v11
       - name: Build and test
-        run: cmake --workflow --preset ${{ matrix.preset }}
+        run: cmake --workflow --preset ${{ matrix.build }}_release_package
       - name: Stage and upload release assets
         uses: ./.github/actions/stage-and-upload
         with:
-          build-dir: build/${{ matrix.build_dir }}
-          artifact-name: release-assets-${{ matrix.artifact_name }}
+          build-dir: build/${{ matrix.build }}
+          artifact: release-assets-${{ matrix.build }}
 
   windows_cross_build:
-    name: linux_${{ matrix.compiler }}_${{ matrix.arch }}
+    name: ${{ matrix.build }}_to_windows
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - compiler: llvm_mingw
-            arch: x86_64
-            preset: windows_llvm_mingw_x86_64_release_package
-            build_dir: windows_llvm_mingw_x86_64
-          - compiler: llvm_mingw
-            arch: i686
-            preset: windows_llvm_mingw_x86_release_package
-            build_dir: windows_llvm_mingw_x86
-          - compiler: llvm_mingw
-            arch: aarch64
-            preset: windows_llvm_mingw_aarch64_release_package
-            build_dir: windows_llvm_mingw_aarch64
+        build:
+          - windows_llvm_mingw_x86
+          - windows_llvm_mingw_x86_64
+          - windows_llvm_mingw_aarch64
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -202,22 +165,17 @@ jobs:
       - name: Set up build
         uses: ./.github/actions/setup-cmake
         with:
-          cache-key: windows_llvm_mingw_${{ matrix.arch }}
-      - name: Cache LLVM MinGW
-        uses: actions/cache@v6
-        with:
-          path: llvm_mingw
-          key: llvm_mingw-${{ hashFiles('cmake/toolchains/llvm_mingw.cmake') }}
-      - name: Build and test
-        run: cmake --workflow --preset ${{ matrix.preset }}
+          llvm-mingw: "true"
+      - name: Build and package
+        run: cmake --workflow --preset ${{ matrix.build }}_release_package
       - name: Stage and upload release assets
         uses: ./.github/actions/stage-and-upload
         with:
-          build-dir: build/${{ matrix.build_dir }}
-          artifact-name: release-assets-windows-llvm-mingw-${{ matrix.arch }}
+          build-dir: build/${{ matrix.build }}
+          artifact: release-assets-${{ matrix.build }}
 
   web_build:
-    name: linux_emscripten_wasm32
+    name: web_emscripten_wasm32
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -228,35 +186,16 @@ jobs:
       - name: Set up build
         uses: ./.github/actions/setup-cmake
         with:
-          cache-key: web_emscripten_wasm32
-      - name: Cache Emscripten SDK
-        uses: actions/cache@v6
-        with:
-          path: .emsdk
-          key: emsdk-${{ hashFiles('cmake/toolchains/emscripten.cmake') }}
+          emsdk: "true"
       - name: Build and test
         run: cmake --workflow --preset web_emscripten_wasm32_release_test
       - name: Package web application
-        shell: bash
-        run: |
-          mapfile -t web_files < <(find build/web_emscripten_wasm32 -type f \
-            \( -name '05_webassembly.html' -o -name '05_webassembly.js' -o -name '05_webassembly.wasm' \) \
-            -print | sort)
-          if (( ${#web_files[@]} != 3 )); then
-            printf '::error::expected html, JavaScript, and WebAssembly outputs; found %d\n' "${#web_files[@]}"
-            exit 1
-          fi
-          staging_dir="${RUNNER_TEMP}/release-assets"
-          mkdir -p "${staging_dir}"
-          cmake -E tar cf "${staging_dir}/cxx_project-Web_Emscripten_wasm32.zip" \
-            --format=zip -- "${web_files[@]}"
-      - name: Upload release assets
-        uses: actions/upload-artifact@v7
+        run: cmake --build --preset web_emscripten_wasm32_release --target ci_web
+      - name: Stage and upload release assets
+        uses: ./.github/actions/stage-and-upload
         with:
-          name: release-assets-web-emscripten-wasm32
-          path: ${{ runner.temp }}/release-assets/
-          if-no-files-found: error
-          compression-level: 0
+          build-dir: build/web_emscripten_wasm32
+          artifact: release-assets-web-emscripten-wasm32
 
   # Direct NDK builds: CMake drives the Android toolchain itself and compiles
   # the libraries only — no Gradle, no APK. The runner image provides the NDK
@@ -277,8 +216,6 @@ jobs:
           persist-credentials: false
       - name: Set up build
         uses: ./.github/actions/setup-cmake
-        with:
-          cache-key: android_clang_${{ matrix.abi }}
       - name: Build
         run: cmake --workflow --preset android_clang_${{ matrix.abi }}_release_build
 
@@ -297,6 +234,11 @@ jobs:
         # 64-bit only: 32-bit ABIs (armeabi-v7a, x86) intentionally excluded,
         # mirroring the android_build matrix.
         arch: [x86_64, arm64-v8a]
+    # The emulator gate, computed once: composite actions cannot see the
+    # matrix context, so steps below read env.EMULATOR_TESTS instead of
+    # repeating the condition.
+    env:
+      EMULATOR_TESTS: ${{ matrix.arch == 'x86_64' && (github.event_name == 'release' || inputs.android_emulator_tests) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -305,36 +247,16 @@ jobs:
       - name: Set up build
         uses: ./.github/actions/setup-cmake
         with:
-          cache-key: unused
-          cache-cpm: "false"
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6
-        with:
-          java-version: "21"
-          distribution: temurin
+          cpm-cache: "false"
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6.4.0
-      # AGP passes -DCPM_SOURCE_CACHE=~/.cache/cpm-cmake (see app/build.gradle),
-      # which overrides the workflow-level env var — cache that directory.
-      - name: Cache CPM sources
-        uses: actions/cache@v6
+        uses: ./.github/actions/setup-gradle
         with:
-          path: ~/.cache/cpm-cmake
-          key: cpm-android_gradle-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
-          restore-keys: cpm-android_gradle-
-      - name: Accept Android SDK licenses
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-      - name: Enable KVM
-        if: matrix.arch == 'x86_64' && (github.event_name == 'release' || inputs.android_emulator_tests)
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4ci.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
+          enable-kvm: ${{ env.EMULATOR_TESTS }}
       - name: Build release APK
         working-directory: ${{ env.ANDROID_PROJECT_DIR }}
         run: ./gradlew :app:assembleRelease
       - name: Run instrumented tests
-        if: matrix.arch == 'x86_64' && (github.event_name == 'release' || inputs.android_emulator_tests)
+        if: env.EMULATOR_TESTS == 'true'
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -345,25 +267,13 @@ jobs:
       # Diagnostics for the upload below: when the test step fails before AGP
       # writes reports (build error, emulator boot failure) the upload errors
       # with a bare "no files found" — this step shows what actually exists.
-      # Only when the emulator actually ran (release-gated, see job comment).
       - name: Locate test reports
-        if: always() && matrix.arch == 'x86_64' && (github.event_name == 'release' || inputs.android_emulator_tests)
-        shell: bash
-        run: |
-          build_dir="${{ env.ANDROID_PROJECT_DIR }}/app/build"
-          for dir in outputs/androidTest-results reports/androidTests; do
-            path="${build_dir}/${dir}"
-            if [ -d "${path}" ]; then
-              echo "== ${dir} =="
-              find "${path}" -type f | sort
-            else
-              echo "::warning::${dir} not found under app/build"
-            fi
-          done
+        if: always() && env.EMULATOR_TESTS == 'true'
+        run: cmake -DAPP_BUILD_DIR=${{ env.ANDROID_PROJECT_DIR }}/app/build -P cmake/scripts/list_android_reports.cmake
       # Strict on purpose: a completed test run must produce reports. If this
       # errors, the step above shows where AGP actually wrote them.
       - name: Upload test results
-        if: always() && matrix.arch == 'x86_64' && (github.event_name == 'release' || inputs.android_emulator_tests)
+        if: always() && env.EMULATOR_TESTS == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: android_emulator_x86_64_test_results
@@ -376,4 +286,4 @@ jobs:
         uses: ./.github/actions/stage-and-upload
         with:
           build-dir: android_project/app/build/outputs/apk/release
-          artifact-name: release-assets-android_gradle_${{ matrix.arch }}
+          artifact: release-assets-android_gradle_${{ matrix.arch }}

@@ -42,13 +42,11 @@ jobs:
           cache-from: type=gha,scope=docker-${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=docker-${{ matrix.name }}
       - name: Verify toolchain
-        run: |
-          build_tool="ninja --version"
-          [[ "${{ matrix.name }}" == "alt" ]] && build_tool="make --version"
+        run: >-
           docker run --rm --entrypoint sh cmake-template:${{ matrix.name }} -c "
-            cmake --version &&
-            git --version &&
-            c++ --version &&
-            clang++ --version &&
-            ${build_tool}
+          cmake --version &&
+          git --version &&
+          c++ --version &&
+          clang++ --version &&
+          ${{ matrix.name == 'alt' && 'make --version' || 'ninja --version' }}
           "
