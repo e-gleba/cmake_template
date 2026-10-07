@@ -15,6 +15,9 @@ Think first. Minimal diff. Verify with build + tests.
   `/ct_add_preset` new platform preset, `/ct_add_dep` CPM dep, `/ct_review` diff.
 - `.opencode/agents/ct_cmake_review.md` owns the read-only review subagent
   (`@ct_cmake_review`, `edit: deny`).
+- `.opencode/ai-workflow-adapter.md` owns opencode mechanics (delegation,
+  background builds, text handling). Loaded only when a command or agent
+  explicitly asks for it; `AGENTS.md` still wins on conflicts.
 - `.agents/shared/` owns workflow memory: `ct_project_context.md`,
   `ct_test_loop.md` (native vs cross). `.agents/skills/` is vendored
   third-party skills via `.agents/install_skills.cmake` + pinned

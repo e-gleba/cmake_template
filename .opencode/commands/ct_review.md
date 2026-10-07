@@ -5,6 +5,9 @@ agent: ct_cmake_review
 
 Review `$ARGUMENTS` (default: `git diff HEAD --stat && git diff HEAD`).
 
+Read `.opencode/ai-workflow-adapter.md` and apply its delegation and
+text-handling rules.
+
 ```text
 !`git diff HEAD --stat && git diff HEAD`
 ```
