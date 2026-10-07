@@ -21,13 +21,21 @@ Canonical links for agents and humans. Keep this file as the only long link list
 - SDL3: https://github.com/libsdl-org/SDL
 - Dear ImGui: https://github.com/ocornut/imgui
 - Microsoft GSL: https://github.com/microsoft/GSL
+- doctest: https://github.com/onqtam/doctest
+- Tracy: https://github.com/wolfpld/tracy
 - CPM.cmake: https://github.com/cpm-cmake/CPM.cmake
 - Taskflow (reference only): https://github.com/taskflow/taskflow
+
+## C++ guidance
+
+- C++ Best Practices (Jason Turner): https://github.com/lefticus/cppbestpractices
+- C++ Core Guidelines: https://github.com/isocpp/CppCoreGuidelines
 
 ## Cross-compilation
 
 - Android NDK CMake guide: https://developer.android.com/ndk/guides/cmake
 - Emscripten + CMake: https://emscripten.org/docs/compiling/Building-Projects.html
+- Emscripten source: https://github.com/emscripten-core/emscripten
 - llvm-mingw: https://github.com/mstorsjo/llvm-mingw
 - vcpkg manifest mode: https://learn.microsoft.com/en-us/vcpkg/users/manifests
 
