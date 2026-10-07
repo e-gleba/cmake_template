@@ -3,7 +3,7 @@ description: Mechanical review of current diff via read-only reviewer (changed l
 agent: build
 ---
 
-Review `$ARGUMENTS` (default: whole working tree vs HEAD).
+Review `$ARGUMENTS`. If empty, review the whole working tree vs HEAD.
 
 Read `.opencode/ai-workflow-adapter.md` and apply its delegation and
 text-handling rules.

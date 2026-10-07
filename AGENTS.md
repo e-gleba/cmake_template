@@ -27,6 +27,9 @@ Think first. Minimal diff. Verify with build + tests.
 - `.agents/scripts/` owns runnable helpers: `rules/hook.py` enforces bans
   (`--staged` for pre-commit, stdin JSON for edit hooks),
   `clipboard/grab_clipboard.sh|.ps1` grabs clipboard images for UI reports.
+- `.opencode/scripts/mcp_env_set.py` sets one env var from hidden console
+  input (`setx` on Windows, rc append on POSIX). Dumb setter only — all
+  server knowledge lives in `/ct_auth_mcps`.
 
 ## Build
 

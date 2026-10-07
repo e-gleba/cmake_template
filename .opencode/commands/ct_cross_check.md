@@ -3,7 +3,8 @@ description: Configure-check cross presets (android, mingw, web) without buildin
 agent: build
 ---
 
-Cross check for `$ARGUMENTS` (default: `all`; one of `android`, `mingw`, `web`, `all`).
+Cross check for `$ARGUMENTS` (one of `android`, `mingw`, `web`, `all`).
+If empty, check `all`.
 Configure only. Never `ctest` a cross preset, never build Release unless asked.
 
 Read `.opencode/ai-workflow-adapter.md` and apply its delegation and

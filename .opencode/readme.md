@@ -36,8 +36,11 @@ Never pin `model`: the user's model choice wins.
 Body, in this order:
 
 1. One line: what it does + `$ARGUMENTS` with its default — or marked
-   `required` with the expected shape (`compiler + platform + arch`).
-   No bare `$ARGUMENTS` without either.
+   `required` with the expected shape (`compiler + platform + arch`) —
+   or no arguments at all for interactive commands (auth-style: check,
+   ask via question tool, act). No bare `$ARGUMENTS` without either.
+   Empty substitution is the common case, so state the empty behavior
+   explicitly (`If empty, …`).
 2. Link `.opencode/ai-workflow-adapter.md` (one line, always).
 3. Constraints before steps: the non-negotiable `AGENTS.md` rules, quoted
    short. A command restates at most 5 rules and never duplicates

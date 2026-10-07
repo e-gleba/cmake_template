@@ -23,7 +23,7 @@ This file adapts harness mechanics to opencode and removes nothing else.
 
 - Keep LF-only, UTF-8 without BOM (see `AGENTS.md` ## Text files).
 - Do not run line-ending normalization, BOM repair, or dedicated text
-  phases. Normal editing preserves the checkout convention.
+  steps. Normal editing preserves the checkout convention.
 - Never rewrite a file solely to change line endings.
 
 ## Presets and tests

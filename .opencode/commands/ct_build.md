@@ -3,7 +3,7 @@ description: Native configure + build + test loop (Debug default, one retry on f
 agent: build
 ---
 
-Run the native dev loop for `$ARGUMENTS` (default: `dev` preset, Debug config).
+Run the native dev loop for `$ARGUMENTS`. If empty, use the `dev` preset, Debug config.
 Do not invent presets or `cmake -D` lines.
 
 Read `.opencode/ai-workflow-adapter.md` and apply its delegation and
