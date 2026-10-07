@@ -1,8 +1,12 @@
 # cursor ignore file, same syntax as .gitignore
-external/
+# Keep in sync with .gitignore build outputs + REVIEW.md path_filters.
 build/
+_deps/
+.emsdk/
+android_project/.gradle/
+**/node_modules/
 llvm-mingw/
 llvm_mingw/
+vcpkg_installed/
 compile_commands.json
-license
-.clang-format
+.cache/

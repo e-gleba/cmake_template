@@ -3,6 +3,26 @@
 C++23. C+CXX. CMake 4.3+. Ninja Multi-Config. CPM. doctest + CTest.
 Think first. Minimal diff. Verify with build + tests.
 
+## AI files
+
+- `AGENTS.md` (this file) owns behavior. `REVIEW.md` owns mechanical
+  shape. `docs/references.md` owns links. `CLAUDE.md` is a one-line
+  pointer for Claude Code.
+- `opencode.jsonc` owns JSON config: MCP servers + repo references.
+  Markdown lives elsewhere, never inline in JSON.
+- `.opencode/commands/*.md` owns slash commands:
+  `/build` native loop, `/cross-check` android/mingw/web,
+  `/add-preset` new platform preset, `/add-dep` CPM dep, `/review` diff.
+- `.opencode/agents/cmake-review.md` owns the read-only review subagent
+  (`@cmake-review`, `edit: deny`).
+- `.agents/shared/` owns workflow memory: `project-context.md`,
+  `test-loop.md` (native vs cross). `.agents/skills/` is vendored
+  third-party skills via `.agents/install_skills.cmake` + pinned
+  `.agents/skills-lock.json` — not project workflow.
+- `tools/rules/hook.py` enforces bans (`--staged` for pre-commit,
+  stdin JSON for edit hooks). `tools/clipboard/grab_clipboard.sh|.ps1`
+  grabs clipboard images for UI reports.
+
 ## Build
 
 cmake --preset dev && cmake --build --preset dev -j && ctest --preset dev
@@ -23,7 +43,9 @@ ln -sf build/dev/compile_commands.json .
 - tools/ + scripts/ — python helpers, format/lint scripts
 - docker/ — official-base images, no source COPY
 - android_project/ — manifest + Gradle wrapper
-- docs/references.md — links live here, not readme
+- docs/references.md — links live here, not readme (see `docs/`)
+- REVIEW.md — mechanical review checklist for `/review` + `@cmake-review`
+- tools/clipboard/ — `grab_clipboard.sh` (wl-paste/xclip) + `.ps1` (WinForms)
 
 ## CMake
 
@@ -85,6 +107,8 @@ ln -sf build/dev/compile_commands.json .
 
 cmake --build build/dev --target format tidy
 - clang-format + cmake-format clean. clang-tidy on native only, never cross. pre-commit install once.
+- `/review` (`REVIEW.md` + `@cmake-review`) is mechanical first-pass, changed lines only.
+- `tools/rules/hook.py --staged` blocks banned CMake/C++ before commit.
 
 ## CI
 
@@ -92,9 +116,11 @@ cmake --build build/dev --target format tidy
 - Matrix in cmake_multi_platform.yml (workflow_call). release.yml pipes it + publish-docker.yml, tags via softprops/action-gh-release, then PR bumps project(VERSION).
 - Docker: manual dispatch only (`docker_ci` build, `docker_publish` push or via release input). Matrix row in publish-docker.yml, ghcr.io/${{ github.repository }}/<name>. Pin bases. Dependabot watches /docker.
 - New matrix entries use existing presets only.
+- CI-only build steps are ci_* targets in cmake/ct_ci.cmake (workflows name preset + target, never paths).
 
 ## Cross
 
+- `/cross-check [android|mingw|web|all]` — configure-only by default, no `ctest` on cross.
 - Android: ./gradlew :app:assembleRelease --offline. abiFilters decides shipped .so. Keep unstripped .so. Symbolicate: ndk-stack -sym <dir> -dump tombstone.txt.
 - llvm-mingw: cmake/toolchains/llvm_mingw.cmake, CMAKE_SYSTEM_PROCESSOR x86_64/i686/aarch64, auto-download tarball, --sysroot + lld baked in.
 - Web: emsdk toolchain, wasm32 only.
@@ -109,9 +135,21 @@ cmake --build build/dev --target format tidy
 
 - readme.md <10KB. Quick start <=3 cmds. Links in docs/references.md. No sponsor badges.
 
+## Text files
+
+- LF only, UTF-8 without BOM. CRLF only for native non-WSL Windows checkouts.
+- Clipboard images for UI bugs: `tools/clipboard/grab_clipboard.sh out.png` (Linux) or `tools/clipboard/grab_clipboard.ps1 -OutPath out.png` (Windows). Attach PNG, never paste binary.
+
+## Troubleshooting
+
+- "preset not found": read `CMakePresets.json` includes + `cmake/presets/*.json`. Never invent `cmake -D` lines.
+- Cross test failure: cross has no CTest. Android -> `./gradlew connectedCheck`, web -> Node, mingw -> no tests.
+- `Libraries not found` (Android/web): NDK/emsdk path comes from preset/toolchain, not from env hacks in `CMakeLists.txt`.
+
 ## Commits
 
 feat(ci): ..., fix(docker): ..., chore(docs): ..., deps: bump x to y.
+- `[ai] ` prefix only when every retained change is AI workflow only (`AGENTS.md`, `REVIEW.md`, `.opencode/`, `.agents/shared/`, `tools/rules/`, commands/agents). Product + workflow mixed = no prefix. Never add `Co-Authored-By` or tool trailers.
 
 ## Agent rules
 

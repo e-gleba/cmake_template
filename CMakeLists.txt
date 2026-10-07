@@ -54,6 +54,10 @@ if(PROJECT_IS_TOP_LEVEL)
 
     include(ct_cpack)
 
+    # CI entry points (ci_docs, ci_web, ...): after src/ and tests/, the
+    # module probes built targets with if(TARGET ...).
+    include(ct_ci)
+
     # include(CPack) reads all CPACK_* variables at include-time and
     # ignores later changes — keep it last.
     # Ref: Professional CMake §36.1 "Packaging Basics"
