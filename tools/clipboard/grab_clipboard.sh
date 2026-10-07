@@ -2,6 +2,11 @@
 # Grab clipboard image on Linux and save as PNG.
 # Wayland (wl-paste) -> X11 (xclip) -> error.
 # Usage: grab_clipboard.sh <output.png>
+#
+# Pattern from telegramdesktop/tdesktop@dev, .claude/grab_clipboard.sh
+# (https://github.com/telegramdesktop/tdesktop/blob/dev/.claude/grab_clipboard.sh),
+# which is macOS-only (osascript). This Linux implementation is original.
+# Same license as this repo (MIT, see license.md).
 set -u
 outPath="$1"
 if [ -z "${outPath:-}" ]; then

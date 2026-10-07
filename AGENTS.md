@@ -11,12 +11,12 @@ Think first. Minimal diff. Verify with build + tests.
 - `opencode.jsonc` owns JSON config: MCP servers + repo references.
   Markdown lives elsewhere, never inline in JSON.
 - `.opencode/commands/*.md` owns slash commands:
-  `/build` native loop, `/cross-check` android/mingw/web,
-  `/add-preset` new platform preset, `/add-dep` CPM dep, `/review` diff.
-- `.opencode/agents/cmake-review.md` owns the read-only review subagent
-  (`@cmake-review`, `edit: deny`).
-- `.agents/shared/` owns workflow memory: `project-context.md`,
-  `test-loop.md` (native vs cross). `.agents/skills/` is vendored
+  `/ct_build` native loop, `/ct_cross_check` android/mingw/web,
+  `/ct_add_preset` new platform preset, `/ct_add_dep` CPM dep, `/ct_review` diff.
+- `.opencode/agents/ct_cmake_review.md` owns the read-only review subagent
+  (`@ct_cmake_review`, `edit: deny`).
+- `.agents/shared/` owns workflow memory: `ct_project_context.md`,
+  `ct_test_loop.md` (native vs cross). `.agents/skills/` is vendored
   third-party skills via `.agents/install_skills.cmake` + pinned
   `.agents/skills-lock.json` — not project workflow.
 - `tools/rules/hook.py` enforces bans (`--staged` for pre-commit,
@@ -44,7 +44,7 @@ ln -sf build/dev/compile_commands.json .
 - docker/ — official-base images, no source COPY
 - android_project/ — manifest + Gradle wrapper
 - docs/references.md — links live here, not readme (see `docs/`)
-- REVIEW.md — mechanical review checklist for `/review` + `@cmake-review`
+- REVIEW.md — mechanical review checklist for `/ct_review` + `@ct_cmake_review`
 - tools/clipboard/ — `grab_clipboard.sh` (wl-paste/xclip) + `.ps1` (WinForms)
 
 ## CMake
@@ -107,7 +107,7 @@ ln -sf build/dev/compile_commands.json .
 
 cmake --build build/dev --target format tidy
 - clang-format + cmake-format clean. clang-tidy on native only, never cross. pre-commit install once.
-- `/review` (`REVIEW.md` + `@cmake-review`) is mechanical first-pass, changed lines only.
+- `/ct_review` (`REVIEW.md` + `@ct_cmake_review`) is mechanical first-pass, changed lines only.
 - `tools/rules/hook.py --staged` blocks banned CMake/C++ before commit.
 
 ## CI
@@ -120,7 +120,7 @@ cmake --build build/dev --target format tidy
 
 ## Cross
 
-- `/cross-check [android|mingw|web|all]` — configure-only by default, no `ctest` on cross.
+- `/ct_cross_check [android|mingw|web|all]` — configure-only by default, no `ctest` on cross.
 - Android: ./gradlew :app:assembleRelease --offline. abiFilters decides shipped .so. Keep unstripped .so. Symbolicate: ndk-stack -sym <dir> -dump tombstone.txt.
 - llvm-mingw: cmake/toolchains/llvm_mingw.cmake, CMAKE_SYSTEM_PROCESSOR x86_64/i686/aarch64, auto-download tarball, --sysroot + lld baked in.
 - Web: emsdk toolchain, wasm32 only.

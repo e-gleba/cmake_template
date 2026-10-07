@@ -4,6 +4,12 @@
 Usage as opencode/Claude edit hook (reads JSON payload from stdin),
 or as a pre-commit check: python3 tools/rules/hook.py --staged
 Exit 0 = clean, 1/2 = violations.
+
+Pattern from telegramdesktop/tdesktop@dev, tools/rules/hook.py
+(https://github.com/telegramdesktop/tdesktop/blob/dev/tools/rules/hook.py):
+edit-hook stdin-JSON + --staged dual mode. All checks below are original
+to this repo (CMake/C++ bans per AGENTS.md + REVIEW.md); no lines copied.
+Same license as this repo (MIT, see license.md).
 """
 
 from __future__ import annotations
