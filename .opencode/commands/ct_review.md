@@ -1,6 +1,6 @@
 ---
 description: Mechanical review of current diff (REVIEW.md + AGENTS.md, changed lines only)
-agent: cmake-review
+agent: ct_cmake_review
 ---
 
 Review `$ARGUMENTS` (default: `git diff HEAD --stat && git diff HEAD`).

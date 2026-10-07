@@ -19,9 +19,9 @@ Think first. Minimal diff. Verify with build + tests.
   `ct_test_loop.md` (native vs cross). `.agents/skills/` is vendored
   third-party skills via `.agents/install_skills.cmake` + pinned
   `.agents/skills-lock.json` — not project workflow.
-- `tools/rules/hook.py` enforces bans (`--staged` for pre-commit,
-  stdin JSON for edit hooks). `tools/clipboard/grab_clipboard.sh|.ps1`
-  grabs clipboard images for UI reports.
+- `.agents/scripts/` owns runnable helpers: `rules/hook.py` enforces bans
+  (`--staged` for pre-commit, stdin JSON for edit hooks),
+  `clipboard/grab_clipboard.sh|.ps1` grabs clipboard images for UI reports.
 
 ## Build
 
@@ -45,7 +45,7 @@ ln -sf build/dev/compile_commands.json .
 - android_project/ — manifest + Gradle wrapper
 - docs/references.md — links live here, not readme (see `docs/`)
 - REVIEW.md — mechanical review checklist for `/ct_review` + `@ct_cmake_review`
-- tools/clipboard/ — `grab_clipboard.sh` (wl-paste/xclip) + `.ps1` (WinForms)
+- `.agents/scripts/clipboard/` — `grab_clipboard.sh` (wl-paste/xclip) + `.ps1` (WinForms)
 
 ## CMake
 
@@ -108,7 +108,7 @@ ln -sf build/dev/compile_commands.json .
 cmake --build build/dev --target format tidy
 - clang-format + cmake-format clean. clang-tidy on native only, never cross. pre-commit install once.
 - `/ct_review` (`REVIEW.md` + `@ct_cmake_review`) is mechanical first-pass, changed lines only.
-- `tools/rules/hook.py --staged` blocks banned CMake/C++ before commit.
+- `.agents/scripts/rules/hook.py --staged` blocks banned CMake/C++ before commit.
 
 ## CI
 
@@ -138,7 +138,7 @@ cmake --build build/dev --target format tidy
 ## Text files
 
 - LF only, UTF-8 without BOM. CRLF only for native non-WSL Windows checkouts.
-- Clipboard images for UI bugs: `tools/clipboard/grab_clipboard.sh out.png` (Linux) or `tools/clipboard/grab_clipboard.ps1 -OutPath out.png` (Windows). Attach PNG, never paste binary.
+- Clipboard images for UI bugs: `.agents/scripts/clipboard/grab_clipboard.sh out.png` (Linux) or `grab_clipboard.ps1 -OutPath out.png` (Windows). Attach PNG, never paste binary.
 
 ## Troubleshooting
 
@@ -149,7 +149,7 @@ cmake --build build/dev --target format tidy
 ## Commits
 
 feat(ci): ..., fix(docker): ..., chore(docs): ..., deps: bump x to y.
-- `[ai] ` prefix only when every retained change is AI workflow only (`AGENTS.md`, `REVIEW.md`, `.opencode/`, `.agents/shared/`, `tools/rules/`, commands/agents). Product + workflow mixed = no prefix. Never add `Co-Authored-By` or tool trailers.
+- `[ai] ` prefix only when every retained change is AI workflow only (`AGENTS.md`, `REVIEW.md`, `.opencode/`, `.agents/`, commands/agents). Product + workflow mixed = no prefix. Never add `Co-Authored-By` or tool trailers.
 
 ## Agent rules
 

@@ -1,6 +1,5 @@
 {
     "$schema": "https://opencode.ai/config.json",
-    "openTelemetry": false,
     "formatter": true,
     // MCPs catalog: https://mcpservers.org/
     // For skills see: https://www.skills.sh/

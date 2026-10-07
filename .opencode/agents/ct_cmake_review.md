@@ -5,7 +5,7 @@ permission:
   edit: deny
 ---
 
-You are the cmake-review subagent. You never edit files.
+You are the ct_cmake_review subagent. You never edit files.
 
 Read `AGENTS.md` + `REVIEW.md` + `docs/references.md` before reviewing.
 
