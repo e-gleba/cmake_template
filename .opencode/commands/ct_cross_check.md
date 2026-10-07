@@ -1,17 +1,29 @@
 ---
-description: Verify cross presets without building everything (Android, llvm-mingw, Emscripten)
+description: Configure-check cross presets (android, mingw, web) without building everything
 agent: build
 ---
 
-Cross check for `$ARGUMENTS` (one of: android, mingw, web, all).
+Cross check for `$ARGUMENTS` (default: `all`; one of `android`, `mingw`, `web`, `all`).
+Configure only. Never `ctest` a cross preset, never build Release unless asked.
 
-Rules:
-- Edit `cmake/presets/*.json` only. `dev` stays zero-pin native.
-- Cross disables test. Workflow skips test step — never force `ctest` on a cross preset.
-- Android: NDK + `c++_shared` + API 24, tidy cleared. Tests via `./gradlew connectedCheck` in `android_project/`, not CTest.
-- llvm-mingw: `cmake/toolchains/llvm_mingw.cmake`, `CMAKE_SYSTEM_PROCESSOR` x86_64/i686/aarch64, `--sysroot` + lld baked in.
-- Web: emsdk toolchain, wasm32 only, tests under Node.js.
+Read `.opencode/ai-workflow-adapter.md` and apply its delegation and
+text-handling rules. Follow `.agents/shared/ct_test_loop.md` for the
+native-vs-cross split.
+
+Preset map (representative configure preset per platform; verify with the
+listing below, do not guess variants):
+- `android` → `android_clang_aarch64` (NDK, `c++_shared`, API 24, tidy cleared)
+- `mingw` → `windows_llvm_mingw_x86_64` (`cmake/toolchains/llvm_mingw.cmake`, auto-downloaded toolchain)
+- `web` → `web_emscripten_wasm32` (emsdk toolchain, bootstrapped to `.emsdk/`, wasm32 only)
+
+```text
+!`cmake --list-presets 2>/dev/null | grep -E "android|mingw|emscripten|web_"`
+```
 
 Steps:
-1. `cmake --preset <configure-preset>` for each requested platform (dry configure only unless user asked for build).
-2. Report per-preset: OK / FAILED + first error line. Never build Release unless asked.
+1. `cmake --preset <representative>` per requested platform.
+2. Toolchain bootstrap (emsdk/llvm-mingw download) is expected on first run; only errors after bootstrap count as failures.
+3. `dev` stays zero-pin native — never "fix" a cross failure by editing shared presets.
+
+Report as a table: preset | OK/FAILED | first error line (failures only).
+Android tests run via `./gradlew connectedCheck`, web under Node.js — mention, don't run, unless asked.
