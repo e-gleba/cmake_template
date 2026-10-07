@@ -18,6 +18,8 @@ Think first. Minimal diff. Verify with build + tests.
 - `.opencode/ai-workflow-adapter.md` owns opencode mechanics (delegation,
   background builds, text handling). Loaded only when a command or agent
   explicitly asks for it; `AGENTS.md` still wins on conflicts.
+- `.opencode/readme.md` owns prompt-file conventions: naming, command vs
+  agent vs skill, and the required shape of every new command/agent file.
 - `.agents/shared/` owns workflow memory: `ct_project_context.md`,
   `ct_test_loop.md` (native vs cross). `.agents/skills/` is vendored
   third-party skills via `.agents/install_skills.cmake` + pinned
