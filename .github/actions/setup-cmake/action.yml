@@ -1,19 +1,16 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-action.json
 name: setup cmake build
-description: Pin CMake and Ninja, install Linux deps, restore CPM cache.
+description: Pin CMake and Ninja, install Linux packages, restore CPM and toolchain caches.
 inputs:
-  cache-key:
-    description: Cache key discriminator, usually the build name.
-    required: true
-  cpm-cache-path:
+  cpm-cache:
+    description: Restore the CPM source cache. One shared key for all jobs — CPM stores sources only, so toolchains and platforms share it safely.
+    required: false
+    default: "true"
+  cpm-path:
     description: Directory CPM_SOURCE_CACHE points at.
     required: false
     default: .cpm_cache
-  cache-cpm:
-    description: Restore the CPM source cache.
-    required: false
-    default: "true"
-  sdl3-deps:
+  sdl3:
     description: Install the SDL3 build dependencies via apt (Linux only).
     required: false
     default: "false"
@@ -21,16 +18,24 @@ inputs:
     description: Extra apt packages, space separated (Linux only).
     required: false
     default: ""
+  llvm-mingw:
+    description: Restore the llvm-mingw toolchain cache.
+    required: false
+    default: "false"
+  emsdk:
+    description: Restore the Emscripten SDK cache.
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
     - name: Set up CMake and Ninja
       uses: lukka/get-cmake@v4.4.2
     - name: Install system dependencies
-      if: runner.os == 'Linux' && (inputs.sdl3-deps == 'true' || inputs.apt-packages != '')
+      if: runner.os == 'Linux' && (inputs.sdl3 == 'true' || inputs.apt-packages != '')
       shell: bash
       env:
-        SDL3_DEPS: ${{ inputs.sdl3-deps == 'true' && 'libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev libdbus-1-dev libudev-dev libasound2-dev' || '' }}
+        SDL3_DEPS: ${{ inputs.sdl3 == 'true' && 'libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev libdbus-1-dev libudev-dev libasound2-dev' || '' }}
         EXTRA_DEPS: ${{ inputs.apt-packages }}
       run: |
         sudo_cmd=$(command -v sudo || true)
@@ -38,9 +43,21 @@ runs:
         ${sudo_cmd} apt-get update -qq
         ${sudo_cmd} apt-get install -y --no-install-recommends ${SDL3_DEPS} ${EXTRA_DEPS}
     - name: Cache CPM sources
-      if: inputs.cache-cpm == 'true'
+      if: inputs.cpm-cache == 'true'
       uses: actions/cache@v6
       with:
-        path: ${{ inputs.cpm-cache-path }}
-        key: cpm-${{ inputs.cache-key }}-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
-        restore-keys: cpm-${{ inputs.cache-key }}-
+        path: ${{ inputs.cpm-path }}
+        key: cpm-${{ hashFiles('cmake/ct_cpm.cmake', 'cmake/cpm/*.cmake') }}
+        restore-keys: cpm-
+    - name: Cache LLVM MinGW
+      if: inputs.llvm-mingw == 'true'
+      uses: actions/cache@v6
+      with:
+        path: llvm_mingw
+        key: llvm_mingw-${{ hashFiles('cmake/toolchains/llvm_mingw.cmake') }}
+    - name: Cache Emscripten SDK
+      if: inputs.emsdk == 'true'
+      uses: actions/cache@v6
+      with:
+        path: .emsdk
+        key: emsdk-${{ hashFiles('cmake/toolchains/emscripten.cmake') }}
