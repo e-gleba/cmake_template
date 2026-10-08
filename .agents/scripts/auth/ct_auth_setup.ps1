@@ -1,7 +1,8 @@
 # Fill MCP tokens via masked prompts and persist them to the global
-# ~/.config/opencode/.env (user profile, UTF-8 without BOM). No Python, no
-# npm, no AI model: plain PowerShell writing beside opencode's own global
-# config, so `git clean -fdx` in the repo can never touch the secrets.
+# ~/.config/opencode/ct_project.env (user profile, UTF-8 without BOM). No
+# Python, no npm, no AI model: plain PowerShell writing beside opencode's
+# own global config, so `git clean -fdx` in the repo can never touch the
+# secrets.
 # Usage: ct_auth_setup.ps1   (prompts for every value; empty keeps current)
 #
 # Required vars come from {env:} in the project opencode.jsonc plus
@@ -14,8 +15,8 @@ $root = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Pare
 
 function Env-Path {
     if ($env:OPENCODE_DOTENV_PATH) { return $env:OPENCODE_DOTENV_PATH }
-    if ($env:XDG_CONFIG_HOME) { return (Join-Path $env:XDG_CONFIG_HOME 'opencode/.env') }
-    return (Join-Path $HOME '.config/opencode/.env')
+    if ($env:XDG_CONFIG_HOME) { return (Join-Path $env:XDG_CONFIG_HOME 'opencode/ct_project.env') }
+    return (Join-Path $HOME '.config/opencode/ct_project.env')
 }
 
 function Token-Page([string]$v) {
@@ -40,22 +41,6 @@ function Is-Set([string[]]$lines, [string]$v) {
 $target = Env-Path
 $dir = Split-Path $target -Parent
 if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-if (-not (Test-Path $target)) {
-    $template = @(
-        '# ct_dotenv_auth — global MCP tokens for opencode. Never commit this file.'
-        '# After editing, restart opencode: {env:} placeholders resolve at startup only.'
-        ''
-        '# ct_github — token page: https://github.com/settings/tokens'
-        '# classic PAT with read scopes, see install guide link in .opencode/opencode.jsonc'
-        'GITHUB_PERSONAL_ACCESS_TOKEN='
-        ''
-        '# Intranet examples — point at your instances, uncomment, flip required'
-        '# in KNOWN_TOKENS once the matching server lands in opencode.jsonc.'
-        '# CT_TEAMCITY_TOKEN='
-        '# CT_SENTRY_TOKEN='
-    )
-    [IO.File]::WriteAllText($target, ($template -join "`n") + "`n", [Text.UTF8Encoding]::new($false))
-}
 
 $wanted = @()
 foreach ($n in @('.opencode/opencode.jsonc', '.opencode/opencode.json', 'opencode.json', 'opencode.jsonc')) {
@@ -67,6 +52,18 @@ foreach ($n in @('.opencode/opencode.jsonc', '.opencode/opencode.json', 'opencod
     }
 }
 if ($wanted -notcontains 'GITHUB_PERSONAL_ACCESS_TOKEN') { $wanted += 'GITHUB_PERSONAL_ACCESS_TOKEN' }
+
+if (-not (Test-Path $target)) {
+    $template = @(
+        '# ct_project.env — MCP tokens for opencode. Never commit this file.'
+        '# After editing, restart opencode: {env:} placeholders resolve at startup only.'
+    )
+    foreach ($v in $wanted) {
+        $template += ''
+        $template += "$v="
+    }
+    [IO.File]::WriteAllText($target, ($template -join "`n") + "`n", [Text.UTF8Encoding]::new($false))
+}
 
 $lines = @([IO.File]::ReadAllText($target) -split "`n")
 Write-Output "Target: $target. Input is hidden, empty line keeps the current value."

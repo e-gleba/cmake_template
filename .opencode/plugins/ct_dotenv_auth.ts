@@ -1,27 +1,26 @@
-// ct_dotenv_auth — automatic MCP token setup from a global .env file.
+// ct_dotenv_auth — MCP tokens from a global ct_project.env file.
 //
 // Own implementation, zero dependencies (node:fs/os/path only). Only
-// opencode needs to be installed: no Python, no npm packages, no shell
-// wrapper, no rc-file edits. Official hooks only, see:
+// opencode needs to be installed: no Python, no npm packages, no AI model.
+// Official hooks only, see:
 // https://opencode.ai/docs/plugins/#inject-environment-variables
 // https://opencode.ai/docs/config/#env-vars
 //
 // Flow:
-// 1. Plugin init reads the global ~/.config/opencode/.env (auto-created as
-//    a 0600 template when absent) into process.env, so {env:VAR} in
-//    .opencode/opencode.jsonc (MCP headers) resolves before MCP servers
-//    spawn. Real environment values always win over the file.
-// 2. `config` rewrites any {env:VAR} literal left in the merged config.
-// 3. `shell.env` injects the file values into the bash tool + terminals.
+// 1. Plugin init reads the global ~/.config/opencode/ct_project.env
+//    (auto-created as a bare 0600 template when absent) into process.env,
+//    so {env:VAR} in .opencode/opencode.jsonc (MCP headers) resolves before
+//    MCP servers spawn. Real environment values always win over the file.
+// 2. `config` rewrites any {env:VAR} literal left in the merged config and
+//    warns on placeholders nothing provides (typo'd var names).
+// 3. `shell.env` injects the file values into the bash tool + terminals, so
+//    shells the agent opens see the same tokens.
 // 4. `event` on session.created fails hard while a required token is
 //    missing and tells exactly which file to fill, where each token page
-//    is, and which setup script prompts for the values with masked input.
+//    is, and which no-AI setup to run (/ct_auth dialog or setup scripts).
 //    {env:} resolves at startup, so a restart is required after edits.
-// 5. Tool ct_mcp_auth reports the status table, so the agent itself suggests
-//    the fix on MCP 401s. No user-invoked setup command needed.
 
 import type { Plugin } from "@opencode-ai/plugin"
-import { tool } from "@opencode-ai/plugin"
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
@@ -31,45 +30,33 @@ type token_info = {
   env_var: string
   token_page: string
   create: string
-  required: boolean
 }
 
-// Server knowledge for this template. `required` entries are enforced;
-// the intranet rows are commented examples — point them at your instances
-// and flip required to true once the matching server lands in opencode.jsonc.
+// Server knowledge for this template. Discovered `{env:}` vars not listed
+// here still get enforced, with a generic token page.
 const KNOWN_TOKENS: token_info[] = [
   {
     server: "ct_github",
     env_var: "GITHUB_PERSONAL_ACCESS_TOKEN",
     token_page: "https://github.com/settings/tokens",
     create: "classic PAT with read scopes, see install guide link in .opencode/opencode.jsonc",
-    required: true,
-  },
-  {
-    server: "ct_teamcity (example)",
-    env_var: "CT_TEAMCITY_TOKEN",
-    token_page: "https://teamcity.internal/profile.html",
-    create: "TeamCity access token for your user",
-    required: false,
-  },
-  {
-    server: "ct_sentry (example)",
-    env_var: "CT_SENTRY_TOKEN",
-    token_page: "https://sentry.internal/settings/auth-tokens/",
-    create: "Sentry auth token (org access)",
-    required: false,
   },
 ]
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/
 const ENV_PLACEHOLDER = /\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g
+const ENV_FILE_NAME = "ct_project.env"
+
+function config_env_dir(): string {
+  const xdg = (process.env.XDG_CONFIG_HOME ?? "").trim()
+  if (xdg !== "") return join(xdg, "opencode")
+  return join(homedir(), ".config", "opencode")
+}
 
 export function global_env_path(): string {
   const explicit = (process.env.OPENCODE_DOTENV_PATH ?? "").trim()
   if (explicit !== "") return explicit
-  const xdg = (process.env.XDG_CONFIG_HOME ?? "").trim()
-  if (xdg !== "") return join(xdg, "opencode", ".env")
-  return join(homedir(), ".config", "opencode", ".env")
+  return join(config_env_dir(), ENV_FILE_NAME)
 }
 
 export function parse_dotenv(text: string): Record<string, string> {
@@ -159,7 +146,8 @@ export function upsert_env_file(path: string, vars: Record<string, string>): voi
   }
 }
 
-export function config_candidates(directory: string, worktree: string): string[] {  const roots = [...new Set([worktree, directory].filter((root) => root !== ""))]
+export function config_candidates(directory: string, worktree: string): string[] {
+  const roots = [...new Set([worktree, directory].filter((root) => root !== ""))]
   const names = [
     join(".opencode", "opencode.jsonc"),
     join(".opencode", "opencode.json"),
@@ -179,11 +167,136 @@ export function discover_env_vars(files: string[]): string[] {
     } catch {
       continue
     }
-    for (const match of text.matchAll(/\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g)) {
+    for (const match of strip_jsonc_comments(text).matchAll(ENV_PLACEHOLDER)) {
       if (!found.includes(match[1])) found.push(match[1])
     }
   }
   return found
+}
+
+// First existing project config, or "" when none is reachable.
+export function find_project_config(directory: string, worktree: string): string {
+  for (const file of config_candidates(directory, worktree)) {
+    if (existsSync(file)) return file
+  }
+  return ""
+}
+
+export function token_for_var(env_var: string): token_info {
+  return (
+    KNOWN_TOKENS.find((entry) => entry.env_var === env_var) ?? {
+      server: "see .opencode/opencode.jsonc",
+      env_var,
+      token_page: "see that server's docs for the token page",
+      create: "paste the token below",
+    }
+  )
+}
+
+// Strip // and /* */ comments, respecting strings (so `https://` inside a
+// value survives). JSONC-aware; plain JSON passes through untouched.
+export function strip_jsonc_comments(text: string): string {
+  let out = ""
+  let i = 0
+  let quote = ""
+  while (i < text.length) {
+    const ch = text[i]
+    if (quote !== "") {
+      out += ch
+      if (ch === "\\" && i + 1 < text.length) {
+        out += text[i + 1]
+        i += 2
+        continue
+      }
+      if (ch === quote) quote = ""
+      i += 1
+      continue
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      out += ch
+      i += 1
+      continue
+    }
+    if (ch === "/" && text[i + 1] === "/") {
+      while (i < text.length && text[i] !== "\n") i += 1
+      continue
+    }
+    if (ch === "/" && text[i + 1] === "*") {
+      i += 2
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i += 1
+      i += 2
+      continue
+    }
+    out += ch
+    i += 1
+  }
+  return out
+}
+
+export type mcp_server_vars = {
+  name: string
+  vars: string[]
+}
+
+// Per-server {env:} vars from the `mcp` section (dynamic: servers are never
+// hardcoded). String-aware brace matching, so `{env:}` inside values and
+// braces inside strings cannot confuse it.
+export function discover_mcp_servers(text: string): mcp_server_vars[] {
+  const clean = strip_jsonc_comments(text)
+  const head = /"mcp"\s*:\s*\{/.exec(clean)
+  if (head === null) return []
+  const servers: mcp_server_vars[] = []
+  let pos = head.index + head[0].length
+  let depth = 1
+  let quote = ""
+  let entry_start = -1
+  let entry_name = ""
+  while (pos < clean.length && depth > 0) {
+    const ch = clean[pos]
+    if (quote !== "") {
+      if (ch === "\\") {
+        pos += 2
+        continue
+      }
+      if (ch === quote) quote = ""
+      pos += 1
+      continue
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      pos += 1
+      continue
+    }
+    if (ch === "{") {
+      if (depth === 1) {
+        const name = /"([^"]+)"\s*:\s*$/.exec(clean.slice(0, pos))
+        if (name !== null) {
+          entry_start = pos
+          entry_name = name[1]
+        }
+      }
+      depth += 1
+      pos += 1
+      continue
+    }
+    if (ch === "}") {
+      depth -= 1
+      if (depth === 1 && entry_start !== -1) {
+        const vars: string[] = []
+        for (const match of clean.slice(entry_start, pos).matchAll(ENV_PLACEHOLDER)) {
+          if (!vars.includes(match[1])) vars.push(match[1])
+        }
+        servers.push({ name: entry_name, vars })
+        entry_start = -1
+        entry_name = ""
+      }
+      pos += 1
+      continue
+    }
+    pos += 1
+  }
+  return servers
 }
 
 // Required set = {env:} vars wired in project config + always-required
@@ -192,52 +305,29 @@ export function required_tokens(directory: string, worktree: string): token_info
   const wanted = discover_env_vars(config_candidates(directory, worktree))
   const tokens: token_info[] = []
   for (const env_var of wanted) {
-    const known = KNOWN_TOKENS.find((entry) => entry.env_var === env_var)
-    tokens.push(
-      known ?? {
-        server: "see .opencode/opencode.jsonc",
-        env_var,
-        token_page: "see that server's docs for the token page",
-        create: "paste the token below",
-        required: true,
-      },
-    )
+    tokens.push(token_for_var(env_var))
   }
   for (const entry of KNOWN_TOKENS) {
-    if (entry.required && !tokens.some((token) => token.env_var === entry.env_var)) {
+    if (!tokens.some((token) => token.env_var === entry.env_var)) {
       tokens.push(entry)
     }
   }
   return tokens
 }
 
-function token_block(entry: token_info): string {
-  return (
-    `\n# ${entry.server} — token page: ${entry.token_page}\n` +
-    `# ${entry.create}\n` +
-    `${entry.env_var}=\n`
-  )
-}
-
 export function render_template(tokens: token_info[]): string {
   let text =
-    "# ct_dotenv_auth — global MCP tokens for opencode. Never commit this file.\n" +
+    "# ct_project.env — MCP tokens for opencode. Never commit this file.\n" +
     "# After editing, restart opencode: {env:} placeholders resolve at startup only.\n"
-  for (const entry of tokens) text += token_block(entry)
-  text +=
-    "\n# Intranet examples — point at your instances, uncomment, flip required\n" +
-    "# in KNOWN_TOKENS once the matching server lands in opencode.jsonc.\n" +
-    "# CT_TEAMCITY_TOKEN=\n" +
-    "# CT_SENTRY_TOKEN=\n"
+  for (const entry of tokens) text += `\n${entry.env_var}=\n`
   return text
 }
 
-// Creates the file (mode 600) or appends blocks for newly required vars.
+// Creates the file (mode 600) or appends lines for newly required vars.
 // Never overwrites existing values.
 export function ensure_env_file(path: string, tokens: token_info[]): "created" | "appended" | "ok" {
   mkdirSync(dirname(path), { recursive: true })
   if (!existsSync(path)) {
-    mkdirSync(dirname(path), { recursive: true })
     writeFileSync(path, render_template(tokens), { mode: 0o600 })
     try {
       chmodSync(path, 0o600)
@@ -251,7 +341,7 @@ export function ensure_env_file(path: string, tokens: token_info[]): "created" |
   if (absent.length === 0) return "ok"
   const current = readFileSync(path, "utf8")
   const prefix = current.endsWith("\n") ? current : current + "\n"
-  writeFileSync(path, prefix + absent.map((entry) => token_block(entry)).join(""))
+  writeFileSync(path, prefix + absent.map((entry) => `${entry.env_var}=\n`).join(""))
   return "appended"
 }
 
@@ -287,32 +377,21 @@ export function format_error(miss: token_info[], env_path: string, setup_hint = 
   )
 }
 
-export function status_report(tokens: token_info[], env_path: string, setup_hint = ""): string {
-  const rows = tokens.map((entry) => {
-    const state = (process.env[entry.env_var] ?? "").trim() === "" ? "missing" : "set"
-    return `| ${entry.server} | ${entry.env_var} | ${state} | ${entry.token_page} |`
-  })
-  const hint =
-    setup_hint === "" ? "" : `\nHuman path (no AI needed): ${setup_hint}.\n`
-  return (
-    `MCP tokens live in ${env_path} (global, never committed). ` +
-    `After editing, restart opencode.\n` +
-    hint +
-    `\n| server | env var | status | token page |\n` +
-    `|---|---|---|---|\n` +
-    rows.join("\n")
-  )
-}
 
 // Rewrites {env:VAR} survivors in the merged config. Unknown or empty vars
-// stay literal, so a typo never silently blanks a value. Returns the count.
-export function substitute_config(node: unknown): number {
+// stay literal, so a typo never silently blanks a value. Returns what was
+// replaced and what is still referencing an unset var.
+export function substitute_config(node: unknown): { replaced: number; unresolved: string[] } {
   let replaced = 0
+  const missing = new Set<string>()
   const walk = (value: unknown): unknown => {
     if (typeof value === "string") {
       return value.replace(ENV_PLACEHOLDER, (literal, name: string) => {
         const resolved = process.env[name]
-        if (resolved === undefined || resolved === "") return literal
+        if (resolved === undefined || resolved === "") {
+          missing.add(name)
+          return literal
+        }
         replaced += 1
         return resolved
       })
@@ -330,7 +409,7 @@ export function substitute_config(node: unknown): number {
     return value
   }
   walk(node)
-  return replaced
+  return { replaced, unresolved: [...missing] }
 }
 
 async function log(client: unknown, level: string, message: string): Promise<void> {
@@ -358,17 +437,27 @@ export const CtDotenvAuth: Plugin = async (input) => {
     state = "unavailable"
   }
   const loaded = load_into_process(file_vars)
+  const names = Object.keys(loaded).sort().join(", ")
   await log(
     input.client,
     "info",
-    `ct_dotenv_auth: ${env_path} ${state}, applied ${Object.keys(loaded).length} var(s)`,
+    `ct_dotenv_auth: ${env_path} ${state}, applied ${Object.keys(loaded).length} var(s)` +
+      (names === "" ? "" : ` (${names})`),
   )
 
   return {
     config: async (cfg) => {
-      const replaced = substitute_config(cfg)
+      const { replaced, unresolved } = substitute_config(cfg)
       if (replaced > 0) {
         await log(input.client, "debug", `ct_dotenv_auth: substituted ${replaced} placeholder(s)`)
+      }
+      if (unresolved.length > 0) {
+        await log(
+          input.client,
+          "warn",
+          `ct_dotenv_auth: unresolved placeholders left in config: ${unresolved.sort().join(", ")} ` +
+            `(check spelling in opencode.jsonc and values in ${env_path})`,
+        )
       }
     },
     "shell.env": async (_in, out) => {
@@ -384,17 +473,6 @@ export const CtDotenvAuth: Plugin = async (input) => {
       const miss = missing_vars(tokens)
       if (miss.length === 0) return
       throw new Error(format_error(miss, env_path, setup_hint))
-    },
-    tool: {
-      ct_mcp_auth: tool({
-        description:
-          "Report MCP token setup status (server, env var, set/missing, token page). " +
-          "Call it when an MCP tool fails with 401/unauthorized or the user asks how " +
-          "to configure MCP tokens. It never reads or prints token values.",
-        args: {},
-        execute: async () =>
-          status_report(required_tokens(input.directory, input.worktree), env_path, setup_hint),
-      }),
     },
   }
 }

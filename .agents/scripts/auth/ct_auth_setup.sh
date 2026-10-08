@@ -1,8 +1,8 @@
 #!/bin/bash
 # Fill MCP tokens via masked prompts and persist them to the global
-# ~/.config/opencode/.env (mode 600). No Python, no npm, no AI model:
-# plain bash + grep + awk writing beside opencode's own global config, so
-# `git clean -fdx` in the repo can never touch the secrets.
+# ~/.config/opencode/ct_project.env (mode 600). No Python, no npm, no AI
+# model: plain bash + grep + awk writing beside opencode's own global
+# config, so `git clean -fdx` in the repo can never touch the secrets.
 # Usage: ct_auth_setup.sh                     (prompts for every value)
 #        printf 'tok1\n\n' | ct_auth_setup.sh  (piped input works too;
 #                                               empty line keeps current)
@@ -20,9 +20,9 @@ env_path() {
     if [ -n "${OPENCODE_DOTENV_PATH:-}" ]; then
         printf '%s' "$OPENCODE_DOTENV_PATH"
     elif [ -n "${XDG_CONFIG_HOME:-}" ]; then
-        printf '%s/opencode/.env' "$XDG_CONFIG_HOME"
+        printf '%s/opencode/ct_project.env' "$XDG_CONFIG_HOME"
     else
-        printf '%s/.config/opencode/.env' "$HOME"
+        printf '%s/.config/opencode/ct_project.env' "$HOME"
     fi
 }
 
@@ -57,21 +57,6 @@ target="$(env_path)"
 umask 077
 mkdir -p "$(dirname "$target")"
 
-if [ ! -f "$target" ]; then
-    {
-        printf '# ct_dotenv_auth — global MCP tokens for opencode. Never commit this file.\n'
-        printf '# After editing, restart opencode: {env:} placeholders resolve at startup only.\n'
-        printf '\n# ct_github — token page: https://github.com/settings/tokens\n'
-        printf '# classic PAT with read scopes, see install guide link in .opencode/opencode.jsonc\n'
-        printf 'GITHUB_PERSONAL_ACCESS_TOKEN=\n'
-        printf '\n# Intranet examples — point at your instances, uncomment, flip required\n'
-        printf '# in KNOWN_TOKENS once the matching server lands in opencode.jsonc.\n'
-        printf '# CT_TEAMCITY_TOKEN=\n'
-        printf '# CT_SENTRY_TOKEN=\n'
-    } > "$target"
-    chmod 600 "$target"
-fi
-
 wanted=""
 for name in .opencode/opencode.jsonc .opencode/opencode.json opencode.json opencode.jsonc; do
     if [ -f "$root/$name" ]; then
@@ -81,6 +66,17 @@ for name in .opencode/opencode.jsonc .opencode/opencode.json opencode.json openc
 done
 wanted="$wanted GITHUB_PERSONAL_ACCESS_TOKEN"
 vars="$(printf '%s' "$wanted" | tr ' ' '\n' | awk 'NF && !seen[$0]++')"
+
+if [ ! -f "$target" ]; then
+    {
+        printf '# ct_project.env — MCP tokens for opencode. Never commit this file.\n'
+        printf '# After editing, restart opencode: {env:} placeholders resolve at startup only.\n'
+        for v in $vars; do
+            printf '\n%s=\n' "$v"
+        done
+    } > "$target"
+    chmod 600 "$target"
+fi
 
 echo "Target: $target (mode 600). Input is hidden, empty line keeps the current value."
 count=0
