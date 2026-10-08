@@ -2,8 +2,9 @@
 //
 // TUI-side companion to ct_dotenv_auth.ts (server): lists the MCP servers
 // wired in the project opencode.jsonc (dynamic `{env:}` discovery, never a
-// hardcoded list), then opens one DialogPrompt per missing token and
-// persists answers to the global ~/.config/opencode/ct_project.env
+// hardcoded list), then opens one DialogPrompt per token of the picked
+// server (empty input keeps the stored value, so re-picking overwrites)
+// and persists answers to the global ~/.config/opencode/ct_project.env
 // (mode 600). The token page shows once, as the input hint — plain strings
 // only, no JSX toolchain (raw string children crash the reconciler). No AI
 // model involved — TUI commands run locally. Secrets never enter the repo.
@@ -30,7 +31,12 @@ import {
 } from "./ct_dotenv_auth.ts"
 
 const PLUGIN_ID = "ct.auth"
-const SELECT_ALL = "__all"
+
+// Status marks. Plain glyphs in the title: the option type offers no color
+// prop, and raw ANSI in strings is renderer-dependent. Terminals render
+// these from any standard font.
+const MARK_SET = "✓"
+const MARK_MISSING = "○"
 
 type auth_group = {
   name: string
@@ -66,12 +72,9 @@ function is_url(text: string): boolean {
 // return raw strings from a render function: the reconciler crashes the
 // whole TUI with an orphan-text error (seen 1.18.35, ct_auth_tui step()).
 // No JSX here by design, so there is no other text slot.
-function prompt_title(index: number, total: number, entry: token_info): string {
-  return `[${index + 1}/${total}] ${entry.env_var} (${entry.server})`
-}
-
-function describe_missing(miss: token_info[]): string {
-  return `missing: ${miss.map((entry) => entry.env_var).join(", ")}`
+function prompt_title(index: number, total: number, entry: token_info, stored: boolean): string {
+  const head = `[${index + 1}/${total}] ${entry.env_var} (${entry.server})`
+  return stored ? `${head} — OVERWRITE` : head
 }
 
 // Brief instruction + hint inside the input itself. Plain string prop.
@@ -123,6 +126,7 @@ function prompt_chain(
 ): void {
   const dialog = api.ui.dialog
   let saved = 0
+  const stored_at_start = file_set_vars(env_path)
   const step = (index: number): void => {
     if (index >= items.length) {
       const rest = count_missing(groups, env_path)
@@ -146,7 +150,7 @@ function prompt_chain(
     const entry = items[index]
     dialog.replace(() =>
       api.ui.DialogPrompt({
-        title: prompt_title(index, items.length, entry),
+        title: prompt_title(index, items.length, entry, stored_at_start.has(entry.env_var)),
         placeholder: prompt_placeholder(entry),
         onConfirm: (value: string) => {
           if (value.trim() !== "") {
@@ -174,70 +178,36 @@ function prompt_chain(
 
 function open_list(api: TuiPluginApi, env_path: string, groups: auth_group[]): void {
   const present = file_set_vars(env_path)
-  const total = groups.reduce((n, group) => n + missing_of(group, present).length, 0)
-  if (total === 0) {
-    api.ui.toast({
-      variant: "success",
-      title: "ct-auth",
-      message: `All MCP tokens set in ${env_path}. Restart opencode to apply.`,
-    })
-    return
-  }
   // Actionable first, ready last (stable: config order kept on ties).
+  // Always listed, even when everything is set, so any row can re-enter.
   const rows = groups
-    .map((group) => ({ group, miss: missing_of(group, present) }))
-    .sort((a, b) => b.miss.length - a.miss.length)
+    .map((group) => ({
+      group,
+      ready: group.tokens.every((entry) => present.has(entry.env_var)),
+    }))
+    .sort((a, b) => Number(a.ready) - Number(b.ready))
   const options = [
-    {
-      title: "All servers",
-      value: SELECT_ALL,
-      description: `${total} value(s) missing`,
-    },
-    ...rows.map((row) => {
-      const ready = row.miss.length === 0
-      const option: {
-        title: string
-        value: string
-        description: string
-        disabled?: boolean
-      } = {
-        title: row.group.name,
-        value: row.group.name,
-        description: ready ? "all set" : describe_missing(row.miss),
-      }
-      if (ready) option.disabled = true
-      return option
-    }),
+    ...rows.map((row) => ({
+      title: `${row.ready ? MARK_SET : MARK_MISSING} ${row.group.name}`,
+      value: row.group.name,
+      description: row.group.tokens.map((entry) => entry.env_var).join(", "),
+    })),
   ]
   api.ui.dialog.replace(() =>
     api.ui.DialogSelect({
-      title: `MCP authorizations — ${total} missing`,
+      title: "MCP authorizations",
       placeholder: "Pick a server — Esc when done",
       flat: true,
       options,
       onSelect: (option) => {
-        const value = String(option.value)
-        if (value === SELECT_ALL) {
-          prompt_chain(
-            api,
-            env_path,
-            groups,
-            groups.flatMap((group) => missing_of(group, file_set_vars(env_path))),
-          )
-          return
-        }
-        const group = groups.find((entry) => entry.name === value)
+        const group = groups.find((entry) => entry.name === String(option.value))
         if (group === undefined) {
           open_list(api, env_path, groups)
           return
         }
-        const miss = missing_of(group, file_set_vars(env_path))
-        if (miss.length === 0) {
-          api.ui.toast({ variant: "success", title: "ct-auth", message: `${group.name}: already set.` })
-          open_list(api, env_path, groups)
-          return
-        }
-        prompt_chain(api, env_path, groups, miss)
+        // Full group, not just missing: re-picking a configured server
+        // overwrites (empty input keeps the stored value).
+        prompt_chain(api, env_path, groups, group.tokens)
       },
     }),
   )
