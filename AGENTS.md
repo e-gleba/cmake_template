@@ -27,9 +27,17 @@ Think first. Minimal diff. Verify with build + tests.
 - `.agents/scripts/` owns runnable helpers: `rules/hook.py` enforces bans
   (`--staged` for pre-commit, stdin JSON for edit hooks),
   `clipboard/grab_clipboard.sh|.ps1` grabs clipboard images for UI reports.
-- `.opencode/scripts/mcp_env_set.py` sets one env var from hidden console
-  input (`setx` on Windows, rc append on POSIX). Dumb setter only — all
-  server knowledge lives in `/ct_auth_mcps`.
+- `.opencode/plugins/ct_dotenv_auth.ts` loads global `~/.config/opencode/.env`
+  (auto-created 0600 template) into `process.env`/`shell.env` so `{env:}`
+  MCP headers resolve; hard-fails new sessions while a required token is
+  missing and exposes the `ct_mcp_auth` status tool. Server knowledge
+  (token pages) lives in its `KNOWN_TOKENS` table + `/ct_auth_mcps`.
+- `.opencode/plugins/ct_auth_tui.ts` (default-export `{id,tui}` only, listed
+  in `.opencode/tui.json`) registers native `/ct_auth`: one DialogPrompt per
+  missing token into the same file. TUI-only; headless runs keep the scripts.
+- `.agents/scripts/auth/ct_auth_setup.sh|.ps1` fills that file via masked
+  prompts (empty keeps current, secrets never echo). Only setup besides
+  opencode itself: POSIX userland / PowerShell, no Python, no npm, no AI.
 
 ## Build
 
