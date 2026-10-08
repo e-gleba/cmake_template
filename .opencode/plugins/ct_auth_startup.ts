@@ -16,26 +16,15 @@ function missing(): string[] {
   })
 }
 
-export const CtAuthStartup: Plugin = async ({ client }) => {
-  const miss = missing()
-  if (miss.length > 0) {
-    const msg = `[ct-auth] missing tokens: ${miss.join(", ")}. Run /ct_auth_mcps to set them up.`
-    await client.app.log({ body: { service: "ct-auth", level: "warn", message: msg } })
-  }
-
+export const CtAuthStartup: Plugin = async () => {
   return {
     event: async ({ event }) => {
       if (event.type !== "session.created") return
       const miss = missing()
-      if (miss.length > 0) {
-        await client.app.log({
-          body: {
-            service: "ct-auth",
-            level: "warn",
-            message: `[ct-auth] missing tokens: ${miss.join(", ")}. Run /ct_auth_mcps to set them up.`,
-          },
-        })
-      }
+      if (miss.length === 0) return
+      throw new Error(
+        `[ct-auth] missing tokens: ${miss.join(", ")}. Run /ct_auth_mcps to set them up.`,
+      )
     },
   }
 }
