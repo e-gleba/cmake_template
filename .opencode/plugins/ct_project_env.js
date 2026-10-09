@@ -31,13 +31,17 @@ function create_sync() {
     return cache;
   };
   // One injector for both APIs: V1 output and V2 event both carry .env.
-  return (target) => Object.assign(target.env, load());
+  // Never throws and returns nothing: a hook failure would fail the
+  // intercepted shell operation, so a missing .env is simply a no-op.
+  return (target) => {
+    if (target && target.env) Object.assign(target.env, load());
+  };
 }
 
 const utf8_bom = "\uFEFF";
 const double_quote = "\"";
 const single_quote = "'";
-const line_re = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/gm;
+const line_re = /^[^\S\n]*(?:export[^\S\n]+)?([A-Za-z_][A-Za-z0-9_]*)[^\S\n]*=[^\S\n]*(.*?)[^\S\n]*$/gm;
 
 const unquote = (v) =>
   v.length > 1 &&
@@ -64,7 +68,11 @@ export const CtProjectEnv = async () => v1_hooks;
 export default {
   id: "ct_project_env",
   async setup(ctx) {
-    await ctx.shell.hook("create.before", sync);
+    try {
+      await ctx?.shell?.hook?.("create.before", sync);
+    } catch {
+      // Hosts without shell hooks: env injection stays V1-only, never fail load.
+    }
   },
   async server() {
     return v1_hooks;
