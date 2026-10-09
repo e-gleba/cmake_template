@@ -8,7 +8,7 @@ Exit 0 = clean, 1/2 = violations.
 Pattern from telegramdesktop/tdesktop@dev, tools/rules/hook.py
 (https://github.com/telegramdesktop/tdesktop/blob/dev/tools/rules/hook.py):
 edit-hook stdin-JSON + --staged dual mode. All checks below are original
-to this repo (CMake/C++ bans per AGENTS.md + REVIEW.md); no lines copied.
+to this repo (CMake/C++ bans per .opencode/AGENTS.md + .opencode/REVIEW.md); no lines copied.
 Same license as this repo (MIT, see license.md).
 """
 
@@ -95,7 +95,7 @@ def main() -> int:
         print(f"{Path(path).name}: {err}", file=sys.stderr)
     if errors:
         print(
-            "Rules live in AGENTS.md + REVIEW.md. Fix before anything else.",
+            "Rules live in .opencode/AGENTS.md + .opencode/REVIEW.md. Fix before anything else.",
             file=sys.stderr,
         )
         return 2

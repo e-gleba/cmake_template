@@ -1,7 +1,7 @@
 # `.opencode` Conventions
 
 Rules for adding commands, agents, and skills in this repo.
-`AGENTS.md` owns project behavior; this file owns prompt-file shape.
+`.opencode/AGENTS.md` owns project behavior; this file owns prompt-file shape.
 
 ## Naming
 
@@ -43,9 +43,9 @@ Body, in this order:
    Empty substitution is the common case, so state the empty behavior
    explicitly (`If empty, …`).
 2. Link `.opencode/ai-workflow-adapter.md` (one line, always).
-3. Constraints before steps: the non-negotiable `AGENTS.md` rules, quoted
+3. Constraints before steps: the non-negotiable `.opencode/AGENTS.md` rules, quoted
    short. A command restates at most 5 rules and never duplicates
-   `REVIEW.md` or `ct_test_loop.md` — it links them.
+   `.opencode/REVIEW.md` or `ct_test_loop.md` — it links them.
 4. Numbered steps, each verifiable (a command to run or a file to read).
    Prefer `!` shell blocks that ground the run
    (`cmake --list-presets`, `git status --short`) over hardcoded names.

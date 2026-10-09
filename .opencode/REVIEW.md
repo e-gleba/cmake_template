@@ -1,8 +1,8 @@
 # Code Review Style Guide
 
 Mechanical checks for `@ct_cmake_review` and `/ct_review`.
-`AGENTS.md` owns all project rules; this file owns review procedure and
-points at it. Where they conflict, `AGENTS.md` wins and this file gets fixed.
+`.opencode/AGENTS.md` owns all project rules; this file owns review procedure and
+points at it. Where they conflict, `.opencode/AGENTS.md` wins and this file gets fixed.
 
 ## Procedure
 
@@ -17,13 +17,13 @@ points at it. Where they conflict, `AGENTS.md` wins and this file gets fixed.
   (error, warning, nit). End with a 3-line verdict:
   approve / approve-with-nits / request-changes.
 
-## Checklist (rules live in AGENTS.md, not repeated here)
+## Checklist (rules live in .opencode/AGENTS.md, not repeated here)
 
-- CMake + presets + deps → `AGENTS.md` ## CMake, ## Presets, ## Deps.
-- C++23 → `AGENTS.md` ## C++.
-- Tests → `AGENTS.md` ## Tests.
-- Workflows → `AGENTS.md` ## CI.
-- Docs → `AGENTS.md` ## README, ## Text files.
+- CMake + presets + deps → `.opencode/AGENTS.md` ## CMake, ## Presets, ## Deps.
+- C++23 → `.opencode/AGENTS.md` ## C++.
+- Tests → `.opencode/AGENTS.md` ## Tests.
+- Workflows → `.opencode/AGENTS.md` ## CI.
+- Docs → `.opencode/AGENTS.md` ## README, ## Text files.
 
 ## Shape (defined here, nowhere else)
 

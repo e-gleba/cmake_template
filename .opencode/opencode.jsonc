@@ -9,7 +9,7 @@
     "compaction": {
         "prune": true
     },
-    // Speed: don't watch generated trees (mirrors .cursorignore + REVIEW.md filters).
+    // Speed: don't watch generated trees (mirrors .cursorignore + .opencode/REVIEW.md filters).
     "watcher": {
         "ignore": [
             "build/**",
@@ -20,6 +20,12 @@
             "android_project/.gradle/**"
         ]
     },
+    // Canonical instructions: project behavior + mechanical review shape.
+    // Root AGENTS.md is a pointer only; these files are the source of truth.
+    "instructions": [
+        ".opencode/AGENTS.md",
+        ".opencode/REVIEW.md"
+    ],
     // MCPs catalog: https://mcpservers.org/
     // For skills see: https://www.skills.sh/
     "mcp": {
@@ -104,7 +110,7 @@
         },
         "ct_cpp_core_guidelines": {
             "repository": "isocpp/CppCoreGuidelines",
-            "description": "Use for the canonical C++ Core Guidelines (R/Rules, lifetime, bounds safety) when AGENTS.md is silent"
+            "description": "Use for the canonical C++ Core Guidelines (R/Rules, lifetime, bounds safety) when .opencode/AGENTS.md is silent"
         },
         "ct_gsl": {
             "repository": "microsoft/GSL",

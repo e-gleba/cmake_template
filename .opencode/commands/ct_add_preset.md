@@ -6,7 +6,7 @@ agent: build
 Add preset for `$ARGUMENTS` (required: compiler + platform + arch, e.g. `linux clang aarch64`).
 
 Read `.opencode/ai-workflow-adapter.md` and apply its delegation and
-text-handling rules. Constraints from `AGENTS.md` (non-negotiable):
+text-handling rules. Constraints from `.opencode/AGENTS.md` (non-negotiable):
 
 - Edit `cmake/presets/*.json` only. New file → also add it to the
   `CMakePresets.json` `include` list. Never hack platform logic into

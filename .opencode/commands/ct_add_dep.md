@@ -6,7 +6,7 @@ agent: build
 Add dependency `$ARGUMENTS` (required: library name + version).
 
 Read `.opencode/ai-workflow-adapter.md` and apply its delegation and
-text-handling rules. Rules from `AGENTS.md` (non-negotiable):
+text-handling rules. Rules from `.opencode/AGENTS.md` (non-negotiable):
 
 - CPM primary. Tagged release, never a branch. `FETCHCONTENT_QUIET OFF`.
 - Options go inside `CPMAddPackage`, nowhere else.

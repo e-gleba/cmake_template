@@ -15,12 +15,12 @@ text-handling rules.
 Steps:
 1. If the tree is clean, say so and stop — no review of committed history.
 2. Delegate exactly one review pass to `@ct_cmake_review` with the diff
-   (prompt is self-contained: files + `REVIEW.md` procedure). Stay on the
+   (prompt is self-contained: files + `.opencode/REVIEW.md` procedure). Stay on the
    `build` agent yourself; never switch the session to the reviewer.
 3. Present its verdict verbatim, then your one-line take. Never edit code
    as part of a review.
 
-Apply `REVIEW.md` exactly, in order: lifetime/ownership, UB,
+Apply `.opencode/REVIEW.md` exactly, in order: lifetime/ownership, UB,
 init/narrowing, concurrency, error paths, interface impact, perf, style last.
 - Changed lines only. No drive-by edits.
 - Conflicts with nearby code resolve toward existing code, reported.
