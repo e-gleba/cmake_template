@@ -29,9 +29,10 @@ Think first. Minimal diff. Verify with build + tests.
 - `.agents/scripts/` owns runnable helpers: `rules/hook.py` enforces bans
   (`--staged` for pre-commit, stdin JSON for edit hooks),
   `clipboard/grab_clipboard.sh|.ps1` grabs clipboard images for UI reports.
-- `.agents/skills/ct-auth/scripts/mcp_env_set.py` sets one env var from
-  hidden console input (`setx` on Windows, rc append on POSIX). Dumb
-  setter only — the `ct-auth` skill discovers what to fill live.
+- `.agents/skills/ct-auth/scripts/mcp_env_set.py` writes one env var from
+  hidden console input to `ct_project.env` (same file the `ct_project_env`
+  plugin reads). Dumb setter only — the `ct-auth` skill discovers what to
+  fill live.
 
 ## Build
 

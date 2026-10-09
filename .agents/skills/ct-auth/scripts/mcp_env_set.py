@@ -1,32 +1,19 @@
 #!/usr/bin/env python3
-"""Set one env var from hidden console input. No network, no registry.
+"""Store one secret VAR in ct_project.env via hidden console input.
+
+Single source of truth: ~/.config/opencode/ct_project.env
+(override with CT_PROJECT_ENV_PATH).
 
 Usage:
-    python3 mcp_env_set.py VAR [--check] [--launch] [--url URL] [--info TEXT]
+    python3 mcp_env_set.py VAR [--check] [--launch] [--url URL] [--instructions TEXT]
 
---check prints set/missing (exit 0/1) and never opens a window.
-Without --check, prompts masked (*** per keystroke, 5-minute limit) and
-persists to user scope: setx on Windows, shell-rc append (idempotent)
-on POSIX. Prints where it saved and what to do next. Server knowledge
-arrives via argv, never hardcoded here.
+The masked prompt has a hard 5-minute deadline (INPUT_TIMEOUT); the user
+is told so before typing. --url auto-opens the token page; --instructions
+carries the AI-written steps (what to create + the URL as plain text, for
+windows where auto-open fails) and is required for every prompt run.
 
-Windowing (--launch opens exactly one prompt window, never probes):
-- stdin is a TTY -> prompt inline, zero windows (--launch is a no-op).
-- stdin has no TTY + --launch -> re-exec this script (without --launch)
-  inside exactly one blocking window and wait: start /wait console on
-  Windows, Terminal.app via osascript (exit code via sentinel file) on
-  macOS, konsole/gnome-terminal/xterm on POSIX. The child sets the window
-  title and prompts. The parent prints one opening line, then one result.
-- stdin has no TTY without --launch, or no window possible (headless,
-  no GUI, no terminal) -> print the exact manual command and open nothing
-  (exit 2).
-TTY/display checks are env + PATH only and never pop UI.
-
-Exit codes (judge by these + the result line, never by grepping
-env/rc files): 0 saved (or set, with --check); 1 missing (--check),
-prompt failed/aborted, or terminal launch failed; 2 this environment
-needs a manual run (bad VAR, no TTY without --launch, no display or
-no terminal with --launch: manual command printed, nothing opened).
+Exit codes: 0 saved (or set, with --check); 1 missing, aborted, timed out,
+or failed; 2 rerun in a terminal (manual command printed, nothing opened).
 """
 
 from __future__ import annotations
@@ -44,20 +31,113 @@ import time
 import webbrowser
 from pathlib import Path
 
-VAR_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+VAR_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_PLAIN_RE = re.compile(r"[A-Za-z0-9_@%+/:.,-]+")
+LINE_RE = re.compile(
+    r"^[^\S\n]*(?:export[^\S\n]+)?([A-Za-z_][A-Za-z0-9_]*)[^\S\n]*=[^\S\n]*(.*?)[^\S\n]*$",
+    re.MULTILINE,
+)
 INPUT_TIMEOUT = 300
 
 
-def hidden_input(prompt: str, timeout: int = INPUT_TIMEOUT) -> str:
-    # One hidden line: '*' per keystroke, backspace works, empty line or
-    # timeout aborts. termios/msvcrt imported here so each OS only loads
-    # its own backend. Raises OSError with a clean message when stdin has
-    # no TTY instead of a termios traceback; caller decides (no window).
+def env_file() -> Path:
+    override = os.environ.get("CT_PROJECT_ENV_PATH", "").strip()
+    if override:
+        return Path(override).expanduser()
+    base = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    root = Path(base).expanduser() if base else Path.home() / ".config"
+    return root / "opencode" / "ct_project.env"
+
+
+def _unescape_doublequoted(inner: str) -> str:
+    """Undo format_value escaping: `\"` -> `"`, `\\` -> `\\`."""
+    out: list[str] = []
+    i = 0
+    while i < len(inner):
+        ch = inner[i]
+        if ch == "\\" and i + 1 < len(inner) and inner[i + 1] in ('"', "\\"):
+            out.append(inner[i + 1])
+            i += 2
+        else:
+            out.append(ch)
+            i += 1
+    return "".join(out)
+
+
+def parse(text: str) -> dict[str, str]:
+    text = text.removeprefix("\ufeff")
+    out: dict[str, str] = {}
+    for match in LINE_RE.finditer(text):
+        key, raw = match.group(1), match.group(2)
+        if len(raw) > 1 and raw[0] == '"' and raw[-1] == '"':
+            raw = _unescape_doublequoted(raw[1:-1])
+        elif len(raw) > 1 and raw[0] == "'" and raw[-1] == "'":
+            raw = raw[1:-1]
+        out[key] = raw
+    return out
+
+
+def format_value(value: str) -> str:
+    """Quote for ct_project.env so parse() round-trips."""
+    if "\n" in value or "\r" in value:
+        raise ValueError("value must be a single line")
+    if _PLAIN_RE.fullmatch(value) is not None:
+        return value
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def save(var: str, value: str) -> Path:
+    target = env_file()
+    line = var + "=" + format_value(value)
+    text = target.read_text(encoding="utf-8") if target.exists() else ""
+    lines = text.splitlines()
+    for i, existing in enumerate(lines):
+        match = LINE_RE.match(existing)
+        if match and match.group(1) == var:
+            lines[i] = line
+            break
+    else:
+        lines.append(line)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_name(target.name + ".tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if os.name != "nt":
+        os.chmod(tmp, 0o600)
+    os.replace(tmp, target)
+    return target
+
+
+def is_set(var: str) -> bool:
+    if os.environ.get(var, "").strip():
+        return True
+    try:
+        text = env_file().read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return bool(parse(text).get(var, "").strip())
+
+
+def set_title(text: str) -> None:
+    if os.name != "nt" and sys.stdout.isatty():
+        sys.stdout.write(f"\033]0;{text}\007")
+        sys.stdout.flush()
+
+
+def read_masked(prompt_text: str, timeout: int = INPUT_TIMEOUT) -> str:
+    """One hidden line with `*` feedback and a hard deadline.
+
+    Raises OSError when stdin has no TTY, TimeoutError on expiry.
+    getpass cannot do deadlines portably, hence the ~40 lines.
+    """
     if not sys.stdin.isatty():
         raise OSError("stdin has no TTY (not a terminal)")
     deadline = time.time() + timeout
-    sys.stdout.write(prompt)
+    sys.stdout.write(prompt_text)
     sys.stdout.flush()
+    restore = None
+    fd = -1
+    termios_mod = None
     if os.name == "nt":
         import msvcrt
 
@@ -68,15 +148,15 @@ def hidden_input(prompt: str, timeout: int = INPUT_TIMEOUT) -> str:
                 time.sleep(0.05)
             return msvcrt.getwch()
 
-        raw = None
     else:
         import select
         import termios
         import tty
 
+        termios_mod = termios
         fd = sys.stdin.fileno()
         try:
-            raw = termios.tcgetattr(fd)
+            restore = termios.tcgetattr(fd)
         except (OSError, termios.error) as exc:
             raise OSError(f"stdin has no TTY ({exc})") from exc
         tty.setraw(fd)
@@ -111,307 +191,195 @@ def hidden_input(prompt: str, timeout: int = INPUT_TIMEOUT) -> str:
             sys.stdout.write("*")
             sys.stdout.flush()
     finally:
-        if raw is not None:
-            import termios
-
-            termios.tcsetattr(fd, termios.TCSADRAIN, raw)
+        if restore is not None and termios_mod is not None:
+            termios_mod.tcsetattr(fd, termios_mod.TCSADRAIN, restore)
 
 
-def set_title(text: str) -> None:
-    # Title escape only on a real terminal; never pollute piped logs.
-    if os.name == "nt" or not sys.stdout.isatty():
-        return
-    sys.stdout.write(f"\033]0;{text}\007")
-    sys.stdout.flush()
-
-
-def shell_rc() -> Path:
-    shell = os.path.basename(os.environ.get("SHELL", ""))
-    if "zsh" in shell:
-        name = ".zshrc"
-    elif "bash" in shell:
-        name = ".bashrc"
-    else:
-        name = ".profile"
-    return Path.home() / name
-
-
-def persist(var: str, value: str) -> bool:
-    if os.name == "nt":
-        done = subprocess.run(
-            ["setx", var, value], capture_output=True, text=True, check=False
-        )
-        if done.returncode != 0:
-            print(f"setx failed: {done.stderr.strip()}", file=sys.stderr)
-            return False
-        print("Saved via setx (user scope) -- restart opencode to pick it up.")
-        return True
-    rc = shell_rc()
-    created = not rc.exists()
-    lines = rc.read_text().splitlines() if not created else []
-    prefix = f"export {var}="
-    lines = [line for line in lines if not line.strip().startswith(prefix)]
-    lines.append(prefix + shlex.quote(value))
-    rc.write_text("\n".join(lines) + "\n")
-    if created:
-        rc.chmod(0o600)
-    print(f"Saved to {rc} -- then: source {rc} && restart opencode.")
-    return True
-
-
-def has_display() -> bool:
-    # Env-only check, never pops UI.
-    if os.name == "nt":
-        return True
-    return bool(
-        os.environ.get("DISPLAY", "").strip()
-        or os.environ.get("WAYLAND_DISPLAY", "").strip()
-    )
-
-
-def find_terminal() -> str | None:
-    # PATH-only check, never launches anything (no probe windows).
-    for name in ("konsole", "gnome-terminal", "xterm"):
-        if shutil.which(name):
-            return name
-    return None
-
-
-def manual_command(var: str, url: str, info: str) -> str:
-    parts = ["python3 .agents/skills/ct-auth/scripts/mcp_env_set.py", var]
-    if url:
-        parts.append(f"--url {shlex.quote(url)}")
-    if info:
-        parts.append(f"--info {shlex.quote(info)}")
-    return " ".join(parts)
-
-
-def need_manual(var: str, url: str, info: str, reason: str, hint: str = "") -> int:
-    # No window possible here: print why + the exact manual command.
-    # Opens nothing, exit 2.
-    print(f"{reason} run this in a terminal (opens nothing here):", file=sys.stderr)
-    print(f"  {manual_command(var, url, info)}", file=sys.stderr)
-    if hint:
-        print(hint, file=sys.stderr)
-    return 2
-
-
-def launch_in_terminal(child_argv: list[str], title: str, term: str) -> int:
-    # Open exactly one blocking terminal running child_argv. Returns the
-    # child exit code. Spawn failures report cleanly and open nothing.
-    if term == "konsole":
-        term_argv = ["konsole", "--separate", "--nofork", "-e", *child_argv]
-    elif term == "gnome-terminal":
-        term_argv = ["gnome-terminal", "--wait", "--", *child_argv]
-    else:
-        term_argv = ["xterm", "-T", title, "-e", *child_argv]
-    try:
-        done = subprocess.run(term_argv, check=False)
-    except (FileNotFoundError, OSError) as exc:
-        print(f"Terminal launch failed ({term}): {exc}", file=sys.stderr)
-        return 1
-    return done.returncode
-
-
-def launch_windows(child_argv: list[str], title: str) -> int | None:
-    # One new console window via start /wait (blocks till it closes).
-    # None = no console possible here (caller prints the manual command).
-    try:
-        done = subprocess.run(
-            ["cmd", "/c", "start", f'"{title}"', "/wait", *child_argv],
-            check=False,
-        )
-    except (FileNotFoundError, OSError) as exc:
-        print(f"Console launch failed (start): {exc}", file=sys.stderr)
-        return None
-    return done.returncode
-
-
-def drop_sentinel(sentinel: str) -> None:
-    try:
-        os.unlink(sentinel)
-    except OSError:
-        pass
-
-
-def wait_sentinel(sentinel: str) -> int | None:
-    # Block until the macOS child reports its exit code (or give up).
-    # None = no GUI possible here; int = child verdict (caller reports it).
-    deadline = time.time() + INPUT_TIMEOUT
-    while time.time() < deadline:
-        try:
-            with open(sentinel) as fh:
-                code = fh.read().strip()
-        except OSError:
-            code = ""
-        if code:
-            drop_sentinel(sentinel)
-            try:
-                return int(code)
-            except ValueError:
-                return 1
-        time.sleep(0.5)
-    print(f"Timed out after {INPUT_TIMEOUT // 60} minutes, nothing saved.")
-    drop_sentinel(sentinel)
-    return 1
-
-
-def launch_macos(child_argv: list[str]) -> int | None:
-    # Terminal.app via osascript; the child reports its exit code through a
-    # sentinel file (do script returns none). None = no GUI possible here.
-    # Note: reuses the front Terminal window when one exists.
-    try:
-        fd, sentinel = tempfile.mkstemp(prefix="mcp_env_")
-    except OSError as exc:
-        print(f"Sentinel file failed: {exc}", file=sys.stderr)
-        return None
-    os.close(fd)
-    shell_cmd = " ".join(shlex.quote(a) for a in child_argv)
-    shell_cmd += f"; code=$?; echo $code > {shlex.quote(sentinel)}"
-    osa_cmd = shell_cmd.replace("\\", "\\\\").replace('"', '\\"')
-    try:
-        done = subprocess.run(
-            [
-                "osascript",
-                "-e",
-                f'tell application "Terminal" to do script "{osa_cmd}"',
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-    except (FileNotFoundError, OSError) as exc:
-        print(f"Terminal launch failed (osascript): {exc}", file=sys.stderr)
-        drop_sentinel(sentinel)
-        return None
-    if done.returncode != 0:
-        print(f"Terminal launch refused: {done.stderr.strip()}", file=sys.stderr)
-        drop_sentinel(sentinel)
-        return None
-    return wait_sentinel(sentinel)
-
-
-def report_launch_result(var: str, code: int) -> int:
-    # Parent-side verdict for a --launch run. The token itself never
-    # appears here, only the outcome. Returns code unchanged: judge by
-    # exit code + this line, never by grepping env/rc files.
-    if code == 0:
-        print(f"{var}: saved.")
-    else:
-        print(
-            f"{var}: prompt failed or aborted (exit {code}); rerun to retry.",
-            file=sys.stderr,
-        )
-    return code
-
-
-def prompt_inline(var: str, url: str, info: str) -> int:
+def prompt(var: str, url: str, instructions: str) -> int:
     set_title(f"MCP auth: {var}")
     if url:
         print("Opening token page...")
         try:
             opened = webbrowser.open(url)
-        except (
-            OSError,
-            webbrowser.Error,
-        ) as exc:  # browser missing/broken: warn, still prompt
+        except (OSError, webbrowser.Error) as exc:
             print(
                 f"Could not open browser ({exc}); open {url} manually.", file=sys.stderr
             )
         else:
             if not opened:
                 print(f"Open {url} manually.", file=sys.stderr)
-    if info:
-        print(info.replace("\\n", "\n"))
+    if instructions:
+        print(instructions.replace("\\n", "\n"))
     print(
-        f"Input is hidden (***), {INPUT_TIMEOUT // 60} minutes, then this closes itself."
+        f"Input is hidden (***). You have {INPUT_TIMEOUT // 60} minutes, "
+        "then this closes itself."
     )
-    try:
+    while True:
         try:
-            value = hidden_input(f"{var}: ").strip()
-        except OSError:
-            value = getpass.getpass(f"{var}: ").strip()
-    except TimeoutError:
+            try:
+                value = read_masked(f"{var}: ").strip()
+            except OSError:
+                value = getpass.getpass(f"{var}: ").strip()
+        except TimeoutError:
+            print(f"Timed out after {INPUT_TIMEOUT // 60} minutes, nothing saved.")
+            return 1
+        except (KeyboardInterrupt, EOFError):
+            print("Aborted, nothing saved.")
+            return 1
+        if not value:
+            print("Empty input, please try again (Ctrl-C to abort).")
+            continue
+        break
+    try:
+        where = save(var, value)
+    except (OSError, ValueError) as exc:
+        print(f"Save failed: {exc}", file=sys.stderr)
+        return 1
+    print(f"{var}: saved to {where}")
+    return 0
+
+
+def manual(var: str, url: str, instructions: str, reason: str) -> int:
+    parts = ["python3 .agents/skills/ct-auth/scripts/mcp_env_set.py", var]
+    if url:
+        parts.append(f"--url {shlex.quote(url)}")
+    if instructions:
+        parts.append(f"--instructions {shlex.quote(instructions)}")
+    print(f"{reason} run this in a terminal (opens nothing here):", file=sys.stderr)
+    print(f"  {' '.join(parts)}", file=sys.stderr)
+    return 2
+
+
+def run_windowed(child: list[str], var: str) -> int | None:
+    if os.name == "nt":
+        argv = ["cmd", "/c", "start", f'"MCP auth: {var}"', "/wait", *child]
+    elif sys.platform == "darwin":
+        return run_macos(child)
+    else:
+        if not (
+            os.environ.get("DISPLAY", "").strip()
+            or os.environ.get("WAYLAND_DISPLAY", "").strip()
+        ):
+            return None
+        term = next(
+            (t for t in ("konsole", "gnome-terminal", "xterm") if shutil.which(t)), None
+        )
+        if term is None:
+            return None
+        if term == "konsole":
+            argv = [term, "--separate", "--nofork", "-e", *child]
+        elif term == "gnome-terminal":
+            argv = [term, "--wait", "--", *child]
+        else:
+            argv = [term, "-e", *child]
+    try:
+        done = subprocess.run(argv, check=False, timeout=INPUT_TIMEOUT)
+    except (FileNotFoundError, OSError) as exc:
+        print(f"Window launch failed: {exc}", file=sys.stderr)
+        return 1
+    except subprocess.TimeoutExpired:
         print(f"Timed out after {INPUT_TIMEOUT // 60} minutes, nothing saved.")
         return 1
-    except (KeyboardInterrupt, EOFError):
-        print("Aborted, nothing saved.")
-        return 1
-    if not value:
-        print("Empty input, nothing saved.")
-        return 1
-    return 0 if persist(var, value) else 1
+    return done.returncode
+
+
+def run_macos(child: list[str]) -> int | None:
+    try:
+        fd, sentinel = tempfile.mkstemp(prefix="mcp_env_")
+    except OSError as exc:
+        print(f"Sentinel file failed: {exc}", file=sys.stderr)
+        return None
+    os.close(fd)
+    cmd = " ".join(shlex.quote(a) for a in child)
+    cmd += f"; code=$?; echo $code > {shlex.quote(sentinel)}"
+    osa = cmd.replace("\\", "\\\\").replace('"', '\\"')
+    try:
+        done = subprocess.run(
+            ["osascript", "-e", f'tell application "Terminal" to do script "{osa}"'],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        print(f"Terminal launch failed: {exc}", file=sys.stderr)
+        Path(sentinel).unlink(missing_ok=True)
+        return None
+    except subprocess.TimeoutExpired:
+        print("Terminal launch timed out.", file=sys.stderr)
+        Path(sentinel).unlink(missing_ok=True)
+        return None
+    if done.returncode != 0:
+        print(f"Terminal launch refused: {done.stderr.strip()}", file=sys.stderr)
+        Path(sentinel).unlink(missing_ok=True)
+        return None
+    deadline = time.time() + INPUT_TIMEOUT
+    while time.time() < deadline:
+        try:
+            code = Path(sentinel).read_text(encoding="utf-8").strip()
+        except OSError:
+            code = ""
+        if code:
+            Path(sentinel).unlink(missing_ok=True)
+            try:
+                return int(code)
+            except ValueError:
+                return 1
+        time.sleep(0.5)
+    print(f"Timed out after {INPUT_TIMEOUT // 60} minutes, nothing saved.")
+    Path(sentinel).unlink(missing_ok=True)
+    return 1
 
 
 def main(argv: list[str]) -> int:
-    ap = argparse.ArgumentParser(
-        description="Set one env var from masked console input."
+    parser = argparse.ArgumentParser(
+        description="Store one secret VAR in ct_project.env."
     )
-    ap.add_argument("var", help="VAR name ([A-Za-z_][A-Za-z0-9_]*)")
-    ap.add_argument(
-        "--check",
-        action="store_true",
-        help="print set/missing only, never opens a window",
+    parser.add_argument("var", help="VAR name ([A-Za-z_][A-Za-z0-9_]*)")
+    parser.add_argument(
+        "--check", action="store_true", help="print set/missing, never prompts"
     )
-    ap.add_argument(
-        "--launch",
-        action="store_true",
-        help="no TTY: open exactly one prompt window and wait; else print the manual command",
+    parser.add_argument(
+        "--launch", action="store_true", help="no TTY: open one prompt window and wait"
     )
-    ap.add_argument("--url", default="", help="token page to open first")
-    ap.add_argument("--info", default="", help="instruction lines, use \\n to separate")
-    ns = ap.parse_args(argv[1:])
-    if not VAR_RE.match(ns.var):
-        ap.error("bad VAR name")
-    var: str = ns.var
-    if ns.check:
-        # --check never launches; --launch is ignored with it.
-        missing = not os.environ.get(var, "").strip()
-        print(f"{var}: {'missing' if missing else 'set'}")
-        return 1 if missing else 0
+    parser.add_argument("--url", default="", help="token page to open first")
+    parser.add_argument(
+        "--instructions",
+        default="",
+        help="steps shown to the user (use \\n for new lines); "
+        "the AI always passes what to create and where",
+    )
+    args = parser.parse_args(argv[1:])
+    if VAR_RE.fullmatch(args.var) is None:
+        parser.error("bad VAR name")
+    if args.check:
+        ok = is_set(args.var)
+        print(f"{args.var}: {'set' if ok else 'missing'}")
+        return 0 if ok else 1
     if sys.stdin.isatty():
-        return prompt_inline(var, ns.url, ns.info)
-    if not ns.launch:
-        return need_manual(
-            var,
-            ns.url,
-            ns.info,
-            "stdin has no TTY;",
-            "Or rerun with --launch to open exactly one prompt window.",
-        )
+        return prompt(args.var, args.url, args.instructions)
+    if not args.launch:
+        return manual(args.var, args.url, args.instructions, "stdin has no TTY;")
     script = str(Path(__file__).resolve())
-    child = [sys.executable, script, var]
-    if ns.url:
-        child += ["--url", ns.url]
-    if ns.info:
-        child += ["--info", ns.info]
-    title = f"MCP auth: {var}"
-    if os.name == "nt":
-        print(f"Opening one prompt window for {var} (console); waiting...")
-        code = launch_windows(child, title)
-        if code is None:
-            return need_manual(var, ns.url, ns.info, "No console here;")
-        return report_launch_result(var, code)
-    if sys.platform == "darwin":
-        print(f"Opening one prompt window for {var} (Terminal); waiting...")
-        code = launch_macos(child)
-        if code is None:
-            return need_manual(var, ns.url, ns.info, "No GUI Terminal here;")
-        return report_launch_result(var, code)
-    term = find_terminal()
-    if not has_display():
-        return need_manual(
-            var,
-            ns.url,
-            ns.info,
-            "No display here (neither $DISPLAY nor $WAYLAND_DISPLAY);",
+    child = [sys.executable, script, args.var]
+    if args.url:
+        child += ["--url", args.url]
+    if args.instructions:
+        child += ["--instructions", args.instructions]
+    print(f"Opening one prompt window for {args.var}; waiting...")
+    code = run_windowed(child, args.var)
+    if code is None:
+        return manual(
+            args.var, args.url, args.instructions, "No window available here;"
         )
-    if term is None:
-        return need_manual(
-            var, ns.url, ns.info, "No terminal found (konsole, gnome-terminal, xterm);"
-        )
-    print(f"Opening one prompt window for {var} ({term}); waiting...")
-    return report_launch_result(var, launch_in_terminal(child, title, term))
+    if code == 0:
+        print(f"{args.var}: saved.")
+        return 0
+    print(
+        f"{args.var}: prompt failed or aborted (exit {code}); rerun to retry.",
+        file=sys.stderr,
+    )
+    return code
 
 
 if __name__ == "__main__":
@@ -422,7 +390,6 @@ if __name__ == "__main__":
         sys.exit(1)
     except BrokenPipeError:
         sys.exit(1)
-    # Last-resort crash guard: clean `error: …` + exit 1, no traceback.
     except Exception as exc:  # noqa: BLE001
         print(f"error: {exc}", file=sys.stderr)
         sys.exit(1)

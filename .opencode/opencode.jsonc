@@ -32,9 +32,7 @@
         "ct_github": {
             "type": "remote",
             "url": "https://api.githubcopilot.com/mcp/",
-            // Disabled: flaky OAuth against this endpoint; kept as a template.
-            // Setup: https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-opencode.md
-            "enabled": false,
+            "enabled": true,
             "oauth": false,
             "headers": {
                 "Authorization": "Bearer {env:GITHUB_PERSONAL_ACCESS_TOKEN}"
@@ -43,26 +41,31 @@
         "ct_xdocs": {
             "type": "remote",
             "url": "https://xdocs.dev/mcp",
+            "oauth": false,
             "enabled": true
         },
         "ct_qt_docs": {
             "type": "remote",
             "url": "https://qt-docs-mcp.qt.io/mcp",
+            "oauth": false,
             "enabled": true
         },
         "ct_ms_learn": {
             "type": "remote",
             "url": "https://learn.microsoft.com/api/mcp",
+            "oauth": false,
             "enabled": true
         },
         "ct_godbolt": {
             "type": "remote",
             "url": "https://godbolt.org/mcp",
+            "oauth": false,
             "enabled": true
         },
         "ct_google_dev": {
             "type": "remote",
             "url": "https://developerknowledge.googleapis.com/mcp",
+            "oauth": false,
             "enabled": true
         }
     },
