@@ -27,7 +27,8 @@ on:
       - ".gitignore"
       - ".gitattributes"
       - "license.md"
-      - "AGENTS.md"
+      - ".opencode/AGENTS.md"
+      - ".opencode/REVIEW.md"
   pull_request:
     branches: [main]
     paths-ignore: *ci_ignore

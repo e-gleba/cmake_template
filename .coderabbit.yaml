@@ -16,7 +16,7 @@ tone_instructions: |-
   Concise, technical, no pleasantries. Fix first, then impact.
   Ground C++ claims in cppreference or the C++ draft; mark
   unverified claims [unverified]. Perf claims need measurements.
-  Follow CLAUDE.md. Changed lines only; no drive-by edits.
+  Follow .opencode/AGENTS.md. Changed lines only; no drive-by edits.
 
 reviews:
   profile: chill

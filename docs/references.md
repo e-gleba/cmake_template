@@ -1,6 +1,6 @@
 # References
 
-Canonical links for agents and humans. Keep this file as the only long link list; `readme.md` and `AGENTS.md` stay lean.
+Canonical links for agents and humans. Keep this file as the only long link list; `readme.md` and `.opencode/AGENTS.md` stay lean.
 
 ## CMake
 
