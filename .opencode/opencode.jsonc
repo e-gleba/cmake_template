@@ -27,7 +27,7 @@
         ".opencode/AGENTS.md",
         ".opencode/REVIEW.md"
     ],
-    // Doc/dev servers; header or public auth, no OAuth.
+    // Docs are header/public auth; search is public; OAuth needs /mcps sign-in.
     "mcp": {
         "ct_github": {
             "type": "remote",
@@ -67,6 +67,49 @@
             "url": "https://developerknowledge.googleapis.com/mcp",
             "enabled": true,
             "oauth": false
+        },
+        "ct_context7": {
+            "type": "remote",
+            "url": "https://mcp.context7.com/mcp/oauth",
+            "enabled": true
+        },
+        "ct_deepwiki": {
+            "type": "remote",
+            "url": "https://mcp.deepwiki.com/mcp",
+            "enabled": true,
+            "oauth": false
+        },
+        "ct_gitmcp": {
+            "type": "remote",
+            "url": "https://gitmcp.io/docs",
+            "enabled": true,
+            "oauth": false
+        },
+        "ct_grep": {
+            "type": "remote",
+            "url": "https://mcp.grep.app",
+            "enabled": true,
+            "oauth": false
+        },
+        "ct_exa": {
+            "type": "remote",
+            "url": "https://mcp.exa.ai/mcp",
+            "enabled": true
+        },
+        "ct_sentry": {
+            "type": "remote",
+            "url": "https://mcp.sentry.dev/mcp",
+            "enabled": false
+        },
+        "ct_linear": {
+            "type": "remote",
+            "url": "https://mcp.linear.app/mcp",
+            "enabled": false
+        },
+        "ct_vercel": {
+            "type": "remote",
+            "url": "https://mcp.vercel.com",
+            "enabled": false
         }
     },
     // Git checkouts for context; description says when to use each.
