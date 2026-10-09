@@ -9,7 +9,7 @@ Think first. Minimal diff. Verify with build + tests.
   owns mechanical shape. `docs/references.md` owns links.
 - `.opencode/opencode.jsonc` owns JSON config: MCP servers + repo
   references + `instructions` (this file + `.opencode/REVIEW.md`).
-  Markdown lives elsewhere, never inline in JSON.
+  Markdown lives elsewhere, never inline in JSON. Dual V1+V2 file.
 - `.opencode/commands/*.md` owns slash commands:
   `/ct_build` native loop, `/ct_cross_check` android/mingw/web,
   `/ct_add_preset` new platform preset, `/ct_add_dep` CPM dep,

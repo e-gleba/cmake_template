@@ -22,7 +22,6 @@ on:
       - ".github/*.md"
       - ".coderabbit.yaml"
       - ".cursor/**"
-      - ".cursorignore"
       - ".editorconfig"
       - ".gitignore"
       - ".gitattributes"
