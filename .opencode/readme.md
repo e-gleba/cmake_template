@@ -23,8 +23,9 @@ Rules for adding commands, agents, and skills in this repo.
 - Skill (`.agents/skills/*`): third-party knowledge vendored via
   `.agents/install_skills.cmake` + pinned `skills-lock.json`. Vendor one
   only if this template can build a test that triggers it; otherwise use
-  `find-skills` on demand. Never author project skills — project workflow
-  lives in commands, agents, and `.agents/shared/`.
+  `find-skills` on demand. Project-owned exception: `ct-auth` (secret
+  provisioning) lives here because opencode discovers `.agents/skills/`
+  natively; all other project workflow stays in commands and agents.
 
 ## Every command file
 

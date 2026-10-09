@@ -10,14 +10,16 @@ persists to user scope: setx on Windows, shell-rc append (idempotent)
 on POSIX. Prints where it saved and what to do next. Server knowledge
 arrives via argv, never hardcoded here.
 
-Windowing (exactly one, never probes):
+Windowing (--launch opens exactly one prompt window, never probes):
 - stdin is a TTY -> prompt inline, zero windows (--launch is a no-op).
-- stdin has no TTY + --launch + display + terminal -> re-exec this
-  script (without --launch) inside exactly one blocking terminal and
-  wait. The child sets the window title and prompts. The parent prints
-  one opening line, then one result line.
-- stdin has no TTY without --launch, or no display / no terminal ->
-  print the exact manual command and open nothing (exit 2).
+- stdin has no TTY + --launch -> re-exec this script (without --launch)
+  inside exactly one blocking window and wait: start /wait console on
+  Windows, Terminal.app via osascript (exit code via sentinel file) on
+  macOS, konsole/gnome-terminal/xterm on POSIX. The child sets the window
+  title and prompts. The parent prints one opening line, then one result.
+- stdin has no TTY without --launch, or no window possible (headless,
+  no GUI, no terminal) -> print the exact manual command and open nothing
+  (exit 2).
 TTY/display checks are env + PATH only and never pop UI.
 
 Exit codes (judge by these + the result line, never by grepping
@@ -37,6 +39,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import webbrowser
 from pathlib import Path
@@ -175,12 +178,22 @@ def find_terminal() -> str | None:
 
 
 def manual_command(var: str, url: str, info: str) -> str:
-    parts = ["python3 .opencode/scripts/mcp_env_set.py", var]
+    parts = ["python3 .agents/skills/ct-auth/scripts/mcp_env_set.py", var]
     if url:
         parts.append(f"--url {shlex.quote(url)}")
     if info:
         parts.append(f"--info {shlex.quote(info)}")
     return " ".join(parts)
+
+
+def need_manual(var: str, url: str, info: str, reason: str, hint: str = "") -> int:
+    # No window possible here: print why + the exact manual command.
+    # Opens nothing, exit 2.
+    print(f"{reason} run this in a terminal (opens nothing here):", file=sys.stderr)
+    print(f"  {manual_command(var, url, info)}", file=sys.stderr)
+    if hint:
+        print(hint, file=sys.stderr)
+    return 2
 
 
 def launch_in_terminal(child_argv: list[str], title: str, term: str) -> int:
@@ -198,6 +211,84 @@ def launch_in_terminal(child_argv: list[str], title: str, term: str) -> int:
         print(f"Terminal launch failed ({term}): {exc}", file=sys.stderr)
         return 1
     return done.returncode
+
+
+def launch_windows(child_argv: list[str], title: str) -> int | None:
+    # One new console window via start /wait (blocks till it closes).
+    # None = no console possible here (caller prints the manual command).
+    try:
+        done = subprocess.run(
+            ["cmd", "/c", "start", f'"{title}"', "/wait", *child_argv],
+            check=False,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        print(f"Console launch failed (start): {exc}", file=sys.stderr)
+        return None
+    return done.returncode
+
+
+def drop_sentinel(sentinel: str) -> None:
+    try:
+        os.unlink(sentinel)
+    except OSError:
+        pass
+
+
+def wait_sentinel(sentinel: str) -> int | None:
+    # Block until the macOS child reports its exit code (or give up).
+    # None = no GUI possible here; int = child verdict (caller reports it).
+    deadline = time.time() + INPUT_TIMEOUT
+    while time.time() < deadline:
+        try:
+            with open(sentinel) as fh:
+                code = fh.read().strip()
+        except OSError:
+            code = ""
+        if code:
+            drop_sentinel(sentinel)
+            try:
+                return int(code)
+            except ValueError:
+                return 1
+        time.sleep(0.5)
+    print(f"Timed out after {INPUT_TIMEOUT // 60} minutes, nothing saved.")
+    drop_sentinel(sentinel)
+    return 1
+
+
+def launch_macos(child_argv: list[str]) -> int | None:
+    # Terminal.app via osascript; the child reports its exit code through a
+    # sentinel file (do script returns none). None = no GUI possible here.
+    # Note: reuses the front Terminal window when one exists.
+    try:
+        fd, sentinel = tempfile.mkstemp(prefix="mcp_env_")
+    except OSError as exc:
+        print(f"Sentinel file failed: {exc}", file=sys.stderr)
+        return None
+    os.close(fd)
+    shell_cmd = " ".join(shlex.quote(a) for a in child_argv)
+    shell_cmd += f"; code=$?; echo $code > {shlex.quote(sentinel)}"
+    osa_cmd = shell_cmd.replace("\\", "\\\\").replace('"', '\\"')
+    try:
+        done = subprocess.run(
+            [
+                "osascript",
+                "-e",
+                f'tell application "Terminal" to do script "{osa_cmd}"',
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        print(f"Terminal launch failed (osascript): {exc}", file=sys.stderr)
+        drop_sentinel(sentinel)
+        return None
+    if done.returncode != 0:
+        print(f"Terminal launch refused: {done.stderr.strip()}", file=sys.stderr)
+        drop_sentinel(sentinel)
+        return None
+    return wait_sentinel(sentinel)
 
 
 def report_launch_result(var: str, code: int) -> int:
@@ -265,7 +356,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--launch",
         action="store_true",
-        help="no TTY + display: open exactly one terminal and wait; else print the manual command",
+        help="no TTY: open exactly one prompt window and wait; else print the manual command",
     )
     ap.add_argument("--url", default="", help="token page to open first")
     ap.add_argument("--info", default="", help="instruction lines, use \\n to separate")
@@ -281,41 +372,46 @@ def main(argv: list[str]) -> int:
     if sys.stdin.isatty():
         return prompt_inline(var, ns.url, ns.info)
     if not ns.launch:
-        print(
-            "stdin has no TTY; run in a terminal (opens nothing here):", file=sys.stderr
+        return need_manual(
+            var,
+            ns.url,
+            ns.info,
+            "stdin has no TTY;",
+            "Or rerun with --launch to open exactly one prompt window.",
         )
-        print(f"  {manual_command(var, ns.url, ns.info)}", file=sys.stderr)
-        print(
-            "Or rerun with --launch to open exactly one prompt window.", file=sys.stderr
-        )
-        return 2
-    term = find_terminal()
-    if not has_display():
-        print(
-            "No display here (neither $DISPLAY nor $WAYLAND_DISPLAY); "
-            "run this in a terminal (opens nothing here):",
-            file=sys.stderr,
-        )
-        print(f"  {manual_command(var, ns.url, ns.info)}", file=sys.stderr)
-        return 2
-    if term is None:
-        print(
-            "No terminal found (konsole, gnome-terminal, xterm); "
-            "run this in a terminal (opens nothing here):",
-            file=sys.stderr,
-        )
-        print(f"  {manual_command(var, ns.url, ns.info)}", file=sys.stderr)
-        return 2
-    print(f"Opening one prompt window for {var} ({term}); waiting...")
     script = str(Path(__file__).resolve())
     child = [sys.executable, script, var]
     if ns.url:
         child += ["--url", ns.url]
     if ns.info:
         child += ["--info", ns.info]
-    return report_launch_result(
-        var, launch_in_terminal(child, f"MCP auth: {var}", term)
-    )
+    title = f"MCP auth: {var}"
+    if os.name == "nt":
+        print(f"Opening one prompt window for {var} (console); waiting...")
+        code = launch_windows(child, title)
+        if code is None:
+            return need_manual(var, ns.url, ns.info, "No console here;")
+        return report_launch_result(var, code)
+    if sys.platform == "darwin":
+        print(f"Opening one prompt window for {var} (Terminal); waiting...")
+        code = launch_macos(child)
+        if code is None:
+            return need_manual(var, ns.url, ns.info, "No GUI Terminal here;")
+        return report_launch_result(var, code)
+    term = find_terminal()
+    if not has_display():
+        return need_manual(
+            var,
+            ns.url,
+            ns.info,
+            "No display here (neither $DISPLAY nor $WAYLAND_DISPLAY);",
+        )
+    if term is None:
+        return need_manual(
+            var, ns.url, ns.info, "No terminal found (konsole, gnome-terminal, xterm);"
+        )
+    print(f"Opening one prompt window for {var} ({term}); waiting...")
+    return report_launch_result(var, launch_in_terminal(child, title, term))
 
 
 if __name__ == "__main__":
