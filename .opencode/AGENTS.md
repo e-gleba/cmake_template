@@ -26,8 +26,12 @@ Think first. Minimal diff. Verify with build + tests.
   `ct_test_loop.md` (native vs cross). `.agents/skills/` is vendored
   third-party skills via `.agents/install_skills.cmake` + pinned
   `.agents/skills-lock.json` — not project workflow.
+- `.opencode/opencode.jsonc` `formatter.house-rules` owns the post-write
+  report on AI edits (nonzero only logs; extensionless `CMakeLists.txt`
+  never matches a formatter).
 - `.agents/scripts/` owns runnable helpers: `rules/hook.py` enforces bans
-  (`--staged` for pre-commit, stdin JSON for edit hooks),
+  on AI edits (`--file` for the formatter entry, stdin JSON for edit
+  hooks, `--staged` for manual runs),
   `clipboard/grab_clipboard.sh|.ps1` grabs clipboard images for UI reports.
 - `.agents/skills/ct-auth/scripts/mcp_env_set.py` writes one env var from
   hidden console input to `ct_project.env` (same file the `ct_project_env`
@@ -63,6 +67,7 @@ ln -sf build/dev/compile_commands.json .
 - Targets only. No CMAKE_CXX_FLAGS, include_directories, link_libraries, add_definitions.
 - No file(GLOB). Explicit sources. No CMAKE_BUILD_TYPE in project. Preset owns it + CMAKE_CONFIGURATION_TYPES.
 - CT_* user cache vars/options, ct_* targets/functions/locals. Upstream names untouched.
+  No `_`-prefixed names (`_foo` is upstream-reserved); enforced by `.agents/scripts/rules/hook.py`.
 - PUBLIC propagates, PRIVATE not, INTERFACE consumers-only.
 - Alias every exported lib. Warnings per-compiler guarded, never PUBLIC.
 - CMAKE_CXX_SCAN_FOR_MODULES OFF unless modules used. CXX_EXTENSIONS OFF.

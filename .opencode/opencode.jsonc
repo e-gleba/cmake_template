@@ -5,8 +5,15 @@
     "share": "disabled",
     // V1 update pin; V2 reads it as update:disable.
     "autoupdate": false,
-    // Format files on write/edit.
-    "formatter": true,
+    // Built-ins stay on (object form enables them); house-rules reports
+    // banned patterns after AI write/edit. Nonzero only logs, never
+    // blocks. CMakeLists.txt has no extension so no formatter matches it.
+    "formatter": {
+        "house-rules": {
+            "command": ["python3", ".agents/scripts/rules/hook.py", "--file", "$FILE"],
+            "extensions": [".cmake", ".cpp", ".h", ".hpp", ".cppm", ".cxx"]
+        }
+    },
     // Watcher is perf-only: ignored trees stay readable via read/grep/glob.
     "watcher": {
         "ignore": [
