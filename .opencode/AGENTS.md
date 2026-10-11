@@ -17,6 +17,8 @@ Think first. Minimal diff. Verify with build + tests.
   `/ct_release` version + changelog + commit.
 - `.opencode/agents/ct_cmake_review.md` owns the read-only review subagent
   (`@ct_cmake_review`, `edit: deny`).
+- `.opencode/opencode.jsonc` `agent.ct_weak_model_probe` owns weak-model
+  efficiency dry-runs of skills/commands (e.g. `ct-auth`) (`edit: deny`, weak `model:`).
 - `.opencode/ai-workflow-adapter.md` owns opencode mechanics (delegation,
   background builds, text handling). Loaded only when a command or agent
   explicitly asks for it; `.opencode/AGENTS.md` still wins on conflicts.
@@ -33,10 +35,9 @@ Think first. Minimal diff. Verify with build + tests.
   on AI edits (`--file` for the formatter entry, stdin JSON for edit
   hooks, `--staged` for manual runs),
   `clipboard/grab_clipboard.sh|.ps1` grabs clipboard images for UI reports.
-- `.agents/skills/ct-auth/scripts/mcp_env_set.py` writes one env var from
-  hidden console input to `ct_project.env` (same file the `ct_project_env`
-  plugin reads). Dumb setter only — the `ct-auth` skill discovers what to
-  fill live.
+- `.agents/skills/ct-auth/SKILL.md` owns MCP auth repair (failed/400/401/bad
+  header): reply in user language, user runs `opencode service set env`, retry
+  only after user says done.
 
 ## Build
 
@@ -161,6 +162,7 @@ cmake --build build/dev --target format tidy
 - "preset not found": read `CMakePresets.json` includes + `cmake/presets/*.json`. Never invent `cmake -D` lines.
 - Cross test failure: cross has no CTest. Android -> `./gradlew connectedCheck`, web -> Node, mingw -> no tests.
 - `Libraries not found` (Android/web): NDK/emsdk path comes from preset/toolchain, not from env hacks in `CMakeLists.txt`.
+- MCP `failed` (auth 400/401/bad header, missing node/python): follow `.agents/skills/ct-auth/SKILL.md`.
 
 ## Commits
 

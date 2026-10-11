@@ -34,6 +34,20 @@
         ".opencode/AGENTS.md",
         ".opencode/REVIEW.md"
     ],
+    // Weak-model efficiency probe: dry-runs any skill/command (e.g. ct-auth)
+    // on a weak model to test the project AI setup. Swap `model` for any other
+    // small model from `opencode models` if this one stops working.
+    "agent": {
+        "ct_weak_model_probe": {
+            "description": "Weak-model efficiency probe: dry-runs a given skill or command on a weak model and reports the result plus ambiguities. Read-only.",
+            "mode": "subagent",
+            "model": "opencode/longcat-2.5-preview-free",
+            "temperature": 0,
+            "permission": {
+                "edit": "deny"
+            }
+        }
+    },
     // Docs are header/public auth; search is public; OAuth needs /mcps sign-in.
     "mcp": {
         "ct_github": {
