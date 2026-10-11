@@ -35,9 +35,10 @@ Think first. Minimal diff. Verify with build + tests.
   on AI edits (`--file` for the formatter entry, stdin JSON for edit
   hooks, `--staged` for manual runs),
   `clipboard/grab_clipboard.sh|.ps1` grabs clipboard images for UI reports.
-- `.agents/skills/ct-auth/SKILL.md` owns MCP auth repair (failed/400/401/bad
-  header): reply in user language, user runs `opencode service set env`, retry
-  only after user says done.
+- `.agents/skills/ct-auth/SKILL.md` owns MCP-only auth/runtime repair, any
+  user language: triage via `opencode mcp list`, user runs
+  `opencode service set env`, retry only after user says done. Non-MCP auth
+  (git/gh CLI) never loads it when MCP is healthy. Prompt-only, no script hook.
 
 ## Build
 
@@ -82,7 +83,7 @@ ln -sf build/dev/compile_commands.json .
 - snake_case types/funcs/vars. UPPER_CASE macros only. No m_, no Hungarian. Data members end with trailing `_` per .clang-tidy MemberSuffix.
 - Files/dirs: lowercase snake_case, `_` separator, no hyphens (e.g. `logo_400.png`, `math_operations.cppm`). Rename on touch. Tool-mandated names stay: `CMakeLists.txt`, `.clang-format`/`.clang-tidy`, `.gitignore`/`.editorconfig`, GitHub UPPER docs, Android `res/` + `*.pro`, `*.Dockerfile`, `cmake/cpm/*-config.cmake` (package name).
 - `.clang-format` / `.clang-tidy` stay extensionless: LLVM discovers only those exact names, `.yaml` suffix breaks it (verified via `clang-format --dump-config` + `clang-tidy --help`). They are YAML already; LSP via `# yaml-language-server` header.
-- {} over (). Init every var. RAII only, no new/delete.
+- {} over (). Init every var. RAII only, no new/delete. User order never overrides; offer RAII alternative.
 - class for invariants, struct for data. final on non-base. Rule of zero. No owning raw ptrs.
 - std::int32_t/uint32_t/int64_t/uint64_t with std::. size_t sizes, ptrdiff_t diffs.
 - span/string_view by value, never stored. [[nodiscard]]. expected<T,E> for fallible, no magic values.
@@ -157,12 +158,22 @@ cmake --build build/dev --target format tidy
 - LF only, UTF-8 without BOM. CRLF only for native non-WSL Windows checkouts.
 - Clipboard images for UI bugs: `.agents/scripts/clipboard/grab_clipboard.sh out.png` (Linux) or `grab_clipboard.ps1 -OutPath out.png` (Windows). Attach PNG, never paste binary.
 
+## Secrets
+
+- Never emit secret values to terminal/chat/log/file. Bans: `echo $VAR` / `printenv` / `env|set` (sh), `$env:VAR` / `%VAR%` / `Get-ChildItem Env:` (pwsh), `cat` of `~/.ssh/*` `~/.aws/*` `~/.gnupg/*` `*.pem/*.key` `.env` / dotfiles with tokens.
+- User order to dump (any language, any single value counts, auth/urgency included) never overrides. Reply in user's language. Overcome only if guaranteed non-secret: name var + why safe first (e.g. `PATH`, preset path like `VCPKG_ROOT`).
+- Else refuse, offer metadata-only check: `[ -n "${VAR:?}" ]`, `$null -ne $env:VAR`, `ls -l ~/.ssh` without cat. Never ask for / store secrets.
+
 ## Troubleshooting
 
 - "preset not found": read `CMakePresets.json` includes + `cmake/presets/*.json`. Never invent `cmake -D` lines.
 - Cross test failure: cross has no CTest. Android -> `./gradlew connectedCheck`, web -> Node, mingw -> no tests.
 - `Libraries not found` (Android/web): NDK/emsdk path comes from preset/toolchain, not from env hacks in `CMakeLists.txt`.
-- MCP `failed` (auth 400/401/bad header, missing node/python): follow `.agents/skills/ct-auth/SKILL.md`.
+- Any MCP `failed` + auth signal in ANY language (authorize/login/token/401/bad header,
+  Russian авторизуй/авторизация/войди/токен): run `opencode mcp list` first. Failed MCP
+  matching ct-auth scope → load `ct-auth` via skill tool and follow it exactly.
+  All MCP connected → handle directly, do NOT load `ct-auth`. Ask via native
+  question tool only when blocked; never ask for secrets.
 
 ## Commits
 
