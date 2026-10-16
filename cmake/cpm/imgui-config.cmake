@@ -4,7 +4,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     ocornut/imgui
     VERSION
-    1.92.9
+    1.93.0
     EXCLUDE_FROM_ALL
     ON
     DOWNLOAD_ONLY
