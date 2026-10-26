@@ -4,7 +4,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     epezent/implot
     VERSION
-    1.0
+    1.1
     SYSTEM
     ON
     EXCLUDE_FROM_ALL
