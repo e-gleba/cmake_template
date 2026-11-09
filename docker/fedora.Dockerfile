@@ -8,7 +8,7 @@
 #     cmake --workflow --preset=linux_gcc_x86_64_release_package
 
 # Pin the current stable. Dependabot / Renovate bump this tag.
-FROM fedora:44
+FROM fedora:45
 
 ARG SOURCE=""
 
