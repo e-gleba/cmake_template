@@ -4,7 +4,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     spnda/fastgltf
     VERSION
-    1.0.0
+    1.0.1
     SYSTEM
     ON
     EXCLUDE_FROM_ALL
