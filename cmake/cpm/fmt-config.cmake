@@ -19,7 +19,7 @@ cpmaddpackage(
     GITHUB_REPOSITORY
     fmtlib/fmt
     GIT_TAG
-    12.2.0
+    12.2.1
     GIT_SHALLOW
     ON
     GIT_PROGRESS
